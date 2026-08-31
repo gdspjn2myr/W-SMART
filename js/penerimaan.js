@@ -27,6 +27,7 @@ function initPenerimaanPage() {
 
   document.getElementById('formPenerimaan').addEventListener('submit', handleSubmit);
 
+  setKedatanganDisplay();
   addItemRow();
   loadMasterData();
 }
@@ -95,6 +96,7 @@ function handleFileSelected(e) {
     document.getElementById('scanDropText').hidden = true;
     document.getElementById('btnScanProcess').disabled = false;
     hideScanStatus();
+    hideRawText();
   };
   reader.readAsDataURL(file);
 }
@@ -110,7 +112,14 @@ async function processScan() {
     const res = await Api.scanSPB(selectedImage);
     // Foto hanya ada di memori browser (selectedImage) & di server sementara — sudah dihapus otomatis di backend.
     fillFormFromParsed(res.parsed);
-    showScanStatus('Data berhasil dibaca. Silakan periksa & lengkapi field yang masih kosong sebelum menyimpan.', 'success');
+    showRawText(res.rawText);
+
+    const gotSomething = res.parsed && (res.parsed.noPO || res.parsed.vendor || (res.parsed.items && res.parsed.items.length));
+    if (gotSomething) {
+      showScanStatus('Data berhasil dibaca. Silakan periksa & lengkapi field yang masih kosong sebelum menyimpan.', 'success');
+    } else {
+      showScanStatus('Foto terbaca tapi belum berhasil mengenali data-nya (lihat "teks mentah hasil OCR" di bawah). Silakan lengkapi manual, dan kirim teks mentahnya kalau mau saya perbaiki pola bacanya.', 'error');
+    }
     document.getElementById('formPenerimaan').scrollIntoView({ behavior: 'smooth' });
   } catch (err) {
     showScanStatus('Gagal membaca SPB: ' + err.message + ' — silakan lengkapi manual di bawah.', 'error');
@@ -148,6 +157,21 @@ function showScanStatus(msg, type) {
 }
 function hideScanStatus() {
   document.getElementById('scanStatus').hidden = true;
+}
+
+function showRawText(rawText) {
+  const wrap = document.getElementById('rawTextWrap');
+  if (!rawText) { wrap.hidden = true; return; }
+  document.getElementById('rawTextContent').textContent = rawText;
+  wrap.hidden = false;
+}
+function hideRawText() {
+  document.getElementById('rawTextWrap').hidden = true;
+  document.getElementById('rawTextContent').textContent = '';
+}
+
+function setKedatanganDisplay() {
+  document.getElementById('fKedatanganDisplay').valueAsDate = new Date();
 }
 
 // ---------------------------------------------------------------------------
@@ -206,6 +230,7 @@ async function handleSubmit(e) {
 
 function resetForm() {
   document.getElementById('formPenerimaan').reset();
+  setKedatanganDisplay();
   clearItemRows();
   addItemRow();
   selectedImage = null;
@@ -213,5 +238,6 @@ function resetForm() {
   document.getElementById('scanDropText').hidden = false;
   document.getElementById('btnScanProcess').disabled = true;
   hideScanStatus();
+  hideRawText();
   setMode('manual');
 }
