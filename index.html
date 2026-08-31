@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+<title>W-SMART — Smart Spare Part Inventory</title>
+<meta name="description" content="W-SMART - Sistem Inventory Spare Part: Penerimaan Barang & Dashboard">
+<meta name="theme-color" content="#0f2a5c">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <img src="icons/icon-192.png" class="topbar-logo" alt="Logo W-SMART">
+    <div class="topbar-text">
+      <div class="topbar-title">W-SMART</div>
+      <div class="topbar-subtitle" id="pageTitle">Dashboard</div>
+    </div>
+  </div>
+</header>
+
+<main id="app" class="app-content">
+
+  <!-- ============================= DASHBOARD ============================= -->
+  <section id="page-dashboard" class="page">
+
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="stat-label">Diterima Hari Ini</div>
+        <div class="stat-value" id="statHariIni">0</div>
+        <div class="stat-unit">pcs</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Diterima Bulan Ini</div>
+        <div class="stat-value" id="statBulanIni">0</div>
+        <div class="stat-unit">pcs</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Transaksi Bulan Ini</div>
+        <div class="stat-value" id="statTransaksi">0</div>
+        <div class="stat-unit">transaksi</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">SKU Bulan Ini</div>
+        <div class="stat-value" id="statSku">0</div>
+        <div class="stat-unit">jenis barang</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">Penerimaan 7 Hari Terakhir</div>
+      <canvas id="chartMingguan" height="160"></canvas>
+    </div>
+
+    <div class="card">
+      <div class="card-header">Riwayat Penerimaan Terbaru</div>
+      <div id="riwayatList" class="riwayat-list">
+        <div class="empty-state">Belum ada data penerimaan.</div>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ============================= PENERIMAAN ============================= -->
+  <section id="page-penerimaan" class="page" hidden>
+
+    <div class="mode-switch">
+      <button class="mode-btn active" id="btnModeManual" type="button">Input Manual</button>
+      <button class="mode-btn" id="btnModeScan" type="button">Scan SPB</button>
+    </div>
+
+    <!-- Panel Scan SPB -->
+    <div id="scanPanel" class="card" hidden>
+      <div class="card-header">Scan Surat Pengiriman Barang (SPB)</div>
+      <p class="hint-text">Foto SPB akan dibaca otomatis untuk mengisi form di bawah. Foto <strong>tidak disimpan</strong> — hanya datanya yang diambil, lalu filenya langsung dihapus dari server.</p>
+
+      <label class="file-drop" for="scanFileInput">
+        <div id="scanPreviewWrap" class="scan-preview-wrap">
+          <span id="scanDropText">Ketuk untuk ambil foto / pilih file SPB</span>
+          <img id="scanPreviewImg" hidden alt="Preview SPB">
+        </div>
+      </label>
+      <input type="file" id="scanFileInput" accept="image/*" capture="environment" hidden>
+
+      <button id="btnScanProcess" class="btn btn-primary btn-block" type="button" disabled>Baca Data SPB</button>
+      <div id="scanStatus" class="scan-status" hidden></div>
+      <button type="button" id="btnFallbackManual" class="btn-link">Susah dibaca? Isi manual saja</button>
+    </div>
+
+    <!-- Form Penerimaan (dipakai untuk manual & hasil scan — field yang bisa terisi
+         otomatis dari scan tetap bisa dikoreksi di sini) -->
+    <form id="formPenerimaan" class="card">
+      <div class="card-header">Detail Penerimaan</div>
+      <p class="hint-text">Tanggal kedatangan (kolom KEDATANGAN) otomatis diisi <strong>hari ini</strong> saat disimpan &mdash; tidak bisa diubah.</p>
+
+      <div class="form-row">
+        <label>Tanggal Dokumen / PO</label>
+        <input type="date" id="fTanggal">
+      </div>
+      <div class="form-row">
+        <label>No. PO</label>
+        <input type="text" id="fNoPO" placeholder="Nomor PO dari SPB">
+      </div>
+      <div class="form-row">
+        <label>Vendor</label>
+        <input type="text" id="fVendor" list="listSupplier" placeholder="Kode - Nama vendor">
+        <datalist id="listSupplier"></datalist>
+      </div>
+      <div class="form-row">
+        <label>User (Penerima) *</label>
+        <input type="text" id="fUser" placeholder="Nama yang menerima barang" required>
+      </div>
+      <div class="form-row-pair">
+        <div class="form-row">
+          <label>Plant</label>
+          <input type="text" id="fPlant" placeholder="Contoh: 1111">
+        </div>
+        <div class="form-row">
+          <label>S. Loc</label>
+          <input type="text" id="fSLoc" placeholder="Contoh: GDSP">
+        </div>
+      </div>
+
+      <div class="items-header">
+        <span>Daftar Barang</span>
+        <button type="button" id="btnAddItem" class="btn btn-small">+ Tambah Item</button>
+      </div>
+      <div id="itemsContainer"></div>
+
+      <div class="form-row">
+        <label>Keterangan</label>
+        <textarea id="fKeterangan" rows="2" placeholder="Catatan tambahan (opsional)"></textarea>
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-block">Simpan Penerimaan</button>
+    </form>
+
+  </section>
+
+</main>
+
+<nav class="bottom-nav">
+  <a href="#/dashboard" class="nav-item" data-nav="dashboard">
+    <svg viewBox="0 0 24 24" class="nav-icon"><path d="M3 11.5 12 4l9 7.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.5 10v9a1 1 0 0 0 1 1H10v-6h4v6h3.5a1 1 0 0 0 1-1v-9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <span>Dashboard</span>
+  </a>
+  <a href="#/penerimaan" class="nav-item" data-nav="penerimaan">
+    <svg viewBox="0 0 24 24" class="nav-icon"><path d="M3 7.5 12 3l9 4.5v9L12 21l-9-4.5v-9Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M3 7.5 12 12l9-4.5M12 12v9" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+    <span>Penerimaan</span>
+  </a>
+</nav>
+
+<div id="toast" class="toast" hidden></div>
+
+<template id="itemRowTemplate">
+  <div class="item-row">
+    <button type="button" class="item-remove" title="Hapus item">×</button>
+    <div class="item-row-grid">
+      <div class="form-row">
+        <label>Kode Barang</label>
+        <input type="text" class="i-kode" list="listMasterBarang">
+      </div>
+      <div class="form-row">
+        <label>Nama Barang</label>
+        <input type="text" class="i-nama" required>
+      </div>
+      <div class="form-row form-row-small">
+        <label>Qty</label>
+        <input type="number" class="i-qty" min="0" step="1" required>
+      </div>
+      <div class="form-row form-row-small">
+        <label>Satuan</label>
+        <input type="text" class="i-satuan" placeholder="EA / PCS / UNT">
+      </div>
+    </div>
+  </div>
+</template>
+<datalist id="listMasterBarang"></datalist>
+
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/router.js"></script>
+<script src="js/dashboard.js"></script>
+<script src="js/penerimaan.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
