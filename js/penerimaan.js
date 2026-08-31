@@ -5,7 +5,7 @@
 
 let penerimaanInitialized = false;
 let masterDataLoaded = false;
-let selectedImage = null; // { base64, mimeType } — hanya di memori, tidak pernah disimpan
+let selectedImage = null; // { imageBase64, mimeType } — hanya di memori, tidak pernah disimpan
 
 function initPenerimaanPage() {
   if (penerimaanInitialized) return;
@@ -87,7 +87,7 @@ function handleFileSelected(e) {
   reader.onload = () => {
     const dataUrl = reader.result; // "data:image/jpeg;base64,...."
     const base64 = dataUrl.split(',')[1];
-    selectedImage = { base64, mimeType: file.type || 'image/jpeg' };
+    selectedImage = { imageBase64: base64, mimeType: file.type || 'image/jpeg' };
 
     const img = document.getElementById('scanPreviewImg');
     img.src = dataUrl;
