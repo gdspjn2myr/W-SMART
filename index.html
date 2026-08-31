@@ -89,14 +89,22 @@
       <button id="btnScanProcess" class="btn btn-primary btn-block" type="button" disabled>Baca Data SPB</button>
       <div id="scanStatus" class="scan-status" hidden></div>
       <button type="button" id="btnFallbackManual" class="btn-link">Susah dibaca? Isi manual saja</button>
+
+      <details id="rawTextWrap" class="raw-text-wrap" hidden>
+        <summary>Lihat teks mentah hasil OCR</summary>
+        <pre id="rawTextContent" class="raw-text-content"></pre>
+      </details>
     </div>
 
     <!-- Form Penerimaan (dipakai untuk manual & hasil scan — field yang bisa terisi
          otomatis dari scan tetap bisa dikoreksi di sini) -->
     <form id="formPenerimaan" class="card">
       <div class="card-header">Detail Penerimaan</div>
-      <p class="hint-text">Tanggal kedatangan (kolom KEDATANGAN) otomatis diisi <strong>hari ini</strong> saat disimpan &mdash; tidak bisa diubah.</p>
 
+      <div class="form-row">
+        <label>Tanggal Kedatangan (otomatis, tidak bisa diubah)</label>
+        <input type="date" id="fKedatanganDisplay" disabled>
+      </div>
       <div class="form-row">
         <label>Tanggal Dokumen / PO</label>
         <input type="date" id="fTanggal">
