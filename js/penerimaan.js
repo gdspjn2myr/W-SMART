@@ -5,6 +5,7 @@
 
 let penerimaanInitialized = false;
 let masterDataLoaded = false;
+let masterBarangCache = []; // dipakai bareng halaman Pemakaian untuk autofill nama/satuan by kode
 let selectedImage = null; // { imageBase64, mimeType } — hanya di memori, tidak pernah disimpan
 
 function initPenerimaanPage() {
@@ -49,9 +50,10 @@ async function loadMasterData() {
   if (masterDataLoaded) return;
   try {
     const [barangRes, supplierRes] = await Promise.all([Api.getMasterBarang(), Api.getSupplier()]);
+    masterBarangCache = (barangRes.data || []).filter((b) => b.status !== 'Nonaktif');
+
     const listBarang = document.getElementById('listMasterBarang');
-    listBarang.innerHTML = (barangRes.data || [])
-      .filter((b) => b.status !== 'Nonaktif')
+    listBarang.innerHTML = masterBarangCache
       .map((b) => `<option value="${escapeHtml(b.kodeBarang)}">${escapeHtml(b.namaBarang)}</option>`)
       .join('');
 
