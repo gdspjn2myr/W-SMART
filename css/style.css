@@ -903,6 +903,18 @@ body {
 .md-badge-b { background: #fff3d6; color: #a06a00; }
 .md-badge-c { background: #e6f7ee; color: var(--green); }
 
+.md-badge-jenis {
+  display: inline-flex;
+  align-items: center;
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.md-badge-jenis-obs { background: #ece9f3; color: #4b3b8a; }
+.md-badge-jenis-fm { background: #e6f7ee; color: var(--green); }
+
 .status-pill {
   border: none;
   border-radius: 999px;
