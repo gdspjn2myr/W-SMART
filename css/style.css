@@ -1140,3 +1140,68 @@ body {
 @media (min-width: 1280px) {
   .app-content, .topbar-inner { max-width: 1240px; }
 }
+
+/* ---------- QR Labels (generate & cetak) ---------- */
+.qr-pick-item { align-items: flex-start; }
+.qr-pick-checkbox {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  margin-top: 1px;
+  accent-color: var(--navy);
+}
+.qr-label-result-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.qr-label-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+}
+.qr-label {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px;
+  text-align: center;
+  background: #fff;
+}
+.qr-label-canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-width: 160px;
+  margin: 0 auto 6px;
+}
+.qr-label-code {
+  font-weight: 700;
+  font-size: 12.5px;
+  word-break: break-word;
+}
+.qr-label-sub {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+  word-break: break-word;
+}
+
+/* Cetak: cuma grid label yang tampil, satu label nggak boleh kepotong 2 halaman. */
+@media print {
+  .topbar, .sidebar, .sidebar-backdrop, .toast, .qr-scan-overlay, .update-banner,
+  .mode-switch, #qrPanelBarang, #qrPanelBin, .qr-label-result-header,
+  .page:not(#page-qr-labels) {
+    display: none !important;
+  }
+  body, .app-content { background: #fff; padding: 0; margin: 0; }
+  #page-qr-labels { display: block !important; }
+  #qrLabelResultCard {
+    box-shadow: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+  }
+  .qr-label-grid { grid-template-columns: repeat(4, 1fr); }
+  .qr-label { break-inside: avoid; border-color: #ccc; }
+}
