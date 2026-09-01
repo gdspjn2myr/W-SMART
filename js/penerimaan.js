@@ -7,6 +7,7 @@ let penerimaanInitialized = false;
 let masterDataLoaded = false;
 let masterBarangCache = []; // dipakai bareng halaman Pemakaian untuk autofill nama/satuan by kode
 let selectedImage = null; // { imageBase64, mimeType } — hanya di memori, tidak pernah disimpan
+let pnLastSavedItems = []; // item terakhir yang berhasil disimpan (buat opsi "Cetak Label QR Dulu" di popup)
 
 function initPenerimaanPage() {
   loadMasterData(); // dipanggil tiap kali halaman ini dibuka — no-op kalau sudah pernah & belum di-invalidate
@@ -35,8 +36,46 @@ function initPenerimaanPage() {
 
   document.getElementById('formPenerimaan').addEventListener('submit', handleSubmit);
 
+  document.getElementById('btnPnPutawayLater').addEventListener('click', () => closePutawayPrompt('later'));
+  document.getElementById('btnPnPutawayNow').addEventListener('click', () => closePutawayPrompt('putaway'));
+  document.getElementById('btnPnPrintQr').addEventListener('click', () => closePutawayPrompt('print'));
+  document.getElementById('pnPutawayModalBackdrop').addEventListener('click', () => closePutawayPrompt('later'));
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !document.getElementById('pnPutawayModal').hidden) closePutawayPrompt('later');
+  });
+
   setKedatanganDisplay();
   addItemRow();
+}
+
+// ---------------------------------------------------------------------------
+// POPUP "LANJUT PUT AWAY?" — muncul tiap kali Barang Masuk berhasil disimpan.
+// "Nanti" -> tetap di halaman Barang Masuk (form sudah direset, siap input
+// berikutnya). "Ya, Put Away Sekarang" -> pindah ke halaman Put Away supaya
+// barang yang baru masuk langsung di-scan/taruh ke bin.
+// ---------------------------------------------------------------------------
+function openPutawayPrompt(jumlahItem, items) {
+  pnLastSavedItems = items || [];
+  document.getElementById('pnPutawayModalText').textContent =
+    `${jumlahItem} item barang sudah tercatat. Lanjut Put Away sekarang untuk taruh ke bin/lokasi?`;
+  document.getElementById('pnPutawayModalBackdrop').hidden = false;
+  document.getElementById('pnPutawayModal').hidden = false;
+}
+
+function closePutawayPrompt(action) {
+  document.getElementById('pnPutawayModalBackdrop').hidden = true;
+  document.getElementById('pnPutawayModal').hidden = true;
+  if (action === 'putaway') {
+    location.hash = '#/putaway';
+  } else if (action === 'print') {
+    const itemsWithKode = pnLastSavedItems.filter((it) => it.kode);
+    if (!itemsWithKode.length) {
+      showToast('Item tadi tidak ada Kode Barang-nya, jadi belum bisa dibuatkan QR.', 'error');
+      return;
+    }
+    goToQrLabelsForItems(itemsWithKode);
+  }
+  // action === 'later' -> tetap di halaman Barang Masuk, form sudah direset saat submit.
 }
 
 function setMode(mode) {
@@ -229,6 +268,7 @@ async function handleSubmit(e) {
     showToast('Tersimpan (' + res.jumlahItem + ' item).', 'success');
     resetForm();
     dashboardLoadedOnce = false; // supaya dashboard refresh saat dibuka lagi
+    openPutawayPrompt(res.jumlahItem, items);
   } catch (err) {
     showToast('Gagal menyimpan: ' + err.message, 'error');
   } finally {
