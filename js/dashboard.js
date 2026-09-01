@@ -7,13 +7,72 @@ let dashboardLoadedOnce = false;
 async function loadDashboard() {
   try {
     const res = await Api.getDashboard();
+    renderStockStats(res);
+    renderReorderAlert(res.reorderAlert || []);
     renderStats(res);
     renderChart(res.chart7Hari || []);
+    renderTopPemakaian(res.topPemakaianBulanIni || []);
+    renderKategoriChart(res.kategoriDist || { A: 0, B: 0, C: 0 });
     renderRiwayat(res.riwayatTerbaru || []);
     dashboardLoadedOnce = true;
   } catch (err) {
     showToast(err.message, 'error');
   }
+}
+
+// Stock Balance / Reorder Alert — dihitung realtime di server dari Penerimaan -
+// Pemakaian dibandingkan ROP/MAX di Master Data (lihat hitungStockHealth_ di Code.gs).
+function renderStockStats(res) {
+  const total = res.totalSku || 0;
+  animateStatValue('statTotalSku', total);
+  animateStatValue('statStokNormal', res.stokNormal || 0);
+  animateStatValue('statStokNearRop', res.stokNearRop || 0);
+  animateStatValue('statStokNeedReorder', res.stokNeedReorder || 0);
+  animateStatValue('statStokOut', res.stokOut || 0);
+
+  const pct = (n) => total ? Math.round((n / total) * 100) + '%' : '0%';
+  document.getElementById('statStokNormalPct').textContent = pct(res.stokNormal || 0);
+  document.getElementById('statStokNearRopPct').textContent = pct(res.stokNearRop || 0);
+  document.getElementById('statStokNeedReorderPct').textContent = pct(res.stokNeedReorder || 0);
+  document.getElementById('statStokOutPct').textContent = pct(res.stokOut || 0);
+}
+
+const RA_STATUS_CLASS = { 'Stock Out': 'ra-badge-out', 'Need Reorder': 'ra-badge-reorder', 'Near ROP': 'ra-badge-near' };
+
+function renderReorderAlert(list) {
+  document.getElementById('reorderAlertCount').textContent = list.length + ' Item';
+  const wrap = document.getElementById('reorderAlertList');
+  if (!list.length) {
+    wrap.innerHTML = '<div class="empty-state">Semua stock dalam kondisi normal.</div>';
+    return;
+  }
+  wrap.innerHTML = list.map((it) => `
+      <div class="ra-item">
+        <div class="ra-item-main">
+          <div class="ra-item-title">${escapeHtml(it.kode)} — ${escapeHtml(it.namaBarang)}</div>
+          <div class="ra-item-sub">Stock ${it.onHand} · ROP ${it.rop} · MAX ${it.max} · Order Qty <strong>${it.orderQty}</strong></div>
+        </div>
+        <span class="ra-badge ${RA_STATUS_CLASS[it.status] || ''}">${escapeHtml(it.status)}</span>
+      </div>
+    `).join('');
+}
+
+function renderTopPemakaian(list) {
+  const wrap = document.getElementById('topPemakaianList');
+  if (!list.length) {
+    wrap.innerHTML = '<div class="empty-state">Belum ada data pemakaian bulan ini.</div>';
+    return;
+  }
+  const max = Math.max(1, ...list.map((it) => it.qty));
+  wrap.innerHTML = list.map((it) => `
+      <div class="tp-item">
+        <div class="tp-item-label">
+          <span>${escapeHtml(it.namaBarang || it.kode)}</span>
+          <strong>${it.qty}${it.satuan ? ' ' + escapeHtml(it.satuan) : ''}</strong>
+        </div>
+        <div class="tp-bar-track"><div class="tp-bar-fill" style="width:${Math.max(4, (it.qty / max) * 100)}%"></div></div>
+      </div>
+    `).join('');
 }
 
 function renderStats(res) {
@@ -136,6 +195,63 @@ function renderChart(data) {
     if (p < 1) requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
+}
+
+const KATEGORI_SEGMENTS = [
+  { key: 'A', label: 'A — Critical', color: '#d64545' },
+  { key: 'B', label: 'B — Medium', color: '#ffb703' },
+  { key: 'C', label: 'C — Fast Moving', color: '#2e9e5b' }
+];
+
+function renderKategoriChart(dist) {
+  const canvas = document.getElementById('chartKategori');
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const size = 140;
+  canvas.style.width = size + 'px';
+  canvas.style.height = size + 'px';
+  canvas.width = Math.round(size * dpr);
+  canvas.height = Math.round(size * dpr);
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, size, size);
+
+  const total = (dist.A || 0) + (dist.B || 0) + (dist.C || 0);
+  const legend = document.getElementById('kategoriLegend');
+  const cx = size / 2, cy = size / 2, r = (size - 18) / 2;
+
+  if (!total) {
+    ctx.strokeStyle = '#e3e7f0';
+    ctx.lineWidth = 18;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.stroke();
+    legend.innerHTML = '<div class="empty-state">Belum ada item aktif di Master Data.</div>';
+    return;
+  }
+
+  let startAngle = -Math.PI / 2;
+  ctx.lineWidth = 18;
+  KATEGORI_SEGMENTS.forEach((seg) => {
+    const value = dist[seg.key] || 0;
+    if (!value) return;
+    const angle = (value / total) * Math.PI * 2;
+    ctx.strokeStyle = seg.color;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, startAngle, startAngle + angle);
+    ctx.stroke();
+    startAngle += angle;
+  });
+
+  legend.innerHTML = KATEGORI_SEGMENTS.map((seg) => {
+    const value = dist[seg.key] || 0;
+    return `
+      <div class="kt-legend-item">
+        <span class="kt-dot" style="background:${seg.color}"></span>
+        <span>${seg.label}</span>
+        <strong>${value} (${Math.round((value / total) * 100)}%)</strong>
+      </div>
+    `;
+  }).join('');
 }
 
 function roundRectPath(ctx, x, y, w, h, r) {
