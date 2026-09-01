@@ -3,7 +3,7 @@
 // Naikkan CACHE_NAME setiap kali file di bawah diubah supaya cache ter-update.
 // ============================================================================
 
-const CACHE_NAME = 'wsmart-shell-v1.3';
+const CACHE_NAME = 'wsmart-shell-v1.4';
 const APP_SHELL = [
   './',
   './index.html',
