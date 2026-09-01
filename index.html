@@ -39,9 +39,17 @@
       <svg viewBox="0 0 24 24" class="nav-icon"><path d="M3 7.5 12 3l9 4.5v9L12 21l-9-4.5v-9Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M3 7.5 12 12l9-4.5M12 12v9" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
       <span>Barang Masuk</span>
     </a>
+    <a href="#/putaway" class="nav-item" data-nav="putaway">
+      <svg viewBox="0 0 24 24" class="nav-icon"><rect x="4" y="4" width="7" height="7" rx="1" fill="none" stroke="currentColor" stroke-width="2"/><rect x="13" y="4" width="7" height="7" rx="1" fill="none" stroke="currentColor" stroke-width="2"/><rect x="4" y="13" width="7" height="7" rx="1" fill="none" stroke="currentColor" stroke-width="2"/><path d="M15.5 17.5 17 19l3-3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span>Put Away</span>
+    </a>
     <a href="#/pemakaian" class="nav-item" data-nav="pemakaian">
       <svg viewBox="0 0 24 24" class="nav-icon"><path d="M12 3v12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="m7 10 5 5 5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       <span>Barang Keluar</span>
+    </a>
+    <a href="#/stock-balance" class="nav-item" data-nav="stock-balance">
+      <svg viewBox="0 0 24 24" class="nav-icon"><path d="M3 9.5 12 4l9 5.5v9a1 1 0 0 1-1 1h-4v-6H10v6H4a1 1 0 0 1-1-1v-9Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 12h6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      <span>Stock Balance</span>
     </a>
     <a href="#/master-data" class="nav-item" data-nav="master-data">
       <svg viewBox="0 0 24 24" class="nav-icon"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4h13A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18.5v-13Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M4 9.5h16M9 9.5V20" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
@@ -289,6 +297,58 @@
 
   </section>
 
+  <!-- ============================= PUT AWAY ============================= -->
+  <section id="page-putaway" class="page" hidden>
+    <form id="formPutaway" class="card">
+      <div class="card-header">Put Away — Masukkan ke Bin</div>
+
+      <div class="form-row">
+        <label>Lokasi/Bin *</label>
+        <div class="scan-lokasi-row">
+          <button type="button" id="btnScanPwLokasi" class="btn btn-small btn-scan">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7V5a1 1 0 0 1 1-1h2M17 4h2a1 1 0 0 1 1 1v2M20 17v2a1 1 0 0 1-1 1h-2M7 20H5a1 1 0 0 1-1-1v-2"/><rect x="8" y="8" width="8" height="8" rx="1"/></svg>
+            Scan Lokasi
+          </button>
+        </div>
+        <input type="text" id="pwLokasi" placeholder="Atau ketik manual, contoh: SP-R01-03" required>
+      </div>
+
+      <div class="form-row">
+        <label>Kode Barang *</label>
+        <input type="text" id="pwKode" list="listBelumMapping" placeholder="Ketik kode atau pilih dari daftar di bawah" required autocomplete="off">
+        <div id="pwNamaHint" class="hint-text" hidden></div>
+        <datalist id="listBelumMapping"></datalist>
+      </div>
+      <div class="form-row-pair">
+        <div class="form-row">
+          <label>Qty *</label>
+          <input type="number" id="pwQty" min="1" step="1" required>
+        </div>
+        <div class="form-row">
+          <label>Satuan</label>
+          <input type="text" id="pwSatuan" placeholder="Otomatis" readonly>
+        </div>
+      </div>
+      <div class="form-row">
+        <label>Nama User *</label>
+        <input type="text" id="pwUser" placeholder="Nama yang scan/put away" required>
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-block">Simpan Put Away</button>
+    </form>
+
+    <div class="card">
+      <div class="card-header">
+        Belum Ter-mapping (Perlu Put Away)
+        <span class="count-badge" id="pwBelumMappingCount">0 Item</span>
+      </div>
+      <p class="md-preview-hint">Sudah diterima (Penerimaan) tapi belum di-scan masuk ke bin manapun. Klik item buat langsung pilih.</p>
+      <div id="pwBelumMappingList" class="pw-list">
+        <div class="empty-state">Memuat...</div>
+      </div>
+    </div>
+  </section>
+
   <!-- ============================= PEMAKAIAN (Barang Keluar) ============================= -->
   <section id="page-pemakaian" class="page" hidden>
     <form id="formPemakaian" class="card">
@@ -297,6 +357,17 @@
       <div class="form-row">
         <label>Tanggal (otomatis, tidak bisa diubah)</label>
         <input type="date" id="pmTanggalDisplay" disabled>
+      </div>
+      <div class="form-row">
+        <label>Ambil dari Lokasi/Bin (opsional, scan diprioritaskan)</label>
+        <div class="scan-lokasi-row">
+          <button type="button" id="btnScanPmLokasi" class="btn btn-small btn-scan">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7V5a1 1 0 0 1 1-1h2M17 4h2a1 1 0 0 1 1 1v2M20 17v2a1 1 0 0 1-1 1h-2M7 20H5a1 1 0 0 1-1-1v-2"/><rect x="8" y="8" width="8" height="8" rx="1"/></svg>
+            Scan Lokasi
+          </button>
+          <span id="pmLokasiBadge" class="lokasi-badge" hidden></span>
+          <button type="button" id="btnClearPmLokasi" class="btn-clear-lokasi" hidden aria-label="Hapus lokasi">×</button>
+        </div>
       </div>
       <div class="form-row">
         <label>Kode Barang *</label>
@@ -326,6 +397,27 @@
     </form>
   </section>
 
+  <!-- ============================= STOCK BALANCE ============================= -->
+  <section id="page-stock-balance" class="page" hidden>
+
+    <div class="md-toolbar">
+      <input type="search" id="sbSearch" class="md-search" placeholder="Cari kode / nama / satuan...">
+      <button type="button" id="btnRefreshStockBalance" class="btn btn-small" title="Refresh" aria-label="Refresh">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 4v6h-6"/></svg>
+      </button>
+    </div>
+
+    <div class="sb-summary">
+      <span id="sbCount">0 SKU</span>
+      <span id="sbUpdatedAt"></span>
+    </div>
+
+    <div id="sbList" class="sb-list">
+      <div class="empty-state">Memuat stock...</div>
+    </div>
+
+  </section>
+
   <!-- ============================= MASTER DATA ============================= -->
   <section id="page-master-data" class="page" hidden>
 
@@ -335,8 +427,8 @@
     </div>
 
     <div class="card md-hint">
-      <strong>Rumus otomatis:</strong> ROP = (Avg Usage × Lead Time) + Safety Stock &nbsp;·&nbsp;
-      MAX = ROP + (Avg Usage × Extra Day) &nbsp;·&nbsp; Min Stock = Safety Stock.
+      <strong>Min &amp; Max Stock</strong> diisi langsung sesuai ketentuan perusahaan. &nbsp;·&nbsp;
+      Yang dihitung otomatis cuma <strong>ROP (titik order)</strong> = Min Stock + (Avg Usage × Lead Time).
     </div>
 
     <div id="mdList" class="md-list">
@@ -385,7 +477,19 @@
         </div>
       </div>
 
-      <div class="items-header"><span>Setting Min-Max / ROP</span></div>
+      <div class="items-header"><span>Min-Max (dari Perusahaan)</span></div>
+      <div class="md-formula-grid">
+        <div class="form-row">
+          <label>Min Stock (pcs) *</label>
+          <input type="number" id="mdMinStock" min="0" step="1" value="0" required>
+        </div>
+        <div class="form-row">
+          <label>Max Stock (pcs) *</label>
+          <input type="number" id="mdMaxStock" min="0" step="1" value="0" required>
+        </div>
+      </div>
+
+      <div class="items-header"><span>Buffer &amp; Titik Order (dihitung otomatis)</span></div>
       <div class="md-formula-grid">
         <div class="form-row">
           <label>Avg Usage (pcs/hari)</label>
@@ -395,21 +499,14 @@
           <label>Lead Time (hari)</label>
           <input type="number" id="mdLeadTime" min="0" step="1" value="0">
         </div>
-        <div class="form-row">
-          <label>Safety Stock (pcs)</label>
-          <input type="number" id="mdSafetyStock" min="0" step="1" value="0">
-        </div>
-        <div class="form-row">
-          <label>Extra Day (hari)</label>
-          <input type="number" id="mdExtraDay" min="0" step="1" value="0">
-        </div>
       </div>
 
       <div class="md-preview">
-        <div class="md-preview-item"><span>ROP</span><strong id="mdPreviewRop">0</strong></div>
-        <div class="md-preview-item"><span>MAX</span><strong id="mdPreviewMax">0</strong></div>
-        <div class="md-preview-item"><span>Min Stock</span><strong id="mdPreviewMin">0</strong></div>
+        <div class="md-preview-item"><span>ROP (Titik Order)</span><strong id="mdPreviewRop">0</strong></div>
+        <div class="md-preview-item"><span>Buffer di atas Min</span><strong id="mdPreviewBuffer">0</strong></div>
       </div>
+      <div id="mdPreviewWarning" class="md-preview-warning" hidden></div>
+      <p class="md-preview-hint">ROP = Min Stock + (Avg Usage × Lead Time) — ini titik kapan kamu harus order, supaya stock nggak sempat turun di bawah Min selagi nunggu barang datang.</p>
 
       <button type="submit" class="btn btn-primary btn-block">Simpan Item</button>
     </form>
@@ -417,6 +514,13 @@
 </div>
 
 <div id="toast" class="toast" hidden></div>
+
+<div id="qrScanOverlay" class="qr-scan-overlay" hidden>
+  <video id="qrScanVideo" class="qr-scan-video" playsinline muted></video>
+  <div class="qr-scan-frame"></div>
+  <div class="qr-scan-hint">Arahkan kamera ke QR lokasi/bin</div>
+  <button type="button" id="btnCloseQrScan" class="qr-scan-close" aria-label="Tutup scan">×</button>
+</div>
 
 <div id="updateBanner" class="update-banner" hidden>
   <div class="update-banner-text">
@@ -457,9 +561,12 @@
 <script src="js/config.js"></script>
 <script src="js/api.js"></script>
 <script src="js/router.js"></script>
+<script src="js/qr-scan.js"></script>
 <script src="js/dashboard.js"></script>
 <script src="js/penerimaan.js"></script>
+<script src="js/putaway.js"></script>
 <script src="js/pemakaian.js"></script>
+<script src="js/stock-balance.js"></script>
 <script src="js/master-data.js"></script>
 <script src="js/app.js"></script>
 </body>
