@@ -51,6 +51,110 @@ function initSidebar() {
   });
 }
 
+// ---------------------------------------------------------------------------
+// SERVICE WORKER & NOTIFIKASI UPDATE VERSI
+// ---------------------------------------------------------------------------
+// Minta nomor versi ke sebuah service worker (installing/waiting/controller)
+// lewat MessageChannel. Resolve null kalau workernya kosong atau tidak
+// membalas dalam 2 detik (mis. browser lama yang belum dukung message ini).
+function getSwVersion(worker) {
+  return new Promise((resolve) => {
+    if (!worker) { resolve(null); return; }
+    const channel = new MessageChannel();
+    const timer = setTimeout(() => resolve(null), 2000);
+    channel.port1.onmessage = (e) => {
+      clearTimeout(timer);
+      resolve(e.data && e.data.version);
+    };
+    worker.postMessage({ type: 'GET_VERSION' }, [channel.port2]);
+  });
+}
+
+function setSidebarVersion(v) {
+  const el = document.getElementById('sidebarVersion');
+  if (el && v) el.textContent = 'v' + v;
+}
+
+function showUpdateBanner(version) {
+  const banner = document.getElementById('updateBanner');
+  if (!banner) return;
+  document.getElementById('updateBannerVersion').textContent = version ? 'v' + version + ' siap dipasang' : 'Siap dipasang';
+  banner.hidden = false;
+  void banner.offsetWidth; // reflow supaya transisi masuk selalu jalan
+  banner.classList.add('show');
+}
+
+function hideUpdateBanner() {
+  const banner = document.getElementById('updateBanner');
+  if (!banner) return;
+  banner.classList.remove('show');
+  setTimeout(() => { banner.hidden = true; }, 280);
+}
+
+function initServiceWorker() {
+  if (!('serviceWorker' in navigator)) return;
+
+  // Kalau saat halaman ini dimuat SUDAH ada worker yang mengontrol, berarti ini
+  // bukan kunjungan pertama. Dipakai untuk membedakan "aktivasi pertama kali"
+  // (jangan reload) vs "user baru saja update ke versi baru" (reload).
+  let hadControllerAtLoad = !!navigator.serviceWorker.controller;
+  let reloading = false;
+
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!hadControllerAtLoad) {
+      hadControllerAtLoad = true;
+      getSwVersion(navigator.serviceWorker.controller).then(setSidebarVersion);
+      return;
+    }
+    if (reloading) return;
+    reloading = true;
+    window.location.reload();
+  });
+
+  navigator.serviceWorker.register('service-worker.js').then((registration) => {
+    getSwVersion(navigator.serviceWorker.controller).then(setSidebarVersion);
+
+    // Ada worker baru yang sudah selesai install & tinggal nunggu konfirmasi user.
+    if (registration.waiting && navigator.serviceWorker.controller) {
+      getSwVersion(registration.waiting).then(showUpdateBanner);
+    }
+
+    registration.addEventListener('updatefound', () => {
+      const newWorker = registration.installing;
+      if (!newWorker) return;
+      newWorker.addEventListener('statechange', () => {
+        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+          getSwVersion(newWorker).then(showUpdateBanner);
+        }
+      });
+    });
+
+    // App PWA biasanya dibiarkan terbuka lama di background — cek update tiap
+    // kali user balik buka lagi, bukan cuma pas pertama kali load.
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') registration.update().catch(() => {});
+    });
+  }).catch(() => {
+    // gagal daftar service worker tidak menghentikan aplikasi
+  });
+
+  const btnUpdateNow = document.getElementById('btnUpdateNow');
+  const btnUpdateLater = document.getElementById('btnUpdateLater');
+  if (btnUpdateNow) {
+    btnUpdateNow.addEventListener('click', () => {
+      navigator.serviceWorker.getRegistration().then((registration) => {
+        if (registration && registration.waiting) {
+          registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+        }
+      });
+      hideUpdateBanner();
+    });
+  }
+  if (btnUpdateLater) {
+    btnUpdateLater.addEventListener('click', hideUpdateBanner);
+  }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   initSidebar();
 
@@ -60,14 +164,13 @@ document.addEventListener('DOMContentLoaded', () => {
   Router.register('penerimaan', () => {
     initPenerimaanPage();
   });
+  Router.register('pemakaian', () => {
+    initPemakaianPage();
+  });
   Router.register('master-data', () => {
     initMasterDataPage();
   });
   Router.init();
 
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('service-worker.js').catch(() => {
-      // gagal daftar service worker tidak menghentikan aplikasi
-    });
-  }
+  initServiceWorker();
 });
