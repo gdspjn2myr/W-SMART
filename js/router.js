@@ -22,6 +22,14 @@ const Router = {
     document.querySelectorAll('.page').forEach((el) => {
       el.hidden = el.id !== 'page-' + page;
     });
+    const activeEl = document.getElementById('page-' + page);
+    if (activeEl) {
+      // Re-trigger animasi masuk tiap kali halaman ini ditampilkan (reflow paksa
+      // supaya class yang sama bisa dipasang ulang & animasi CSS jalan lagi).
+      activeEl.classList.remove('page-enter');
+      void activeEl.offsetWidth;
+      activeEl.classList.add('page-enter');
+    }
     document.querySelectorAll('.nav-item').forEach((el) => {
       el.classList.toggle('active', el.dataset.nav === page);
     });
