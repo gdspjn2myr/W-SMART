@@ -8,6 +8,8 @@ let masterDataLoaded = false;
 let selectedImage = null; // { imageBase64, mimeType } — hanya di memori, tidak pernah disimpan
 
 function initPenerimaanPage() {
+  loadMasterData(); // dipanggil tiap kali halaman ini dibuka — no-op kalau sudah pernah & belum di-invalidate
+
   if (penerimaanInitialized) return;
   penerimaanInitialized = true;
 
@@ -34,7 +36,6 @@ function initPenerimaanPage() {
 
   setKedatanganDisplay();
   addItemRow();
-  loadMasterData();
 }
 
 function setMode(mode) {
@@ -50,6 +51,7 @@ async function loadMasterData() {
     const [barangRes, supplierRes] = await Promise.all([Api.getMasterBarang(), Api.getSupplier()]);
     const listBarang = document.getElementById('listMasterBarang');
     listBarang.innerHTML = (barangRes.data || [])
+      .filter((b) => b.status !== 'Nonaktif')
       .map((b) => `<option value="${escapeHtml(b.kodeBarang)}">${escapeHtml(b.namaBarang)}</option>`)
       .join('');
 
