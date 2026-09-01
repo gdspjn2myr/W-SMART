@@ -99,7 +99,7 @@ function renderMdList() {
             ${it.jenis ? `<span class="md-badge-jenis ${jenisClass}">${escapeHtml(it.jenis)}</span>` : ''}
           </div>
           <div class="md-item-sub">
-            ${escapeHtml(it.satuan || '-')}${it.lokasiDefault ? ' · ' + escapeHtml(it.lokasiDefault) : ''}${it.area ? ' · Area ' + escapeHtml(it.area) : ''}
+            ${escapeHtml(it.satuan || '-')}${it.lokasiDefault ? ' · ' + escapeHtml(it.lokasiDefault) : ''}${it.area ? ' · Area ' + escapeHtml(it.area) : ''}${it.plant ? ' · Plant ' + escapeHtml(it.plant) : ''}
             · Min ${it.minStock} · ROP ${it.rop} · MAX ${it.max}
             ${ropOverMax ? '<span class="md-rop-warning">⚠ ROP &gt; MAX</span>' : ''}
             ${!ropOverMax && belumLengkap ? '<span class="badge-belum-master">⚠ Kategori &amp; Min/Max belum diisi</span>' : ''}
@@ -129,6 +129,7 @@ function openMdModal(item) {
   document.getElementById('mdLokasi').value = item ? (item.lokasiDefault || '') : '';
   document.getElementById('mdJenis').value = item ? (item.jenis || '') : '';
   document.getElementById('mdArea').value = item ? (item.area || '') : '';
+  document.getElementById('mdPlant').value = item ? (item.plant || '') : '';
   document.getElementById('mdAvgUsage').value = item ? item.avgUsage : 0;
   document.getElementById('mdLeadTime').value = item ? item.leadTime : 0;
   document.getElementById('mdMinStock').value = item ? item.minStock : 0;
@@ -192,6 +193,7 @@ async function handleMdSubmit(e) {
     lokasiDefault: document.getElementById('mdLokasi').value.trim(),
     jenis: document.getElementById('mdJenis').value,
     area: document.getElementById('mdArea').value.trim(),
+    plant: document.getElementById('mdPlant').value,
     avgUsage: Number(document.getElementById('mdAvgUsage').value) || 0,
     leadTime: Number(document.getElementById('mdLeadTime').value) || 0,
     minStock: minStock,
