@@ -33,10 +33,12 @@ const Api = {
   savePenerimaan: (payload) => callApi('savePenerimaan', payload),
   scanSPB: (payload) => callApi('scanSPB', payload),
   getDashboard: () => callApi('getDashboard'),
+  getStockBalance: (payload) => callApi('getStockBalance', payload),
   getRiwayat: (payload) => callApi('getRiwayat', payload),
   getMasterBarang: () => callApi('getMasterBarang'),
   saveMasterBarang: (payload) => callApi('saveMasterBarang', payload),
   toggleMasterBarangStatus: (payload) => callApi('toggleMasterBarangStatus', payload),
   savePemakaian: (payload) => callApi('savePemakaian', payload),
+  savePutaway: (payload) => callApi('savePutaway', payload),
   getSupplier: () => callApi('getSupplier')
 };
