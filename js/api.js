@@ -59,6 +59,7 @@ const Api = {
   getDashboard: () => callApi('getDashboard'),
   getStockBalance: (payload) => callApi('getStockBalance', payload),
   getRiwayat: (payload) => callApi('getRiwayat', payload),
+  getRiwayatTerpadu: (payload) => callApi('getRiwayatTerpadu', payload),
   getMasterBarang: () => callApi('getMasterBarang'),
   saveMasterBarang: (payload) => callApi('saveMasterBarang', payload),
   toggleMasterBarangStatus: (payload) => callApi('toggleMasterBarangStatus', payload),
