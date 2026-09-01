@@ -1,9 +1,11 @@
 // ============================================================================
 // SERVICE WORKER — cache app shell agar W-SMART bisa dibuka offline (PWA)
-// Naikkan CACHE_NAME setiap kali file di bawah diubah supaya cache ter-update.
+// Naikkan APP_VERSION setiap kali file di bawah diubah supaya cache ter-update
+// DAN supaya user dapat notif "Versi baru tersedia" di aplikasi.
 // ============================================================================
 
-const CACHE_NAME = 'wsmart-shell-v1.6';
+const APP_VERSION = '2.1.0';
+const CACHE_NAME = 'wsmart-shell-v' + APP_VERSION;
 const APP_SHELL = [
   './',
   './index.html',
@@ -14,6 +16,8 @@ const APP_SHELL = [
   './js/router.js',
   './js/dashboard.js',
   './js/penerimaan.js',
+  './js/master-data.js',
+  './js/pemakaian.js',
   './js/app.js',
   './icons/icon-192.png',
   './icons/icon-512.png'
@@ -23,7 +27,10 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL))
   );
-  self.skipWaiting();
+  // Sengaja TIDAK skipWaiting() di sini. Kalau ini update (bukan install pertama
+  // kali), worker baru harus nunggu ('waiting') sampai user pilih "Update Sekarang"
+  // di app.js — supaya user tahu ada versi baru & bisa pilih kapan reload, bukan
+  // tiba-tiba ganti versi sendiri di tengah dia lagi input data.
 });
 
 self.addEventListener('activate', (event) => {
@@ -33,6 +40,19 @@ self.addEventListener('activate', (event) => {
     )
   );
   self.clients.claim();
+});
+
+// Jembatan komunikasi dengan app.js: app.js minta versi (buat ditampilkan di
+// sidebar / banner update), atau perintahkan worker baru langsung aktif begitu
+// user klik "Update Sekarang".
+self.addEventListener('message', (event) => {
+  const data = event.data;
+  if (!data) return;
+  if (data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  } else if (data.type === 'GET_VERSION' && event.ports && event.ports[0]) {
+    event.ports[0].postMessage({ version: APP_VERSION });
+  }
 });
 
 self.addEventListener('fetch', (event) => {
