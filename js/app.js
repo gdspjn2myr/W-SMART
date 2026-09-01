@@ -11,6 +11,15 @@ function showToast(msg, type) {
   el.textContent = msg;
   el.className = 'toast' + (type ? ' ' + type : '');
   el.hidden = false;
+
+  // Feedback getar/bunyi nyambung ke SEMUA toast sukses/gagal di seluruh app
+  // (scan lokasi, simpan Barang Masuk/Put Away/Barang Keluar, dsb) lewat satu
+  // titik ini — bukan ditaruh manual di tiap halaman, biar konsisten & nggak
+  // ada yang kelewatan. Toast tipe 'info' sengaja dilewati (mis. "Mengecek
+  // update...") supaya nggak berisik untuk hal yang bukan hasil aksi.
+  if (type === 'success' && typeof feedbackSuccess === 'function') feedbackSuccess();
+  else if (type === 'error' && typeof feedbackError === 'function') feedbackError();
+
   void el.offsetWidth; // reflow supaya transisi masuk selalu jalan (walau toast sebelumnya baru saja hilang)
   el.classList.add('show');
   toastTimer = setTimeout(() => {
@@ -145,6 +154,35 @@ function initServiceWorker() {
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') registration.update().catch(() => {});
     });
+
+    // Klik nomor versi di sidebar -> cek update sekarang juga (manual), nggak
+    // nunggu visibilitychange atau interval browser. Kalau ada versi baru,
+    // banner "Versi baru tersedia" bakal muncul otomatis lewat listener
+    // 'updatefound' di atas; kalau nggak ada, kasih tahu sudah paling baru.
+    const footerBtn = document.getElementById('sidebarFooter');
+    if (footerBtn) {
+      let checkingUpdate = false;
+      footerBtn.addEventListener('click', async () => {
+        if (checkingUpdate) return;
+        checkingUpdate = true;
+        footerBtn.classList.add('checking');
+        showToast('Mengecek update...', 'info');
+        try {
+          await registration.update();
+          // Beri jeda sedikit supaya event 'updatefound' -> 'installed' (kalau ada
+          // versi baru) sempat kepicu duluan sebelum kita cek registration.waiting.
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+          if (!registration.waiting) {
+            showToast('Sudah pakai versi terbaru.', 'success');
+          }
+        } catch (err) {
+          showToast('Gagal cek update: ' + err.message, 'error');
+        } finally {
+          checkingUpdate = false;
+          footerBtn.classList.remove('checking');
+        }
+      });
+    }
   }).catch(() => {
     // gagal daftar service worker tidak menghentikan aplikasi
   });
@@ -192,6 +230,9 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   Router.register('qr-labels', () => {
     initQrLabelsPage();
+  });
+  Router.register('riwayat', () => {
+    initRiwayatPage();
   });
   Router.init();
 
