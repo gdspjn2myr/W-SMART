@@ -564,6 +564,22 @@
   </div>
 </div>
 
+<!-- Popup setelah simpan Barang Masuk: tawarkan lanjut Put Away sekarang atau nanti -->
+<div id="pnPutawayModalBackdrop" class="modal-backdrop" hidden></div>
+<div id="pnPutawayModal" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="pnPutawayModalTitle">
+  <div class="modal-card card">
+    <div class="modal-header">
+      <span id="pnPutawayModalTitle">Barang Masuk Tersimpan</span>
+    </div>
+    <p class="hint-text" id="pnPutawayModalText">Barang sudah tercatat. Lanjut Put Away sekarang untuk taruh ke bin/lokasi?</p>
+    <div class="pn-putaway-modal-actions">
+      <button type="button" id="btnPnPutawayNow" class="btn btn-primary btn-block">Ya, Put Away Sekarang</button>
+      <button type="button" id="btnPnPrintQr" class="btn btn-small btn-block">Cetak Label QR Dulu</button>
+      <button type="button" id="btnPnPutawayLater" class="btn-link">Nanti</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast" class="toast" hidden></div>
 
 <div id="qrScanOverlay" class="qr-scan-overlay" hidden>
