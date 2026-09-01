@@ -1,10 +1,13 @@
 // ============================================================================
 // MASTER DATA — daftar SKU + setting Min-Max/ROP per item.
-// Rumus (harus SAMA dengan hitungRopMaxMin_ di Code.gs — di sini cuma dipakai
-// untuk preview instan di form, angka final tetap dihitung ulang di server):
-//   ROP = (Avg Usage x Lead Time) + Safety Stock
-//   MAX = ROP + (Avg Usage x Extra Day)
-//   Min Stock = Safety Stock
+// Min Stock & Max Stock DIISI LANGSUNG (sudah ditentukan perusahaan) — bukan
+// hasil hitungan. Yang dihitung otomatis cuma ROP (titik order/buffer), rumus
+// (harus SAMA dengan hitungRop_ di Code.gs — di sini cuma dipakai untuk preview
+// instan di form, angka final tetap dihitung ulang di server):
+//   ROP = Min Stock + (Avg Usage x Lead Time)
+// Kalau ROP hasil hitungan lebih besar dari Max Stock, berarti rentang Min-Max
+// dari perusahaan kekecilan untuk pola pemakaian & lead time item ini — form
+// akan kasih peringatan (lihat updateMdPreview).
 // ============================================================================
 
 let mdInitialized = false;
@@ -28,7 +31,7 @@ function initMasterDataPage() {
       renderMdList();
     });
 
-    ['mdAvgUsage', 'mdLeadTime', 'mdSafetyStock', 'mdExtraDay'].forEach((id) => {
+    ['mdAvgUsage', 'mdLeadTime', 'mdMinStock', 'mdMaxStock'].forEach((id) => {
       document.getElementById(id).addEventListener('input', updateMdPreview);
     });
 
@@ -81,6 +84,11 @@ function renderMdList() {
     const kat = (it.kategori || 'B').toUpperCase();
     const katClass = kat === 'A' ? 'md-badge-a' : kat === 'C' ? 'md-badge-c' : 'md-badge-b';
     const isAktif = it.status !== 'Nonaktif';
+    const ropOverMax = it.max > 0 && it.rop > it.max;
+    // Min & Max sama-sama 0 = belum pernah dilengkapi manual — kombinasi ini
+    // yang dipakai buat nandain item hasil auto-daftar dari Barang Masuk (lihat
+    // autoRegisterMasterBarang_ di Code.gs), bukan cuma item ROP > MAX.
+    const belumLengkap = it.minStock === 0 && it.max === 0;
     return `
       <div class="md-item">
         <div class="md-item-main">
@@ -90,7 +98,9 @@ function renderMdList() {
           </div>
           <div class="md-item-sub">
             ${escapeHtml(it.satuan || '-')}${it.lokasiDefault ? ' · ' + escapeHtml(it.lokasiDefault) : ''}
-            · ROP ${it.rop} · MAX ${it.max} · Min ${it.minStock}
+            · Min ${it.minStock} · ROP ${it.rop} · MAX ${it.max}
+            ${ropOverMax ? '<span class="md-rop-warning">⚠ ROP &gt; MAX</span>' : ''}
+            ${!ropOverMax && belumLengkap ? '<span class="badge-belum-master">⚠ Kategori &amp; Min/Max belum diisi</span>' : ''}
           </div>
         </div>
         <div class="md-item-actions">
@@ -117,8 +127,8 @@ function openMdModal(item) {
   document.getElementById('mdLokasi').value = item ? (item.lokasiDefault || '') : '';
   document.getElementById('mdAvgUsage').value = item ? item.avgUsage : 0;
   document.getElementById('mdLeadTime').value = item ? item.leadTime : 0;
-  document.getElementById('mdSafetyStock').value = item ? item.safetyStock : 0;
-  document.getElementById('mdExtraDay').value = item ? item.extraDay : 0;
+  document.getElementById('mdMinStock').value = item ? item.minStock : 0;
+  document.getElementById('mdMaxStock').value = item ? item.max : 0;
   updateMdPreview();
 
   document.getElementById('mdModalBackdrop').hidden = false;
@@ -135,16 +145,22 @@ function closeMdModal() {
 function updateMdPreview() {
   const avgUsage = Number(document.getElementById('mdAvgUsage').value) || 0;
   const leadTime = Number(document.getElementById('mdLeadTime').value) || 0;
-  const safetyStock = Number(document.getElementById('mdSafetyStock').value) || 0;
-  const extraDay = Number(document.getElementById('mdExtraDay').value) || 0;
+  const minStock = Number(document.getElementById('mdMinStock').value) || 0;
+  const maxStock = Number(document.getElementById('mdMaxStock').value) || 0;
 
-  const rop = Math.round(avgUsage * leadTime + safetyStock);
-  const max = Math.round(rop + avgUsage * extraDay);
-  const minStock = Math.round(safetyStock);
+  const rop = Math.round(minStock + avgUsage * leadTime);
+  const buffer = rop - minStock;
 
   document.getElementById('mdPreviewRop').textContent = rop;
-  document.getElementById('mdPreviewMax').textContent = max;
-  document.getElementById('mdPreviewMin').textContent = minStock;
+  document.getElementById('mdPreviewBuffer').textContent = buffer;
+
+  const warningEl = document.getElementById('mdPreviewWarning');
+  if (maxStock > 0 && rop > maxStock) {
+    warningEl.textContent = `⚠ ROP (${rop}) melebihi Max Stock (${maxStock}). Rentang Min-Max dari perusahaan kemungkinan kekecilan untuk pemakaian & lead time item ini — pertimbangkan order lebih sering, percepat lead time, atau ajukan review Min-Max ke perusahaan.`;
+    warningEl.hidden = false;
+  } else {
+    warningEl.hidden = true;
+  }
 }
 
 async function handleMdSubmit(e) {
@@ -157,6 +173,13 @@ async function handleMdSubmit(e) {
     return;
   }
 
+  const minStock = Number(document.getElementById('mdMinStock').value) || 0;
+  const maxStock = Number(document.getElementById('mdMaxStock').value) || 0;
+  if (maxStock > 0 && maxStock < minStock) {
+    showToast('Max Stock tidak boleh lebih kecil dari Min Stock.', 'error');
+    return;
+  }
+
   const payload = {
     kodeBarang: kode,
     namaBarang: nama,
@@ -165,8 +188,8 @@ async function handleMdSubmit(e) {
     lokasiDefault: document.getElementById('mdLokasi').value.trim(),
     avgUsage: Number(document.getElementById('mdAvgUsage').value) || 0,
     leadTime: Number(document.getElementById('mdLeadTime').value) || 0,
-    safetyStock: Number(document.getElementById('mdSafetyStock').value) || 0,
-    extraDay: Number(document.getElementById('mdExtraDay').value) || 0,
+    minStock: minStock,
+    maxStock: maxStock,
     status: mdEditingKode
       ? (mdItems.find((it) => it.kodeBarang === mdEditingKode) || {}).status || 'Aktif'
       : 'Aktif'
@@ -181,7 +204,11 @@ async function handleMdSubmit(e) {
     const idx = mdItems.findIndex((it) => it.kodeBarang === res.item.kodeBarang);
     if (idx === -1) mdItems.push(res.item); else mdItems[idx] = res.item;
     renderMdList();
-    showToast('Item tersimpan.', 'success');
+    if (res.warning) {
+      showToast(res.warning, 'error');
+    } else {
+      showToast('Item tersimpan.', 'success');
+    }
     closeMdModal();
     masterDataLoaded = false; // supaya autocomplete di Penerimaan ikut ter-refresh
   } catch (err) {
