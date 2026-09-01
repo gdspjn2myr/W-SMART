@@ -60,6 +60,9 @@ document.addEventListener('DOMContentLoaded', () => {
   Router.register('penerimaan', () => {
     initPenerimaanPage();
   });
+  Router.register('master-data', () => {
+    initMasterDataPage();
+  });
   Router.init();
 
   if ('serviceWorker' in navigator) {
