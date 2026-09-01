@@ -75,6 +75,17 @@ function setSidebarVersion(v) {
   if (el && v) el.textContent = 'v' + v;
 }
 
+// Worker mana pun yang lagi ada boleh ditanya versinya — script service worker
+// sudah daftarin listener 'message' di scope paling atas (bukan di dalam event
+// 'install'), jadi TETAP bisa jawab GET_VERSION walau masih 'installing' atau
+// bahkan kalau proses cache.addAll()-nya di 'install' gagal. Sebelumnya cuma
+// nanya ke `controller`, yang kosong terus di kunjungan pertama sampai
+// 'controllerchange' kepicu — kalau itu nggak pernah kepicu (mis. registrasi SW
+// gagal total), versi di sidebar nggak pernah keisi & macet di placeholder.
+function pickAnySwWorker(registration) {
+  return navigator.serviceWorker.controller || registration.active || registration.waiting || registration.installing || null;
+}
+
 function showUpdateBanner(version) {
   const banner = document.getElementById('updateBanner');
   if (!banner) return;
@@ -112,7 +123,7 @@ function initServiceWorker() {
   });
 
   navigator.serviceWorker.register('service-worker.js').then((registration) => {
-    getSwVersion(navigator.serviceWorker.controller).then(setSidebarVersion);
+    getSwVersion(pickAnySwWorker(registration)).then((v) => { if (v) setSidebarVersion(v); });
 
     // Ada worker baru yang sudah selesai install & tinggal nunggu konfirmasi user.
     if (registration.waiting && navigator.serviceWorker.controller) {
