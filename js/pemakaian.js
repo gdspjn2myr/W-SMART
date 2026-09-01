@@ -2,9 +2,15 @@
 // PEMAKAIAN BARANG (barang keluar) — kebalikan dari Penerimaan.
 // Kode barang dicocokkan ke masterBarangCache (diisi oleh loadMasterData() di
 // js/penerimaan.js) supaya Nama & Satuan bisa terisi otomatis saat kode dipilih.
+//
+// Lokasi/Bin OPSIONAL — kalau user scan QR lokasi sebelum ambil barang, itu
+// dicatat (dipakai buat breakdown stock per bin di Stock Balance). Kalau tidak
+// di-scan (manual), tetap boleh disimpan tanpa lokasi — scan cuma prioritas,
+// bukan wajib (sesuai konfirmasi user).
 // ============================================================================
 
 let pemakaianInitialized = false;
+let pmLokasi = '';
 
 function initPemakaianPage() {
   loadMasterData(); // pastikan datalist #listMasterBarang & masterBarangCache terisi
@@ -14,9 +20,31 @@ function initPemakaianPage() {
 
     document.getElementById('pmKode').addEventListener('input', handlePmKodeInput);
     document.getElementById('formPemakaian').addEventListener('submit', handlePmSubmit);
+
+    document.getElementById('btnScanPmLokasi').addEventListener('click', () => {
+      openQrScanner(
+        (value) => { setPmLokasi(value); showToast('Lokasi terbaca: ' + value, 'success'); },
+        (err) => showToast(err, 'error')
+      );
+    });
+    document.getElementById('btnClearPmLokasi').addEventListener('click', () => setPmLokasi(''));
   }
 
   setPmTanggalDisplay();
+}
+
+function setPmLokasi(value) {
+  pmLokasi = value;
+  const badge = document.getElementById('pmLokasiBadge');
+  const clearBtn = document.getElementById('btnClearPmLokasi');
+  if (value) {
+    badge.textContent = 'Dari: ' + value;
+    badge.hidden = false;
+    clearBtn.hidden = false;
+  } else {
+    badge.hidden = true;
+    clearBtn.hidden = true;
+  }
 }
 
 function setPmTanggalDisplay() {
@@ -66,7 +94,8 @@ async function handlePmSubmit(e) {
     qty,
     satuan: document.getElementById('pmSatuan').value.trim(),
     teknisi,
-    keterangan: document.getElementById('pmKeterangan').value.trim()
+    keterangan: document.getElementById('pmKeterangan').value.trim(),
+    lokasi: pmLokasi
   };
 
   const submitBtn = e.target.querySelector('button[type="submit"]');
@@ -90,4 +119,5 @@ function resetPmForm() {
   document.getElementById('formPemakaian').reset();
   setPmTanggalDisplay();
   document.getElementById('pmNamaHint').hidden = true;
+  setPmLokasi('');
 }
