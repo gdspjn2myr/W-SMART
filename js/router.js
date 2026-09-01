@@ -33,7 +33,7 @@ const Router = {
     document.querySelectorAll('.nav-item').forEach((el) => {
       el.classList.toggle('active', el.dataset.nav === page);
     });
-    const titles = { dashboard: 'Dashboard', penerimaan: 'Input Barang' };
+    const titles = { dashboard: 'Dashboard', penerimaan: 'Input Barang', 'master-data': 'Master Data' };
     document.getElementById('pageTitle').textContent = titles[page] || '';
     if (typeof this.routes[page] === 'function') {
       this.routes[page]();
