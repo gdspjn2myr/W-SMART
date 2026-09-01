@@ -89,15 +89,17 @@ function renderMdList() {
     // yang dipakai buat nandain item hasil auto-daftar dari Barang Masuk (lihat
     // autoRegisterMasterBarang_ di Code.gs), bukan cuma item ROP > MAX.
     const belumLengkap = it.minStock === 0 && it.max === 0;
+    const jenisClass = it.jenis === 'OBS' ? 'md-badge-jenis-obs' : it.jenis === 'Fast Moving' ? 'md-badge-jenis-fm' : '';
     return `
       <div class="md-item">
         <div class="md-item-main">
           <div class="md-item-title">
             <span class="md-badge ${katClass}">${escapeHtml(kat)}</span>
             ${escapeHtml(it.kodeBarang)} — ${escapeHtml(it.namaBarang)}
+            ${it.jenis ? `<span class="md-badge-jenis ${jenisClass}">${escapeHtml(it.jenis)}</span>` : ''}
           </div>
           <div class="md-item-sub">
-            ${escapeHtml(it.satuan || '-')}${it.lokasiDefault ? ' · ' + escapeHtml(it.lokasiDefault) : ''}
+            ${escapeHtml(it.satuan || '-')}${it.lokasiDefault ? ' · ' + escapeHtml(it.lokasiDefault) : ''}${it.area ? ' · Area ' + escapeHtml(it.area) : ''}
             · Min ${it.minStock} · ROP ${it.rop} · MAX ${it.max}
             ${ropOverMax ? '<span class="md-rop-warning">⚠ ROP &gt; MAX</span>' : ''}
             ${!ropOverMax && belumLengkap ? '<span class="badge-belum-master">⚠ Kategori &amp; Min/Max belum diisi</span>' : ''}
@@ -125,6 +127,8 @@ function openMdModal(item) {
   document.getElementById('mdSatuan').value = item ? (item.satuan || '') : '';
   document.getElementById('mdKategori').value = item ? (item.kategori || 'B') : 'B';
   document.getElementById('mdLokasi').value = item ? (item.lokasiDefault || '') : '';
+  document.getElementById('mdJenis').value = item ? (item.jenis || '') : '';
+  document.getElementById('mdArea').value = item ? (item.area || '') : '';
   document.getElementById('mdAvgUsage').value = item ? item.avgUsage : 0;
   document.getElementById('mdLeadTime').value = item ? item.leadTime : 0;
   document.getElementById('mdMinStock').value = item ? item.minStock : 0;
@@ -186,6 +190,8 @@ async function handleMdSubmit(e) {
     satuan: document.getElementById('mdSatuan').value.trim(),
     kategori: document.getElementById('mdKategori').value,
     lokasiDefault: document.getElementById('mdLokasi').value.trim(),
+    jenis: document.getElementById('mdJenis').value,
+    area: document.getElementById('mdArea').value.trim(),
     avgUsage: Number(document.getElementById('mdAvgUsage').value) || 0,
     leadTime: Number(document.getElementById('mdLeadTime').value) || 0,
     minStock: minStock,
