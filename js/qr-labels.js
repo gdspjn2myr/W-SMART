@@ -12,6 +12,7 @@ let qrMode = 'barang'; // 'barang' | 'bin'
 let qrBarangItems = [];
 let qrBarangSelected = new Set();
 let qrBarangSearchText = '';
+let qrLabelsPendingItems = null; // dipakai buat "cetak QR langsung" dari halaman lain (lihat goToQrLabelsForItems)
 
 function initQrLabelsPage() {
   if (!qrLabelsInitialized) {
@@ -29,7 +30,27 @@ function initQrLabelsPage() {
     document.getElementById('btnGenerateQrBin').addEventListener('click', generateQrBinLabels);
     document.getElementById('btnPrintQrLabels').addEventListener('click', () => window.print());
   }
+
+  if (qrLabelsPendingItems && qrLabelsPendingItems.length) {
+    const items = qrLabelsPendingItems;
+    qrLabelsPendingItems = null;
+    setQrMode('barang');
+    renderQrLabels(items.map((it) => ({ code: it.kode, title: it.kode, sub: it.namaBarang || '' })));
+  }
+
   loadQrBarangItems();
+}
+
+/**
+ * Dipanggil dari halaman lain (Barang Masuk, Put Away) buat langsung cetak QR
+ * item tertentu tanpa harus pilih manual dari daftar Master Data — berguna
+ * juga untuk barang yang belum terdaftar di Master Data (belumAdaMaster),
+ * karena di sini nggak bergantung pada daftar Api.getMasterBarang().
+ * items = [{ kode, namaBarang }]
+ */
+function goToQrLabelsForItems(items) {
+  qrLabelsPendingItems = items;
+  location.hash = '#/qr-labels';
 }
 
 function setQrMode(mode) {
