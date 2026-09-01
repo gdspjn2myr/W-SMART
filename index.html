@@ -15,13 +15,33 @@
 
 <header class="topbar">
   <div class="topbar-inner">
-    <img src="icons/icon-192.png" class="topbar-logo" alt="Logo W-SMART">
-    <div class="topbar-text">
-      <div class="topbar-title">W-SMART</div>
-      <div class="topbar-subtitle" id="pageTitle">Dashboard</div>
-    </div>
+    <button type="button" id="btnMenuToggle" class="menu-toggle" aria-label="Buka menu" aria-expanded="false" aria-controls="sidebar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
+    </button>
+    <div class="topbar-title" id="pageTitle">Dashboard</div>
   </div>
 </header>
+
+<aside id="sidebar" class="sidebar">
+  <div class="sidebar-brand">
+    <img src="icons/icon-192.png" class="sidebar-logo" alt="Logo W-SMART">
+    <div>
+      <div class="sidebar-title">W-SMART</div>
+      <div class="sidebar-subtitle">Spare Part Inventory</div>
+    </div>
+  </div>
+  <nav class="sidebar-nav">
+    <a href="#/dashboard" class="nav-item" data-nav="dashboard">
+      <svg viewBox="0 0 24 24" class="nav-icon"><path d="M3 11.5 12 4l9 7.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.5 10v9a1 1 0 0 0 1 1H10v-6h4v6h3.5a1 1 0 0 0 1-1v-9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span>Dashboard</span>
+    </a>
+    <a href="#/penerimaan" class="nav-item" data-nav="penerimaan">
+      <svg viewBox="0 0 24 24" class="nav-icon"><path d="M3 7.5 12 3l9 4.5v9L12 21l-9-4.5v-9Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M3 7.5 12 12l9-4.5M12 12v9" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+      <span>Input Barang</span>
+    </a>
+  </nav>
+</aside>
+<div id="sidebarBackdrop" class="sidebar-backdrop" hidden></div>
 
 <main id="app" class="app-content">
 
@@ -30,34 +50,60 @@
 
     <div class="stat-grid">
       <div class="stat-card">
-        <div class="stat-label">Diterima Hari Ini</div>
-        <div class="stat-value" id="statHariIni">0</div>
-        <div class="stat-unit">pcs</div>
+        <div class="stat-icon stat-icon-a">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M3 9h18M8 3v3M16 3v3"/></svg>
+        </div>
+        <div class="stat-body">
+          <div class="stat-label">Diterima Hari Ini</div>
+          <div class="stat-value" id="statHariIni">0</div>
+          <div class="stat-unit">pcs</div>
+        </div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">Diterima Bulan Ini</div>
-        <div class="stat-value" id="statBulanIni">0</div>
-        <div class="stat-unit">pcs</div>
+        <div class="stat-icon stat-icon-b">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8 12 3 3 8v8l9 5 9-5Z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg>
+        </div>
+        <div class="stat-body">
+          <div class="stat-label">Diterima Bulan Ini</div>
+          <div class="stat-value" id="statBulanIni">0</div>
+          <div class="stat-unit">pcs</div>
+        </div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">Transaksi Bulan Ini</div>
-        <div class="stat-value" id="statTransaksi">0</div>
-        <div class="stat-unit">transaksi</div>
+        <div class="stat-icon stat-icon-c">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+        </div>
+        <div class="stat-body">
+          <div class="stat-label">Transaksi Bulan Ini</div>
+          <div class="stat-value" id="statTransaksi">0</div>
+          <div class="stat-unit">transaksi</div>
+        </div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">SKU Bulan Ini</div>
-        <div class="stat-value" id="statSku">0</div>
-        <div class="stat-unit">jenis barang</div>
+        <div class="stat-icon stat-icon-d">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 12.6 12.7 4.7a2 2 0 0 0-1.4-.6H5a1 1 0 0 0-1 1v6.3a2 2 0 0 0 .6 1.4l7.9 7.9a2 2 0 0 0 2.8 0l5.3-5.3a2 2 0 0 0 0-2.8Z"/><circle cx="8" cy="8.5" r="1.3"/></svg>
+        </div>
+        <div class="stat-body">
+          <div class="stat-label">SKU Bulan Ini</div>
+          <div class="stat-value" id="statSku">0</div>
+          <div class="stat-unit">jenis barang</div>
+        </div>
       </div>
     </div>
 
     <div class="card">
-      <div class="card-header">Penerimaan 7 Hari Terakhir</div>
+      <div class="card-header">
+        <svg viewBox="0 0 24 24" class="card-header-icon" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/></svg>
+        Penerimaan 7 Hari Terakhir
+      </div>
       <canvas id="chartMingguan" height="160"></canvas>
     </div>
 
     <div class="card">
-      <div class="card-header">Riwayat Penerimaan Terbaru</div>
+      <div class="card-header">
+        <svg viewBox="0 0 24 24" class="card-header-icon" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v4l3 2"/><circle cx="12" cy="12" r="9"/></svg>
+        Riwayat Penerimaan Terbaru
+      </div>
       <div id="riwayatList" class="riwayat-list">
         <div class="empty-state">Belum ada data penerimaan.</div>
       </div>
@@ -150,17 +196,6 @@
   </section>
 
 </main>
-
-<nav class="bottom-nav">
-  <a href="#/dashboard" class="nav-item" data-nav="dashboard">
-    <svg viewBox="0 0 24 24" class="nav-icon"><path d="M3 11.5 12 4l9 7.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.5 10v9a1 1 0 0 0 1 1H10v-6h4v6h3.5a1 1 0 0 0 1-1v-9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-    <span>Dashboard</span>
-  </a>
-  <a href="#/penerimaan" class="nav-item" data-nav="penerimaan">
-    <svg viewBox="0 0 24 24" class="nav-icon"><path d="M3 7.5 12 3l9 4.5v9L12 21l-9-4.5v-9Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M3 7.5 12 12l9-4.5M12 12v9" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
-    <span>Penerimaan</span>
-  </a>
-</nav>
 
 <div id="toast" class="toast" hidden></div>
 
