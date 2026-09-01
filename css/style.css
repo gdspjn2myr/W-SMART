@@ -708,6 +708,76 @@ body {
 .kt-legend-item strong { margin-left: auto; color: var(--navy); }
 .kt-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
 
+/* ---------- Stock Balance ---------- */
+.sb-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: var(--text-muted);
+  padding: 0 2px 12px;
+}
+#sbCount { font-weight: 700; color: var(--navy); }
+
+.sb-list { display: flex; flex-direction: column; gap: 10px; }
+.sb-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  animation: fadeIn .25s ease;
+}
+.sb-item-main { min-width: 0; }
+.sb-item-title {
+  font-weight: 600;
+  font-size: 13.5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sb-item-sub { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+.sb-belum-mapping {
+  display: inline-block;
+  margin-left: 6px;
+  color: #a06a00;
+  font-weight: 700;
+}
+.sb-item-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 5px;
+  flex-shrink: 0;
+}
+.sb-onhand {
+  font-size: 19px;
+  font-weight: 800;
+  color: var(--navy);
+  line-height: 1;
+}
+.sb-onhand span {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-left: 3px;
+}
+.sb-badge {
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.sb-badge-out { background: #ece9f3; color: #4b3b8a; }
+.sb-badge-reorder { background: #fdeaea; color: var(--red); }
+.sb-badge-near { background: #fff3d6; color: #a06a00; }
+.sb-badge-over { background: #e6edfb; color: var(--navy); }
+.sb-badge-normal { background: #e6f7ee; color: var(--green); }
+
 /* ---------- Master Data ---------- */
 .md-toolbar {
   display: flex;
@@ -757,6 +827,12 @@ body {
   font-size: 12px;
   color: var(--text-muted);
   margin-top: 4px;
+}
+.md-rop-warning {
+  display: inline-block;
+  margin-left: 6px;
+  color: var(--red);
+  font-weight: 700;
 }
 .md-item-actions {
   display: flex;
@@ -813,13 +889,13 @@ body {
 }
 .md-preview {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 10px;
   background: #f8f9fd;
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 12px;
-  margin-bottom: 14px;
+  margin-bottom: 8px;
 }
 .md-preview-item {
   text-align: center;
@@ -835,6 +911,22 @@ body {
 .md-preview-item strong {
   font-size: 18px;
   color: var(--navy);
+}
+.md-preview-warning {
+  background: rgba(214,69,69,0.1);
+  color: var(--red);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 10px;
+  line-height: 1.4;
+}
+.md-preview-hint {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  line-height: 1.45;
+  margin: 0 0 14px;
 }
 
 /* ---------- Modal ---------- */
@@ -892,6 +984,121 @@ body {
   line-height: 1;
   cursor: pointer;
 }
+
+/* ---------- Scan Lokasi (Put Away & Pemakaian) ---------- */
+.scan-lokasi-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.btn-scan {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.lokasi-badge {
+  background: #e6edfb;
+  color: var(--navy);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 5px 10px;
+  border-radius: 999px;
+}
+.btn-clear-lokasi {
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 50%;
+  background: #eef1f8;
+  color: var(--text-muted);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.qr-scan-overlay {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+/* Author `display:flex` di atas dan browser default `[hidden]{display:none}`
+   sama-sama specificity (0,1,0) — author menang di UA tie, jadi overlay ini
+   akan TETAP kelihatan (dan nge-block klik) walau atribut hidden terpasang,
+   kalau baris di bawah ini tidak ada. */
+.qr-scan-overlay[hidden] { display: none; }
+.qr-scan-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.qr-scan-frame {
+  position: relative;
+  width: 68vw;
+  max-width: 280px;
+  aspect-ratio: 1 / 1;
+  border: 3px solid var(--gold);
+  border-radius: 18px;
+  box-shadow: 0 0 0 999px rgba(0,0,0,0.45);
+}
+.qr-scan-hint {
+  position: absolute;
+  bottom: 64px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  color: #fff;
+  font-size: 13.5px;
+  font-weight: 600;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+}
+.qr-scan-close {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255,255,255,0.16);
+  color: #fff;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+/* ---------- Put Away list ---------- */
+.pw-list { display: flex; flex-direction: column; gap: 8px; }
+.pw-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: border-color .15s ease, background .15s ease;
+}
+.pw-item:hover, .pw-item:active { border-color: var(--navy); background: #f8f9fd; }
+.pw-item-title { font-weight: 600; font-size: 13.5px; }
+.pw-item-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.pw-item-qty {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--navy);
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.pw-item-qty span { font-size: 10.5px; font-weight: 600; color: var(--text-muted); margin-left: 3px; }
 
 @media (min-width: 640px) {
   .modal { align-items: center; padding: 20px; }
