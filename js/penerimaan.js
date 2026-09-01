@@ -18,7 +18,12 @@ function initPenerimaanPage() {
   document.getElementById('btnAddItem').addEventListener('click', () => addItemRow());
   document.getElementById('itemsContainer').addEventListener('click', (e) => {
     if (e.target.classList.contains('item-remove')) {
-      e.target.closest('.item-row').remove();
+      const row = e.target.closest('.item-row');
+      if (!row) return;
+      row.classList.add('removing');
+      row.addEventListener('transitionend', () => row.remove(), { once: true });
+      // Fallback jaga-jaga kalau transitionend tidak terpanggil (mis. reduced-motion).
+      setTimeout(() => { if (row.isConnected) row.remove(); }, 320);
     }
   });
 
