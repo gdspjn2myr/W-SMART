@@ -179,6 +179,9 @@ document.addEventListener('DOMContentLoaded', () => {
   Router.register('master-data', () => {
     initMasterDataPage();
   });
+  Router.register('qr-labels', () => {
+    initQrLabelsPage();
+  });
   Router.init();
 
   initServiceWorker();
