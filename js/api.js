@@ -35,5 +35,7 @@ const Api = {
   getDashboard: () => callApi('getDashboard'),
   getRiwayat: (payload) => callApi('getRiwayat', payload),
   getMasterBarang: () => callApi('getMasterBarang'),
+  saveMasterBarang: (payload) => callApi('saveMasterBarang', payload),
+  toggleMasterBarangStatus: (payload) => callApi('toggleMasterBarangStatus', payload),
   getSupplier: () => callApi('getSupplier')
 };
