@@ -55,6 +55,10 @@
       <svg viewBox="0 0 24 24" class="nav-icon"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4h13A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18.5v-13Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M4 9.5h16M9 9.5V20" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
       <span>Master Data</span>
     </a>
+    <a href="#/qr-labels" class="nav-item" data-nav="qr-labels">
+      <svg viewBox="0 0 24 24" class="nav-icon"><rect x="3.5" y="3.5" width="7" height="7" rx="1" fill="none" stroke="currentColor" stroke-width="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="1" fill="none" stroke="currentColor" stroke-width="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="1" fill="none" stroke="currentColor" stroke-width="2"/><path d="M14.5 14.5h3M17.5 14.5v3M20.5 14.5v6M14.5 20.5h3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span>Cetak Label QR</span>
+    </a>
   </nav>
   <div class="sidebar-footer">W-SMART <span id="sidebarVersion">v…</span></div>
 </aside>
@@ -437,6 +441,53 @@
 
   </section>
 
+  <!-- ============================= QR LABELS ============================= -->
+  <section id="page-qr-labels" class="page" hidden>
+
+    <div class="mode-switch">
+      <button type="button" class="mode-btn active" id="btnQrModeBarang">QR Barang</button>
+      <button type="button" class="mode-btn" id="btnQrModeBin">QR Bin/Lokasi</button>
+    </div>
+
+    <div id="qrPanelBarang" class="card">
+      <div class="card-header">
+        <svg class="card-header-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3.5" y="3.5" width="7" height="7" rx="1"/><rect x="13.5" y="3.5" width="7" height="7" rx="1"/><rect x="3.5" y="13.5" width="7" height="7" rx="1"/></svg>
+        Pilih Barang untuk Label QR
+      </div>
+      <p class="hint-text">QR akan berisi Kode Barang — sama seperti yang dibaca fitur scan di Put Away &amp; Barang Keluar. Tempel di rak/box, pilih beberapa item lalu cetak sekaligus.</p>
+      <div class="md-toolbar">
+        <input type="search" id="qrBarangSearch" class="md-search" placeholder="Cari kode / nama barang...">
+        <button type="button" id="btnQrBarangSelectAll" class="btn btn-small">Pilih Semua</button>
+      </div>
+      <div id="qrBarangList" class="pw-list">
+        <div class="empty-state">Memuat data barang...</div>
+      </div>
+      <button type="button" id="btnGenerateQrBarang" class="btn btn-primary btn-block">Buat Label QR</button>
+    </div>
+
+    <div id="qrPanelBin" class="card" hidden>
+      <div class="card-header">
+        <svg class="card-header-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="7" height="7" rx="1"/><rect x="13" y="4" width="7" height="7" rx="1"/><rect x="4" y="13" width="7" height="7" rx="1"/></svg>
+        Kode Bin/Lokasi untuk Label QR
+      </div>
+      <p class="hint-text">Satu kode bin per baris (mis. SP-R01-01). QR ini yang dibaca lewat tombol "Scan" di Put Away &amp; Barang Keluar untuk isi Lokasi/Bin.</p>
+      <div class="form-row">
+        <label>Daftar Kode Bin</label>
+        <textarea id="qrBinCodes" rows="6" placeholder="SP-R01-01&#10;SP-R01-02&#10;SP-R02-01"></textarea>
+      </div>
+      <button type="button" id="btnGenerateQrBin" class="btn btn-primary btn-block">Buat Label QR</button>
+    </div>
+
+    <div id="qrLabelResultCard" class="card" hidden>
+      <div class="card-header qr-label-result-header">
+        <span>Label Siap Cetak (<span id="qrLabelCount">0</span>)</span>
+        <button type="button" id="btnPrintQrLabels" class="btn btn-small">Cetak / Simpan PDF</button>
+      </div>
+      <div id="qrLabelGrid" class="qr-label-grid"></div>
+    </div>
+
+  </section>
+
 </main>
 
 <!-- Modal Tambah/Edit Item Master Data -->
@@ -568,6 +619,8 @@
 <script src="js/pemakaian.js"></script>
 <script src="js/stock-balance.js"></script>
 <script src="js/master-data.js"></script>
+<script src="js/qrcode-lib.js"></script>
+<script src="js/qr-labels.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>
