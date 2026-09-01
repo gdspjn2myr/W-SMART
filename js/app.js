@@ -158,14 +158,23 @@ function initServiceWorker() {
 document.addEventListener('DOMContentLoaded', () => {
   initSidebar();
 
+  const btnCloseQrScan = document.getElementById('btnCloseQrScan');
+  if (btnCloseQrScan) btnCloseQrScan.addEventListener('click', closeQrScanner);
+
   Router.register('dashboard', () => {
     if (!dashboardLoadedOnce) loadDashboard();
   });
   Router.register('penerimaan', () => {
     initPenerimaanPage();
   });
+  Router.register('putaway', () => {
+    initPutawayPage();
+  });
   Router.register('pemakaian', () => {
     initPemakaianPage();
+  });
+  Router.register('stock-balance', () => {
+    initStockBalancePage();
   });
   Router.register('master-data', () => {
     initMasterDataPage();
