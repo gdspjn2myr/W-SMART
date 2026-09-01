@@ -37,13 +37,18 @@
     </a>
     <a href="#/penerimaan" class="nav-item" data-nav="penerimaan">
       <svg viewBox="0 0 24 24" class="nav-icon"><path d="M3 7.5 12 3l9 4.5v9L12 21l-9-4.5v-9Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M3 7.5 12 12l9-4.5M12 12v9" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
-      <span>Input Barang</span>
+      <span>Barang Masuk</span>
+    </a>
+    <a href="#/pemakaian" class="nav-item" data-nav="pemakaian">
+      <svg viewBox="0 0 24 24" class="nav-icon"><path d="M12 3v12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="m7 10 5 5 5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span>Barang Keluar</span>
     </a>
     <a href="#/master-data" class="nav-item" data-nav="master-data">
       <svg viewBox="0 0 24 24" class="nav-icon"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4h13A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18.5v-13Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M4 9.5h16M9 9.5V20" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
       <span>Master Data</span>
     </a>
   </nav>
+  <div class="sidebar-footer">W-SMART <span id="sidebarVersion">v…</span></div>
 </aside>
 <div id="sidebarBackdrop" class="sidebar-backdrop" hidden></div>
 
@@ -51,6 +56,70 @@
 
   <!-- ============================= DASHBOARD ============================= -->
   <section id="page-dashboard" class="page">
+
+    <div class="stat-grid" id="stockStatGrid">
+      <div class="stat-card">
+        <div class="stat-icon stat-icon-a">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4h13A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18.5v-13Z"/><path d="M4 9.5h16M9 9.5V20"/></svg>
+        </div>
+        <div class="stat-body">
+          <div class="stat-label">Total SKU</div>
+          <div class="stat-value" id="statTotalSku">0</div>
+          <div class="stat-unit">item aktif</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon stat-icon-normal">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8.5 12.5 2.5 2.5 4.5-5"/></svg>
+        </div>
+        <div class="stat-body">
+          <div class="stat-label">Normal</div>
+          <div class="stat-value" id="statStokNormal">0</div>
+          <div class="stat-unit" id="statStokNormalPct">0%</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon stat-icon-near">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M10.3 3.9 2.5 17.5a1.5 1.5 0 0 0 1.3 2.2h16.4a1.5 1.5 0 0 0 1.3-2.2L13.7 3.9a1.5 1.5 0 0 0-2.6 0Z"/><path d="M12 16.2h.01"/></svg>
+        </div>
+        <div class="stat-body">
+          <div class="stat-label">Near ROP</div>
+          <div class="stat-value" id="statStokNearRop">0</div>
+          <div class="stat-unit" id="statStokNearRopPct">0%</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon stat-icon-reorder">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="20" r="1.3"/><circle cx="18" cy="20" r="1.3"/><path d="M2.5 3.5h2l2.6 12.2a1.5 1.5 0 0 0 1.5 1.2h8.6a1.5 1.5 0 0 0 1.5-1.2l1.3-6.7H6"/></svg>
+        </div>
+        <div class="stat-body">
+          <div class="stat-label">Need Reorder</div>
+          <div class="stat-value" id="statStokNeedReorder">0</div>
+          <div class="stat-unit" id="statStokNeedReorderPct">0%</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon stat-icon-out">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m9 9 6 6M15 9l-6 6"/></svg>
+        </div>
+        <div class="stat-body">
+          <div class="stat-label">Stock Out</div>
+          <div class="stat-value" id="statStokOut">0</div>
+          <div class="stat-unit" id="statStokOutPct">0%</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" id="reorderAlertCard">
+      <div class="card-header">
+        <svg viewBox="0 0 24 24" class="card-header-icon" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 2.5 17.5a1.5 1.5 0 0 0 1.3 2.2h16.4a1.5 1.5 0 0 0 1.3-2.2L13.7 3.9a1.5 1.5 0 0 0-2.6 0Z"/><path d="M12 9v4M12 16.2h.01"/></svg>
+        Reorder Alert (Perlu Tindakan)
+        <span class="count-badge" id="reorderAlertCount">0 Item</span>
+      </div>
+      <div id="reorderAlertList" class="ra-list">
+        <div class="empty-state">Belum ada item yang perlu di-reorder.</div>
+      </div>
+    </div>
 
     <div class="stat-grid">
       <div class="stat-card">
@@ -101,6 +170,27 @@
         Penerimaan 7 Hari Terakhir
       </div>
       <canvas id="chartMingguan" height="160"></canvas>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <svg viewBox="0 0 24 24" class="card-header-icon" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect x="7" y="12" width="3" height="6"/><rect x="12" y="8" width="3" height="10"/><rect x="17" y="5" width="3" height="13"/></svg>
+        Top Pemakaian Bulan Ini
+      </div>
+      <div id="topPemakaianList" class="tp-list">
+        <div class="empty-state">Belum ada data pemakaian bulan ini.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <svg viewBox="0 0 24 24" class="card-header-icon" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 9 9h-9V3Z"/></svg>
+        Kategori Item
+      </div>
+      <div class="kt-wrap">
+        <canvas id="chartKategori" width="140" height="140"></canvas>
+        <div id="kategoriLegend" class="kt-legend"></div>
+      </div>
     </div>
 
     <div class="card">
@@ -199,6 +289,43 @@
 
   </section>
 
+  <!-- ============================= PEMAKAIAN (Barang Keluar) ============================= -->
+  <section id="page-pemakaian" class="page" hidden>
+    <form id="formPemakaian" class="card">
+      <div class="card-header">Catat Barang Keluar</div>
+
+      <div class="form-row">
+        <label>Tanggal (otomatis, tidak bisa diubah)</label>
+        <input type="date" id="pmTanggalDisplay" disabled>
+      </div>
+      <div class="form-row">
+        <label>Kode Barang *</label>
+        <input type="text" id="pmKode" list="listMasterBarang" placeholder="Ketik kode atau pilih dari daftar" required autocomplete="off">
+        <div id="pmNamaHint" class="hint-text" hidden></div>
+      </div>
+      <div class="form-row-pair">
+        <div class="form-row">
+          <label>Qty *</label>
+          <input type="number" id="pmQty" min="1" step="1" required>
+        </div>
+        <div class="form-row">
+          <label>Satuan</label>
+          <input type="text" id="pmSatuan" placeholder="Otomatis dari Master Data">
+        </div>
+      </div>
+      <div class="form-row">
+        <label>Nama Teknisi / User *</label>
+        <input type="text" id="pmTeknisi" placeholder="Nama yang mengambil barang" required>
+      </div>
+      <div class="form-row">
+        <label>Keterangan</label>
+        <textarea id="pmKeterangan" rows="2" placeholder="Contoh: Maintenance Line 1 (opsional)"></textarea>
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-block">Simpan Pemakaian</button>
+    </form>
+  </section>
+
   <!-- ============================= MASTER DATA ============================= -->
   <section id="page-master-data" class="page" hidden>
 
@@ -291,6 +418,17 @@
 
 <div id="toast" class="toast" hidden></div>
 
+<div id="updateBanner" class="update-banner" hidden>
+  <div class="update-banner-text">
+    <strong>Versi baru tersedia</strong>
+    <span id="updateBannerVersion"></span>
+  </div>
+  <div class="update-banner-actions">
+    <button type="button" id="btnUpdateLater" class="btn-link-inline">Nanti</button>
+    <button type="button" id="btnUpdateNow" class="btn btn-primary btn-small">Update Sekarang</button>
+  </div>
+</div>
+
 <template id="itemRowTemplate">
   <div class="item-row">
     <button type="button" class="item-remove" title="Hapus item">×</button>
@@ -321,6 +459,7 @@
 <script src="js/router.js"></script>
 <script src="js/dashboard.js"></script>
 <script src="js/penerimaan.js"></script>
+<script src="js/pemakaian.js"></script>
 <script src="js/master-data.js"></script>
 <script src="js/app.js"></script>
 </body>
