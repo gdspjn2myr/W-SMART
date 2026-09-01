@@ -746,6 +746,12 @@ body {
   color: #a06a00;
   font-weight: 700;
 }
+.badge-belum-master {
+  display: inline-block;
+  margin-left: 6px;
+  color: #a06a00;
+  font-weight: 700;
+}
 .sb-item-side {
   display: flex;
   flex-direction: column;
@@ -985,6 +991,10 @@ body {
   cursor: pointer;
 }
 
+.pn-putaway-modal-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.pn-putaway-modal-actions .btn-block { margin-top: 0; }
+.pn-putaway-modal-actions .btn-link { padding-top: 4px; }
+
 /* ---------- Scan Lokasi (Put Away & Pemakaian) ---------- */
 .scan-lokasi-row {
   display: flex;
@@ -1099,6 +1109,21 @@ body {
   white-space: nowrap;
 }
 .pw-item-qty span { font-size: 10.5px; font-weight: 600; color: var(--text-muted); margin-left: 3px; }
+.pw-item-side { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.pw-print-btn {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  border: none;
+  border-radius: 50%;
+  background: #e6edfb;
+  color: var(--navy);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.pw-print-btn:hover, .pw-print-btn:active { background: #d7e2f7; }
 
 @media (min-width: 640px) {
   .modal { align-items: center; padding: 20px; }
