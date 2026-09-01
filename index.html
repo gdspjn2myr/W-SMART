@@ -59,8 +59,12 @@
       <svg viewBox="0 0 24 24" class="nav-icon"><rect x="3.5" y="3.5" width="7" height="7" rx="1" fill="none" stroke="currentColor" stroke-width="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="1" fill="none" stroke="currentColor" stroke-width="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="1" fill="none" stroke="currentColor" stroke-width="2"/><path d="M14.5 14.5h3M17.5 14.5v3M20.5 14.5v6M14.5 20.5h3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       <span>Cetak Label QR</span>
     </a>
+    <a href="#/riwayat" class="nav-item" data-nav="riwayat">
+      <svg viewBox="0 0 24 24" class="nav-icon"><path d="M3 12a9 9 0 1 0 2.64-6.36" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 4v5h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 7v5l4 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span>Riwayat Transaksi</span>
+    </a>
   </nav>
-  <div class="sidebar-footer">W-SMART <span id="sidebarVersion"></span></div>
+  <button type="button" id="sidebarFooter" class="sidebar-footer" title="Klik untuk cek update">W-SMART <span id="sidebarVersion"></span></button>
 </aside>
 <div id="sidebarBackdrop" class="sidebar-backdrop" hidden></div>
 
@@ -488,6 +492,45 @@
 
   </section>
 
+  <!-- ============================= RIWAYAT TRANSAKSI ============================= -->
+  <section id="page-riwayat" class="page" hidden>
+
+    <div class="md-toolbar">
+      <input type="search" id="rwSearch" class="md-search" placeholder="Cari kode / nama / user...">
+      <select id="rwJenis" class="rw-select">
+        <option value="Semua">Semua Jenis</option>
+        <option value="Penerimaan">Barang Masuk</option>
+        <option value="Putaway">Put Away</option>
+        <option value="Pemakaian">Barang Keluar</option>
+      </select>
+    </div>
+
+    <div class="rw-date-row">
+      <div class="form-row form-row-small">
+        <label>Dari Tanggal</label>
+        <input type="date" id="rwDari">
+      </div>
+      <div class="form-row form-row-small">
+        <label>Sampai Tanggal</label>
+        <input type="date" id="rwSampai">
+      </div>
+      <button type="button" id="btnRwFilter" class="btn btn-small">Terapkan</button>
+      <button type="button" id="btnRwReset" class="btn-link">Reset</button>
+    </div>
+
+    <div class="sb-summary">
+      <span id="rwCount">0 Transaksi</span>
+      <button type="button" id="btnRefreshRiwayat" class="btn btn-small" title="Refresh" aria-label="Refresh">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 4v6h-6"/></svg>
+      </button>
+    </div>
+
+    <div id="rwList" class="rw-list">
+      <div class="empty-state">Memuat riwayat...</div>
+    </div>
+
+  </section>
+
 </main>
 
 <!-- Modal Tambah/Edit Item Master Data -->
@@ -626,6 +669,7 @@
 <datalist id="listMasterBarang"></datalist>
 
 <script src="js/config.js"></script>
+<script src="js/feedback.js"></script>
 <script src="js/api.js"></script>
 <script src="js/router.js"></script>
 <script src="js/qr-scan.js"></script>
@@ -637,6 +681,7 @@
 <script src="js/master-data.js"></script>
 <script src="js/qrcode-lib.js"></script>
 <script src="js/qr-labels.js"></script>
+<script src="js/riwayat.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>
