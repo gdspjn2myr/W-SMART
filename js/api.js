@@ -37,5 +37,6 @@ const Api = {
   getMasterBarang: () => callApi('getMasterBarang'),
   saveMasterBarang: (payload) => callApi('saveMasterBarang', payload),
   toggleMasterBarangStatus: (payload) => callApi('toggleMasterBarangStatus', payload),
+  savePemakaian: (payload) => callApi('savePemakaian', payload),
   getSupplier: () => callApi('getSupplier')
 };
