@@ -263,6 +263,14 @@ body {
   flex-shrink: 0;
 }
 .stat-icon svg { width: 20px; height: 20px; }
+.stat-card-hero {
+  margin-bottom: 12px;
+  align-items: center;
+}
+.stat-card-hero .stat-icon { width: 46px; height: 46px; border-radius: 12px; }
+.stat-card-hero .stat-icon svg { width: 24px; height: 24px; }
+.stat-card-hero .stat-value { font-size: 32px; }
+.stat-icon-stock { background: linear-gradient(135deg, #e3f6fb, #c3ebf4); color: #0f7490; }
 .stat-icon-a { background: linear-gradient(135deg, #eaf1fd, #d7e3f8); color: var(--navy); }
 .stat-icon-b { background: linear-gradient(135deg, #fff8e6, #ffedc2); color: #a06a00; }
 .stat-icon-c { background: linear-gradient(135deg, #eafaf1, #d3f2e2); color: var(--green); }
