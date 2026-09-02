@@ -30,6 +30,14 @@ function initPenerimaanPage() {
       setTimeout(() => { if (row.isConnected) row.remove(); }, 320);
     }
   });
+  // Delegated karena baris item dibuat dinamis (addItemRow) — kalau Kode Barang
+  // cocok dengan Master Data, Nama & Satuan otomatis terisi (tapi tetap
+  // editable, bukan disabled) supaya user tinggal koreksi kalau perlu.
+  document.getElementById('itemsContainer').addEventListener('input', (e) => {
+    if (e.target.classList.contains('i-kode')) {
+      handleItemKodeInput(e.target);
+    }
+  });
 
   document.getElementById('scanFileInput').addEventListener('change', handleFileSelected);
   document.getElementById('btnScanProcess').addEventListener('click', processScan);
@@ -122,6 +130,21 @@ function addItemRow(prefill) {
 
 function clearItemRows() {
   document.getElementById('itemsContainer').innerHTML = '';
+}
+
+// Autofill Nama Barang & Satuan dari Master Data begitu Kode Barang di baris
+// item cocok — nilainya tetap boleh diubah manual sesudahnya (mis. barang
+// belum terdaftar, atau satuan beda dari biasanya untuk pengiriman ini).
+function handleItemKodeInput(kodeInput) {
+  const kode = kodeInput.value.trim();
+  if (!kode) return;
+  const match = masterBarangCache.find((b) => b.kodeBarang === kode);
+  if (!match) return;
+
+  const row = kodeInput.closest('.item-row');
+  if (!row) return;
+  row.querySelector('.i-nama').value = match.namaBarang || '';
+  row.querySelector('.i-satuan').value = match.satuan || '';
 }
 
 // ---------------------------------------------------------------------------
@@ -241,12 +264,10 @@ async function handleSubmit(e) {
     return;
   }
 
+  // User (penerima) SENGAJA opsional — boleh dikosongkan & diisi belakangan
+  // (mis. langsung di spreadsheet, kolom D sheet PENERIMAAN), nggak boleh
+  // ngeblok proses input barang cuma gara-gara belum sempat catat nama.
   const userVal = document.getElementById('fUser').value.trim();
-  if (!userVal) {
-    showToast('Nama User (penerima) wajib diisi.', 'error');
-    document.getElementById('fUser').focus();
-    return;
-  }
 
   const payload = {
     tanggal: document.getElementById('fTanggal').value, // tanggal dokumen/PO — Kedatangan diisi server = hari ini
