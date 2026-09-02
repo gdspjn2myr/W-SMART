@@ -1349,6 +1349,59 @@ body {
 .rw-badge-koreksi { background: #fff3d6; color: #a06a00; }
 .rw-badge-opname { background: #ece9f3; color: #4b3b8a; }
 
+/* ---------------------------- STOCK OPNAME ------------------------------- */
+.ra-badge-normal { background: #e6f7ee; color: var(--green); }
+.ra-badge-overmax { background: #f4eefc; color: #7a4bcf; }
+.ra-badge-unregistered { background: #f0f1f4; color: var(--text-muted); }
+
+.op-bin-list, .op-list { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.op-bin-item {
+  display: flex; justify-content: space-between; align-items: center; gap: 10px;
+  padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px;
+  background: var(--card-bg); cursor: pointer; text-align: left; width: 100%;
+  font: inherit; color: inherit;
+}
+.op-bin-item:hover, .op-bin-item:active { border-color: var(--navy-light); background: #f8f9fd; }
+.op-bin-item-qty { font-weight: 700; color: var(--navy); flex-shrink: 0; white-space: nowrap; }
+
+.op-detail-stats {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+  margin: 12px 0; padding: 12px; background: #f6f8fc; border-radius: 10px;
+}
+.op-detail-stats > div { display: flex; flex-direction: column; gap: 3px; }
+.op-detail-stats span { font-size: 11px; color: var(--text-muted); }
+.op-detail-stats strong { font-size: 15px; color: var(--navy); }
+
+.op-section-title { font-size: 12.5px; font-weight: 700; color: var(--text-muted); margin: 14px 0 8px; text-transform: uppercase; letter-spacing: .03em; }
+
+.op-riwayat-list { display: flex; flex-direction: column; gap: 6px; }
+.op-riwayat-item {
+  display: flex; justify-content: space-between; align-items: center; gap: 10px;
+  padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 12.5px;
+}
+.op-riwayat-main { min-width: 0; }
+.op-riwayat-main strong { color: var(--navy); }
+.op-riwayat-qty { font-weight: 700; color: var(--green); flex-shrink: 0; white-space: nowrap; }
+
+.op-count-form { margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--border); }
+
+.op-item {
+  display: flex; justify-content: space-between; align-items: center; gap: 10px;
+  padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px;
+}
+.op-item-title { font-weight: 600; font-size: 13.5px; }
+.op-item-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.op-item-side { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.op-selisih-badge { font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 999px; white-space: nowrap; }
+.op-selisih-zero { background: #e6f7ee; color: var(--green); }
+.op-selisih-minus { background: #fdeaea; color: var(--red); }
+.op-selisih-plus { background: #fff3d6; color: #a06a00; }
+.op-item-remove {
+  background: none; border: none; color: var(--text-muted); font-size: 18px; line-height: 1;
+  cursor: pointer; padding: 2px 6px; border-radius: 6px;
+}
+.op-item-remove:hover { background: #fdeaea; color: var(--red); }
+
 /* Cetak: cuma grid label yang tampil, satu label nggak boleh kepotong 2 halaman. */
 @media print {
   .topbar, .sidebar, .sidebar-backdrop, .toast, .qr-scan-overlay, .update-banner,
