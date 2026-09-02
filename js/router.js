@@ -33,7 +33,7 @@ const Router = {
     document.querySelectorAll('.nav-item').forEach((el) => {
       el.classList.toggle('active', el.dataset.nav === page);
     });
-    const titles = { dashboard: 'Dashboard', penerimaan: 'Barang Masuk', putaway: 'Put Away', pemakaian: 'Barang Keluar', 'stock-balance': 'Stock Balance', 'master-data': 'Master Data', 'qr-labels': 'Cetak Label QR', riwayat: 'Riwayat Transaksi', opname: 'Stock Opname', koreksi: 'Koreksi Stock' };
+    const titles = { dashboard: 'Dashboard', penerimaan: 'Barang Masuk', putaway: 'Put Away', pemakaian: 'Barang Keluar', 'stock-balance': 'Stock Balance', 'master-data': 'Master Data', 'qr-labels': 'Cetak Label QR', riwayat: 'Riwayat Transaksi', opname: 'Stock Opname', koreksi: 'Koreksi Stock', 'alert-order': 'Alert Order' };
     document.getElementById('pageTitle').textContent = titles[page] || '';
     if (typeof this.routes[page] === 'function') {
       this.routes[page]();
