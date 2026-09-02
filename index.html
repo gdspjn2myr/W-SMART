@@ -63,6 +63,14 @@
       <svg viewBox="0 0 24 24" class="nav-icon"><path d="M3 12a9 9 0 1 0 2.64-6.36" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 4v5h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 7v5l4 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       <span>Riwayat Transaksi</span>
     </a>
+    <a href="#/opname" class="nav-item" data-nav="opname">
+      <svg viewBox="0 0 24 24" class="nav-icon"><rect x="3.5" y="3.5" width="6" height="6" rx="1" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 6.5h2M6.5 8v2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M14.5 5.5h6M14.5 9.5h6M14.5 13.5h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="m14.5 18.5 2 2 4-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span>Stock Opname</span>
+    </a>
+    <a href="#/koreksi" class="nav-item" data-nav="koreksi">
+      <svg viewBox="0 0 24 24" class="nav-icon"><path d="M4 12a8 8 0 0 1 13.66-5.66M20 12a8 8 0 0 1-13.66 5.66" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M17.5 3v4h-4M6.5 21v-4h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span>Koreksi Stock</span>
+    </a>
   </nav>
   <button type="button" id="sidebarFooter" class="sidebar-footer" title="Klik untuk cek update">W-SMART <span id="sidebarVersion"></span></button>
 </aside>
@@ -513,6 +521,8 @@
         <option value="Penerimaan">Barang Masuk</option>
         <option value="Putaway">Put Away</option>
         <option value="Pemakaian">Barang Keluar</option>
+        <option value="Koreksi">Koreksi Stock</option>
+        <option value="Opname">Stock Opname</option>
       </select>
     </div>
 
@@ -539,6 +549,96 @@
     <div id="rwList" class="rw-list">
       <div class="empty-state">Memuat riwayat...</div>
     </div>
+
+  </section>
+
+  <!-- ============================= STOCK OPNAME ============================= -->
+  <section id="page-opname" class="page" hidden>
+
+    <div class="card">
+      <div class="card-header">Stock Opname — Cari / Scan Barang atau Bin</div>
+      <p class="md-preview-hint">Scan atau cari Kode Barang buat lihat data lengkapnya (qty tercatat sistem + riwayat kedatangan: kapan, dari vendor mana, No PO). Atau scan/cari Kode Lokasi/Bin buat lihat semua barang yang ada di situ. Scan di sini cuma buat lihat data referensi — hasil hitung fisik tetap diisi manual di bawah.</p>
+
+      <div class="mode-switch">
+        <button type="button" class="mode-btn active" id="btnOpModeBarang">Cari Barang</button>
+        <button type="button" class="mode-btn" id="btnOpModeBin">Cari Lokasi/Bin</button>
+      </div>
+
+      <div id="opPanelBarang">
+        <div class="form-row">
+          <label>Kode Barang</label>
+          <div class="scan-lokasi-row">
+            <button type="button" id="btnScanOpBarang" class="btn btn-small btn-scan">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7V5a1 1 0 0 1 1-1h2M17 4h2a1 1 0 0 1 1 1v2M20 17v2a1 1 0 0 1-1 1h-2M7 20H5a1 1 0 0 1-1-1v-2"/><rect x="8" y="8" width="8" height="8" rx="1"/></svg>
+              Scan QR Barang
+            </button>
+          </div>
+          <input type="text" id="opKodeBarang" list="listMasterBarang" placeholder="Ketik atau scan Kode Barang" autocomplete="off">
+        </div>
+        <button type="button" id="btnOpCariBarang" class="btn btn-small">Cari</button>
+      </div>
+
+      <div id="opPanelBin" hidden>
+        <div class="form-row">
+          <label>Kode Lokasi/Bin</label>
+          <div class="scan-lokasi-row">
+            <button type="button" id="btnScanOpBin" class="btn btn-small btn-scan">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7V5a1 1 0 0 1 1-1h2M17 4h2a1 1 0 0 1 1 1v2M20 17v2a1 1 0 0 1-1 1h-2M7 20H5a1 1 0 0 1-1-1v-2"/><rect x="8" y="8" width="8" height="8" rx="1"/></svg>
+              Scan QR Bin
+            </button>
+          </div>
+          <input type="text" id="opKodeBin" placeholder="Ketik atau scan Kode Lokasi/Bin" autocomplete="off">
+        </div>
+        <button type="button" id="btnOpCariBin" class="btn btn-small">Cari</button>
+      </div>
+    </div>
+
+    <div id="opBinResultCard" class="card" hidden>
+      <div class="card-header">Barang di Lokasi <span id="opBinResultLokasi"></span></div>
+      <div id="opBinResultList" class="op-bin-list"></div>
+    </div>
+
+    <div id="opDetailCard" class="card" hidden></div>
+
+    <div class="card">
+      <div class="card-header">
+        Sesi Opname Ini
+        <span class="count-badge" id="opSesiCount">0 Item</span>
+      </div>
+      <p class="md-preview-hint">Item yang sudah dicatat hasil hitung fisiknya di sesi ini (belum tersimpan sampai klik "Simpan Hasil Opname"). Ini cuma catatan selisih untuk direview — belum otomatis mengubah stock.</p>
+      <div id="opSesiList" class="op-list">
+        <div class="empty-state">Belum ada item yang dicatat di sesi ini.</div>
+      </div>
+      <div class="form-row">
+        <label>Nama User (yang opname)</label>
+        <input type="text" id="opUser" placeholder="Nama yang melakukan opname">
+      </div>
+      <button type="button" id="btnSimpanOpname" class="btn btn-primary btn-block" disabled>Simpan Hasil Opname</button>
+    </div>
+
+  </section>
+
+  <!-- ============================= KOREKSI STOCK MANUAL ============================= -->
+  <section id="page-koreksi" class="page" hidden>
+
+    <div class="card">
+      <div class="card-header">Koreksi Stock Manual</div>
+      <p class="md-preview-hint">Buat menyesuaikan qty stock yang tercatat sistem ke qty yang sebenarnya (barang ketemu, rusak/hilang, atau reconcile selisih hasil Stock Opname). Beda dari Stock Opname — ini LANGSUNG mengubah stock begitu disimpan, jadi Alasan wajib diisi buat jejak audit.</p>
+
+      <div class="form-row">
+        <label>Kode Barang</label>
+        <div class="scan-lokasi-row">
+          <button type="button" id="btnScanKsBarang" class="btn btn-small btn-scan">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7V5a1 1 0 0 1 1-1h2M17 4h2a1 1 0 0 1 1 1v2M20 17v2a1 1 0 0 1-1 1h-2M7 20H5a1 1 0 0 1-1-1v-2"/><rect x="8" y="8" width="8" height="8" rx="1"/></svg>
+            Scan QR Barang
+          </button>
+        </div>
+        <input type="text" id="ksKode" list="listMasterBarang" placeholder="Ketik atau scan Kode Barang" autocomplete="off">
+      </div>
+      <button type="button" id="btnKsCari" class="btn btn-small">Cari</button>
+    </div>
+
+    <div id="ksDetailCard" class="card" hidden></div>
 
   </section>
 
@@ -716,6 +816,8 @@
 <script src="js/qrcode-lib.js"></script>
 <script src="js/qr-labels.js"></script>
 <script src="js/riwayat.js"></script>
+<script src="js/opname.js"></script>
+<script src="js/koreksi.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>
