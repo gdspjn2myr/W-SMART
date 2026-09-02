@@ -1348,6 +1348,7 @@ body {
 .rw-badge-keluar { background: #fdeaea; color: var(--red); }
 .rw-badge-koreksi { background: #fff3d6; color: #a06a00; }
 .rw-badge-opname { background: #ece9f3; color: #4b3b8a; }
+.rw-badge-pr { background: #e6edfb; color: var(--navy); }
 
 /* ---------------------------- STOCK OPNAME ------------------------------- */
 .ra-badge-normal { background: #e6f7ee; color: var(--green); }
@@ -1402,11 +1403,50 @@ body {
 }
 .op-item-remove:hover { background: #fdeaea; color: var(--red); }
 
+/* ---------- Alert Order & Purchase Request ---------- */
+.ao-header { justify-content: space-between; flex-wrap: wrap; }
+.ao-header-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ao-list { display: flex; flex-direction: column; gap: 10px; }
+.ao-item {
+  display: flex; flex-direction: column; gap: 10px;
+  padding: 12px; border: 1px solid var(--border); border-radius: 10px;
+}
+.ao-item-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.ao-item-title { font-weight: 600; font-size: 13.5px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ao-item-sub { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+.ao-item-side { flex-shrink: 0; }
+.ao-metrics {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;
+  padding: 10px; background: #f6f8fc; border-radius: 8px; font-size: 12px;
+}
+.ao-metrics > div { display: flex; flex-direction: column; gap: 2px; }
+.ao-metrics span { color: var(--text-muted); }
+.ao-metrics strong { color: var(--navy); font-size: 13.5px; }
+.ao-metrics-insufficient {
+  font-size: 12px; color: var(--text-muted); font-style: italic;
+  padding: 8px 10px; background: #f6f8fc; border-radius: 8px;
+}
+.ao-pr-open {
+  display: flex; flex-direction: column; gap: 2px; font-size: 12px;
+  padding: 8px 10px; background: #e6edfb; color: var(--navy); border-radius: 8px;
+}
+.ao-pr-open strong { font-size: 12.5px; }
+
+/* Kartu ini cuma sumber cetak PDF Alert Order (window.print) — selalu hidden
+   di layar, ditampilkan lagi khusus di @media print di bawah. */
+.ao-print-card { display: none; }
+.ao-print-meta { font-size: 12px; color: var(--text-muted); margin-bottom: 10px; }
+.ao-print-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+.ao-print-table th, .ao-print-table td {
+  border: 1px solid #ccc; padding: 5px 6px; text-align: left; vertical-align: top;
+}
+.ao-print-table th { background: #f0f2f7; font-weight: 700; }
+
 /* Cetak: cuma grid label yang tampil, satu label nggak boleh kepotong 2 halaman. */
 @media print {
   .topbar, .sidebar, .sidebar-backdrop, .toast, .qr-scan-overlay, .update-banner,
   .mode-switch, #qrPanelBarang, #qrPanelBin, .qr-label-result-header,
-  .page:not(#page-qr-labels) {
+  .page:not(#page-qr-labels):not(#page-alert-order) {
     display: none !important;
   }
   body, .app-content { background: #fff; padding: 0; margin: 0; }
@@ -1419,4 +1459,11 @@ body {
   }
   .qr-label-grid { grid-template-columns: repeat(4, 1fr); }
   .qr-label { break-inside: avoid; border-color: #ccc; }
+
+  /* Alert Order: pas dicetak cuma kartu ringkasan tabel (.ao-print-card) yang
+     kelihatan — kartu daftar interaktif (badge/tombol) disembunyikan. */
+  #page-alert-order { display: block !important; }
+  #page-alert-order > .card:not(.ao-print-card) { display: none !important; }
+  .ao-print-card[hidden] { display: block !important; }
+  .ao-print-card { box-shadow: none; border: none; padding: 0; margin: 0; }
 }
