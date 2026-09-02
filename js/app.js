@@ -234,6 +234,12 @@ document.addEventListener('DOMContentLoaded', () => {
   Router.register('riwayat', () => {
     initRiwayatPage();
   });
+  Router.register('opname', () => {
+    initOpnamePage();
+  });
+  Router.register('koreksi', () => {
+    initKoreksiPage();
+  });
   Router.init();
 
   initServiceWorker();
