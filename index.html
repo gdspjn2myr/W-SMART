@@ -71,6 +71,10 @@
       <svg viewBox="0 0 24 24" class="nav-icon"><path d="M4 12a8 8 0 0 1 13.66-5.66M20 12a8 8 0 0 1-13.66 5.66" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M17.5 3v4h-4M6.5 21v-4h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       <span>Koreksi Stock</span>
     </a>
+    <a href="#/alert-order" class="nav-item" data-nav="alert-order">
+      <svg viewBox="0 0 24 24" class="nav-icon"><path d="M12 3a6 6 0 0 0-6 6c0 4.5-2 6-2 6h16s-2-1.5-2-6a6 6 0 0 0-6-6Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 20a2 2 0 0 0 4 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      <span>Alert Order</span>
+    </a>
   </nav>
   <button type="button" id="sidebarFooter" class="sidebar-footer" title="Klik untuk cek update">W-SMART <span id="sidebarVersion"></span></button>
 </aside>
@@ -523,6 +527,7 @@
         <option value="Pemakaian">Barang Keluar</option>
         <option value="Koreksi">Koreksi Stock</option>
         <option value="Opname">Stock Opname</option>
+        <option value="PR">Purchase Request</option>
       </select>
     </div>
 
@@ -639,6 +644,45 @@
     </div>
 
     <div id="ksDetailCard" class="card" hidden></div>
+
+  </section>
+
+  <!-- ============================= ALERT ORDER ============================= -->
+  <section id="page-alert-order" class="page" hidden>
+
+    <div class="card">
+      <div class="card-header ao-header">
+        <span>Barang Perlu Diorder <span class="count-badge" id="aoCount">0 Item</span></span>
+        <div class="ao-header-actions">
+          <button type="button" id="btnRefreshAlertOrder" class="btn btn-small" title="Refresh" aria-label="Refresh">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 4v6h-6"/></svg>
+          </button>
+          <button type="button" id="btnDownloadAlertOrderCsv" class="btn btn-small">CSV</button>
+          <button type="button" id="btnDownloadAlertOrderExcel" class="btn btn-small">Excel</button>
+          <button type="button" id="btnDownloadAlertOrderPdf" class="btn btn-small">PDF</button>
+        </div>
+      </div>
+      <p class="md-preview-hint">Barang dengan status Stock Out / Need Reorder / Near ROP. Klik "Buat PR" untuk mencatat kapan proses order dimulai — begitu barang datang lewat Barang Masuk, PR ini otomatis ditutup &amp; Lead Time asli terekam, jadi Avg Usage &amp; Lead Time Otomatis makin akurat seiring waktu.</p>
+      <div id="aoList" class="ao-list">
+        <div class="empty-state">Memuat data...</div>
+      </div>
+    </div>
+
+    <!-- Kartu ini CUMA dipakai buat sumber cetak PDF (window.print) — nggak
+         pernah ditampilkan di layar, lihat CSS .ao-print-card & @media print. -->
+    <div class="card ao-print-card" id="aoPrintCard" hidden>
+      <div class="card-header">Alert Order — Barang Perlu Diorder</div>
+      <div class="ao-print-meta" id="aoPrintMeta"></div>
+      <table class="ao-print-table">
+        <thead>
+          <tr>
+            <th>Kode</th><th>Nama Barang</th><th>Status</th><th>Stock</th><th>Min</th><th>ROP</th><th>MAX</th><th>Order Qty</th>
+            <th>PR Terbuka</th><th>Avg Usage Otm.</th><th>Lead Time Otm.</th><th>ROP Otm.</th><th>Saran Min/Max Otm.</th>
+          </tr>
+        </thead>
+        <tbody id="aoPrintTbody"></tbody>
+      </table>
+    </div>
 
   </section>
 
@@ -818,6 +862,7 @@
 <script src="js/riwayat.js"></script>
 <script src="js/opname.js"></script>
 <script src="js/koreksi.js"></script>
+<script src="js/alert-order.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>
