@@ -240,6 +240,9 @@ document.addEventListener('DOMContentLoaded', () => {
   Router.register('koreksi', () => {
     initKoreksiPage();
   });
+  Router.register('alert-order', () => {
+    initAlertOrderPage();
+  });
   Router.init();
 
   initServiceWorker();
