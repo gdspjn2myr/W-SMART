@@ -65,5 +65,9 @@ const Api = {
   toggleMasterBarangStatus: (payload) => callApi('toggleMasterBarangStatus', payload),
   savePemakaian: (payload) => callApi('savePemakaian', payload),
   savePutaway: (payload) => callApi('savePutaway', payload),
-  getSupplier: () => callApi('getSupplier')
+  getSupplier: () => callApi('getSupplier'),
+  getOpnameItemDetail: (payload) => callApi('getOpnameItemDetail', payload),
+  getOpnameBinDetail: (payload) => callApi('getOpnameBinDetail', payload),
+  saveStockOpname: (payload) => callApi('saveStockOpname', payload),
+  saveKoreksiStock: (payload) => callApi('saveKoreksiStock', payload)
 };
