@@ -15,21 +15,24 @@ const RW_JENIS_LABEL = {
   Putaway: 'Put Away',
   Pemakaian: 'Barang Keluar',
   Koreksi: 'Koreksi Stock',
-  Opname: 'Stock Opname'
+  Opname: 'Stock Opname',
+  PR: 'Purchase Request'
 };
 const RW_JENIS_CLASS = {
   Penerimaan: 'rw-badge-masuk',
   Putaway: 'rw-badge-putaway',
   Pemakaian: 'rw-badge-keluar',
   Koreksi: 'rw-badge-koreksi',
-  Opname: 'rw-badge-opname'
+  Opname: 'rw-badge-opname',
+  PR: 'rw-badge-pr'
 };
 const RW_JENIS_SIGN = {
   Penerimaan: '+',
   Putaway: '',
   Pemakaian: '−', // minus
   Koreksi: '±', // plus-minus
-  Opname: '±'
+  Opname: '±',
+  PR: '' // PR cuma catatan "order dimulai", belum mengubah qty stock
 };
 
 function initRiwayatPage() {
