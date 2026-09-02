@@ -23,6 +23,10 @@ async function loadDashboard() {
 // Stock Balance / Reorder Alert — dihitung realtime di server dari Penerimaan -
 // Pemakaian dibandingkan ROP/MAX di Master Data (lihat hitungStockHealth_ di Code.gs).
 function renderStockStats(res) {
+  // Stock Saat Ini = total pcs SEMUA barang (termasuk yang belum terdaftar
+  // di Master Data) — lihat totalStockSaatIni di hitungStockHealth_ (Code.gs).
+  animateStatValue('statStockSaatIni', res.totalStockSaatIni || 0);
+
   const total = res.totalSku || 0;
   animateStatValue('statTotalSku', total);
   animateStatValue('statStokNormal', res.stokNormal || 0);
@@ -127,7 +131,15 @@ function renderChart(data) {
   const canvas = document.getElementById('chartMingguan');
   const ctx = canvas.getContext('2d');
   const dpr = window.devicePixelRatio || 1;
-  const cssWidth = canvas.parentElement.clientWidth || canvas.clientWidth || 320;
+  // PENTING: canvas ini anak langsung dari .card yang punya padding (lihat index.html).
+  // parentElement.clientWidth itu lebar .card TERMASUK padding kiri-kanannya — kalau
+  // dipakai langsung, canvas jadi digambar lebih lebar dari ruang yang sebenarnya
+  // tersedia di dalam padding, jadi bar paling kanan keliatan "bablas" nyembul lewat
+  // tepi kanan card. Makanya padding parent-nya harus dikurangi dulu di sini.
+  const parentEl = canvas.parentElement;
+  const parentPadding = parentEl ? (parseFloat(getComputedStyle(parentEl).paddingLeft) || 0) +
+    (parseFloat(getComputedStyle(parentEl).paddingRight) || 0) : 0;
+  const cssWidth = (parentEl && (parentEl.clientWidth - parentPadding)) || canvas.clientWidth || 320;
   const cssHeight = 160;
   // Kunci UKURAN TAMPILAN canvas ke ukuran CSS yang dimaksud — tanpa ini, di HP dengan
   // devicePixelRatio tinggi (2x/3x) canvasnya malah tampil 2-3x lebih besar dari seharusnya,
