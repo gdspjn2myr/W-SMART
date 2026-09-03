@@ -7,9 +7,11 @@
 // ============================================================================
 
 let sbInitialized = false;
+let sbCurrentPeriod = null; // { tanggalMulai, tanggalAkhir } dari filter yang lagi aktif — dipakai popup Riwayat Transaksi biar rentangnya SAMA dengan yang lagi ditampilkan di tabel
 
 const SB_KATEGORI_CLASS = { A: 'md-badge-a', B: 'md-badge-b', C: 'md-badge-c' };
 const SB_JENIS_CLASS = { 'OBS': 'md-badge-jenis-obs', 'Fast Moving': 'md-badge-jenis-fm' };
+const SB_RIWAYAT_JENIS_CLASS = { 'Penerimaan': 'ra-badge-normal', 'Pemakaian': 'ra-badge-out', 'Koreksi Stock': 'ra-badge-near' };
 
 function initStockBalancePage() {
   if (!sbInitialized) {
@@ -36,6 +38,19 @@ function initStockBalancePage() {
     });
 
     document.getElementById('sbTableWrap').classList.add('detail-off'); // default OFF
+
+    // Klik 1 baris SKU -> popup Riwayat Transaksi (lihat openSbRiwayatModal),
+    // delegated ke tbody karena isinya di-render ulang tiap kali filter diganti.
+    const sbTableBody = document.getElementById('sbTableBody');
+    sbTableBody.addEventListener('click', (e) => {
+      const row = e.target.closest('tr[data-kode]');
+      if (row) openSbRiwayatModal(row.dataset.kode, row.dataset.plant || '', row.dataset.nama || '');
+    });
+    sbTableBody.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      const row = e.target.closest('tr[data-kode]');
+      if (row) { e.preventDefault(); openSbRiwayatModal(row.dataset.kode, row.dataset.plant || '', row.dataset.nama || ''); }
+    });
   }
 
   applySbFilter();
@@ -70,6 +85,7 @@ async function applySbFilter() {
 
   try {
     const res = await Api.getStockMutasi(payload);
+    sbCurrentPeriod = { tanggalMulai: res.tanggalMulai, tanggalAkhir: res.tanggalAkhir };
     renderSbTable(res.items || []);
     document.getElementById('sbCount').textContent = (res.items || []).length + ' SKU';
     document.getElementById('sbUpdatedAt').textContent =
@@ -96,7 +112,7 @@ function renderSbTable(items) {
     const plantTag = it.plant ? `<div class="sb-plant-tag">Plant ${escapeHtml(it.plant)}</div>` : '';
 
     return `
-      <tr>
+      <tr class="sb-row-clickable" data-kode="${escapeHtml(it.kode)}" data-plant="${escapeHtml(it.plant || '')}" data-nama="${escapeHtml(it.namaBarang || '')}" tabindex="0">
         <td>
           <div class="sb-kode-cell">${escapeHtml(it.kode)}</div>
           ${plantTag}
@@ -117,4 +133,67 @@ function renderSbTable(items) {
       </tr>
     `;
   }).join('');
+}
+
+// ---------------------------------------------------------------------------
+// Popup Riwayat Transaksi 1 SKU — muncul waktu 1 baris di tabel Mutasi Stock
+// diklik, isinya gabungan Penerimaan + Pemakaian + Koreksi Stock kode itu,
+// dibatasi ke rentang tanggal yang LAGI DIPAKAI di filter tabel (sbCurrentPeriod)
+// — lihat handleGetItemMutasiRiwayat di Code.gs.
+// ---------------------------------------------------------------------------
+async function openSbRiwayatModal(kode, plant, namaBarang) {
+  const titleEl = document.getElementById('sbRiwayatModalTitle');
+  const hintEl = document.getElementById('sbRiwayatModalHint');
+  const bodyEl = document.getElementById('sbRiwayatModalBody');
+
+  titleEl.textContent = namaBarang ? `${kode} — ${namaBarang}` : kode;
+  hintEl.textContent = sbCurrentPeriod
+    ? `Riwayat transaksi periode ${sbCurrentPeriod.tanggalMulai} s/d ${sbCurrentPeriod.tanggalAkhir}${plant ? ' · Plant ' + plant : ''}`
+    : '';
+  bodyEl.innerHTML = '<div class="empty-state">Memuat...</div>';
+  document.getElementById('sbRiwayatModalBackdrop').hidden = false;
+  document.getElementById('sbRiwayatModal').hidden = false;
+
+  if (!sbCurrentPeriod) {
+    bodyEl.innerHTML = '<div class="empty-state">Periode belum dipilih.</div>';
+    return;
+  }
+
+  try {
+    const res = await Api.getItemMutasiRiwayat({
+      kode,
+      plant,
+      tanggalMulai: sbCurrentPeriod.tanggalMulai,
+      tanggalAkhir: sbCurrentPeriod.tanggalAkhir
+    });
+    renderSbRiwayatModalBody(res.riwayat || []);
+  } catch (err) {
+    bodyEl.innerHTML = `<div class="empty-state">Gagal memuat: ${escapeHtml(err.message)}</div>`;
+  }
+}
+
+function renderSbRiwayatModalBody(riwayat) {
+  const body = document.getElementById('sbRiwayatModalBody');
+  if (!riwayat.length) {
+    body.innerHTML = '<div class="empty-state">Tidak ada transaksi di periode ini.</div>';
+    return;
+  }
+  body.innerHTML = riwayat.map((r) => {
+    const qtyText = r.qty > 0 ? `+${r.qty}` : String(r.qty);
+    const qtyClass = r.qty > 0 ? 'sb-num-in' : (r.qty < 0 ? 'sb-num-out' : '');
+    return `
+      <div class="ra-item">
+        <div class="ra-item-main">
+          <div class="ra-item-title">${escapeHtml(r.tanggal)} <span class="${qtyClass}">${escapeHtml(qtyText)}</span></div>
+          <div class="ra-item-sub">${escapeHtml(r.keterangan || '-')}${r.user ? ' · ' + escapeHtml(r.user) : ''}</div>
+        </div>
+        <span class="ra-badge ${SB_RIWAYAT_JENIS_CLASS[r.jenis] || ''}">${escapeHtml(r.jenis)}</span>
+      </div>
+    `;
+  }).join('');
+}
+
+function closeSbRiwayatModal() {
+  document.getElementById('sbRiwayatModalBackdrop').hidden = true;
+  document.getElementById('sbRiwayatModal').hidden = true;
 }
