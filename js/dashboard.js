@@ -192,6 +192,8 @@ async function openDashStatModal(filterKey) {
   document.getElementById('dashListModalTitle').textContent = cfg.title;
   document.getElementById('dashListModalHint').textContent = cfg.hint;
   document.getElementById('dashListModalBody').innerHTML = '<div class="empty-state">Memuat...</div>';
+  document.getElementById('dashListModalPlantFilter').hidden = true;
+  document.getElementById('dashListModalPlantFilter').innerHTML = '';
   document.getElementById('dashListModalBackdrop').hidden = false;
   document.getElementById('dashListModal').hidden = false;
 
@@ -212,8 +214,19 @@ async function openDashStatModal(filterKey) {
     }
     const items = dashFullBalances.filter(cfg.filter).sort(cfg.sort);
 
-    if (cfg.mode === 'stock-by-plant') renderDashPlantGroupedModalBody(items);
-    else renderDashListModalBody(items);
+    if (cfg.mode === 'stock-by-plant') {
+      // "Total SKU Terdaftar" — 1 Kode Barang bisa muncul di lebih dari 1 Plant
+      // (baris Master Data terpisah per Plant, lihat kodePlantCount di
+      // hitungBalances_/Code.gs). Dulu semua Plant ditumpuk jadi 1 list panjang
+      // (harus discroll jauh buat pindah Plant) — sekarang Plant jadi FILTER
+      // (chip di atas list) supaya bisa langsung loncat ke Plant yang dimau.
+      dashTotalPlantItems = items;
+      dashTotalPlantSelected = '';
+      renderDashPlantFilterChips();
+      renderDashPlantFilteredList();
+    } else {
+      renderDashListModalBody(items);
+    }
   } catch (err) {
     document.getElementById('dashListModalBody').innerHTML =
       `<div class="empty-state">Gagal memuat: ${escapeHtml(err.message)}</div>`;
@@ -229,51 +242,74 @@ function renderDashListModalBody(items) {
   body.innerHTML = items.map((it) => dashStockItemHtml(it)).join('');
 }
 
-function dashStockItemHtml(it) {
+function dashStockItemHtml(it, showPlant) {
   const badgeClass = it.belumAdaMaster ? 'ra-badge-unregistered' : (RA_STATUS_CLASS[it.status] || '');
   const badgeLabel = it.belumAdaMaster ? 'Belum Terdaftar' : (STATUS_LABEL[it.status] || it.status);
   const ropMaxText = (!it.belumAdaMaster && (it.rop || it.max)) ? ` · ROP ${it.rop} · MAX ${it.max}` : '';
+  const plantText = (showPlant && it.plant) ? ` · Plant ${escapeHtml(it.plant)}` : '';
   return `
       <div class="ra-item">
         <div class="ra-item-main">
           <div class="ra-item-title">${escapeHtml(it.kode)} — ${escapeHtml(it.namaBarang || '-')}</div>
-          <div class="ra-item-sub">Stock ${it.onHand} ${escapeHtml(it.satuan || '')}${ropMaxText}</div>
+          <div class="ra-item-sub">Stock ${it.onHand} ${escapeHtml(it.satuan || '')}${ropMaxText}${plantText}</div>
         </div>
         <span class="ra-badge ${badgeClass}">${escapeHtml(badgeLabel)}</span>
       </div>
     `;
 }
 
-// "Total SKU Terdaftar" DIKELOMPOKKAN per Plant — 1 Kode Barang bisa muncul di
-// lebih dari 1 grup Plant kalau memang punya baris Master Data terpisah per
-// Plant (lihat catatan kodePlantCount di hitungBalances_, Code.gs). Item yang
-// Plant-nya belum diisi (kosong) dikumpulkan di grup "Belum Ditentukan".
-function renderDashPlantGroupedModalBody(items) {
+// ---------------------------------------------------------------------------
+// Filter Plant (chip) di popup "Total SKU Terdaftar" — state-nya di-reset tiap
+// popup ini dibuka (lihat openDashStatModal), datanya sudah ada di memori
+// (dashTotalPlantItems, dari dashFullBalances yang sudah di-fetch), jadi
+// ganti-ganti Plant TIDAK perlu fetch ulang ke server, cuma re-render.
+// ---------------------------------------------------------------------------
+let dashTotalPlantItems = [];
+let dashTotalPlantSelected = ''; // '' = Semua Plant
+const DASH_PLANT_NONE = '__none__'; // sentinel buat item yang Plant-nya belum diisi
+
+function renderDashPlantFilterChips() {
+  const wrap = document.getElementById('dashListModalPlantFilter');
+  const plants = Array.from(new Set(dashTotalPlantItems.map((it) => it.plant || DASH_PLANT_NONE)))
+    .sort((a, b) => {
+      if (a === DASH_PLANT_NONE) return 1;
+      if (b === DASH_PLANT_NONE) return -1;
+      return a.localeCompare(b);
+    });
+
+  // Kalau semua item cuma dari 1 Plant (atau nggak ada Plant sama sekali),
+  // filter-nya nggak berguna — sembunyikan biar popup nggak keliatan aneh.
+  if (plants.length <= 1) { wrap.hidden = true; wrap.innerHTML = ''; return; }
+
+  const chips = [{ value: '', label: 'Semua Plant' }]
+    .concat(plants.map((p) => ({ value: p, label: p === DASH_PLANT_NONE ? 'Belum Ditentukan' : 'Plant ' + p })));
+
+  wrap.hidden = false;
+  wrap.innerHTML = chips.map((c) => `
+      <button type="button" class="dm-plant-chip${dashTotalPlantSelected === c.value ? ' active' : ''}" data-plant="${escapeHtml(c.value)}">${escapeHtml(c.label)}</button>
+    `).join('');
+}
+
+function renderDashPlantFilteredList() {
+  const items = dashTotalPlantSelected
+    ? dashTotalPlantItems.filter((it) => (it.plant || DASH_PLANT_NONE) === dashTotalPlantSelected)
+    : dashTotalPlantItems;
+
   const body = document.getElementById('dashListModalBody');
   if (!items.length) {
-    body.innerHTML = '<div class="empty-state">Belum ada barang terdaftar di Master Data.</div>';
+    body.innerHTML = '<div class="empty-state">Tidak ada barang terdaftar di Plant ini.</div>';
     return;
   }
-  const groups = {};
-  const order = [];
-  items.forEach((it) => {
-    const plant = it.plant || '';
-    const key = plant || ' '; // grup "Belum Ditentukan" selalu di-sort paling akhir
-    if (!groups[key]) { groups[key] = { plant, items: [] }; order.push(key); }
-    groups[key].items.push(it);
-  });
-  order.sort((a, b) => a.localeCompare(b));
+  // showPlant cuma perlu kalau lagi nampilin "Semua Plant" — begitu difilter ke
+  // 1 Plant spesifik, semua baris pasti Plant yang sama, jadi label-nya nggak perlu diulang.
+  const showPlant = !dashTotalPlantSelected;
+  body.innerHTML = items.map((it) => dashStockItemHtml(it, showPlant)).join('');
+}
 
-  body.innerHTML = order.map((key) => {
-    const grp = groups[key];
-    const label = grp.plant ? `Plant ${escapeHtml(grp.plant)}` : 'Plant Belum Ditentukan';
-    return `
-      <div class="ra-group">
-        <div class="ra-group-header">${label} <span class="count-badge">${grp.items.length} SKU</span></div>
-        ${grp.items.map((it) => dashStockItemHtml(it)).join('')}
-      </div>
-    `;
-  }).join('');
+function selectDashPlantFilter(value) {
+  dashTotalPlantSelected = value;
+  renderDashPlantFilterChips();
+  renderDashPlantFilteredList();
 }
 
 // Popup "Diterima Hari Ini" / "Diterima Bulan Ini" / "SKU Bulan Ini" — dari
