@@ -102,7 +102,7 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4h13A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18.5v-13Z"/><path d="M4 9.5h16M9 9.5V20"/></svg>
         </div>
         <div class="stat-body">
-          <div class="stat-label">Total SKU</div>
+          <div class="stat-label">Total SKU Terdaftar</div>
           <div class="stat-value" id="statTotalSku">0</div>
           <div class="stat-unit">item aktif</div>
         </div>
@@ -159,7 +159,7 @@
     </div>
 
     <div class="stat-grid">
-      <div class="stat-card">
+      <div class="stat-card stat-card-clickable" role="button" tabindex="0" data-dash-filter="terima-hari-ini">
         <div class="stat-icon stat-icon-a">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M3 9h18M8 3v3M16 3v3"/></svg>
         </div>
@@ -169,7 +169,7 @@
           <div class="stat-unit">pcs</div>
         </div>
       </div>
-      <div class="stat-card">
+      <div class="stat-card stat-card-clickable" role="button" tabindex="0" data-dash-filter="terima-bulan-ini">
         <div class="stat-icon stat-icon-b">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8 12 3 3 8v8l9 5 9-5Z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg>
         </div>
@@ -179,7 +179,7 @@
           <div class="stat-unit">pcs</div>
         </div>
       </div>
-      <div class="stat-card">
+      <div class="stat-card stat-card-clickable" role="button" tabindex="0" data-dash-filter="transaksi-bulan-ini">
         <div class="stat-icon stat-icon-c">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
         </div>
@@ -189,7 +189,7 @@
           <div class="stat-unit">transaksi</div>
         </div>
       </div>
-      <div class="stat-card">
+      <div class="stat-card stat-card-clickable" role="button" tabindex="0" data-dash-filter="sku-bulan-ini">
         <div class="stat-icon stat-icon-d">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 12.6 12.7 4.7a2 2 0 0 0-1.4-.6H5a1 1 0 0 0-1 1v6.3a2 2 0 0 0 .6 1.4l7.9 7.9a2 2 0 0 0 2.8 0l5.3-5.3a2 2 0 0 0 0-2.8Z"/><circle cx="8" cy="8.5" r="1.3"/></svg>
         </div>
@@ -417,6 +417,16 @@
         <label>Nama Teknisi / User *</label>
         <input type="text" id="pmTeknisi" placeholder="Nama yang mengambil barang" required>
       </div>
+      <div class="form-row-pair">
+        <div class="form-row">
+          <label>Plant</label>
+          <input type="text" id="pmPlant" placeholder="Contoh: 1111">
+        </div>
+        <div class="form-row">
+          <label>S. Loc</label>
+          <input type="text" id="pmSLoc" placeholder="Contoh: GDSP">
+        </div>
+      </div>
       <div class="form-row">
         <label>Keterangan</label>
         <textarea id="pmKeterangan" rows="2" placeholder="Contoh: Maintenance Line 1 (opsional)"></textarea>
@@ -429,11 +439,42 @@
   <!-- ============================= STOCK BALANCE ============================= -->
   <section id="page-stock-balance" class="page" hidden>
 
-    <div class="md-toolbar">
-      <input type="search" id="sbSearch" class="md-search" placeholder="Cari kode / nama / satuan...">
-      <button type="button" id="btnRefreshStockBalance" class="btn btn-small" title="Refresh" aria-label="Refresh">
-        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 4v6h-6"/></svg>
-      </button>
+    <div class="card sb-filter-card">
+      <div class="card-header">Filter Mutasi Stock</div>
+      <div class="sb-filter-grid">
+        <div class="form-row">
+          <label>Periode Dari *</label>
+          <input type="date" id="sbTglMulai" required>
+        </div>
+        <div class="form-row">
+          <label>Periode Sampai *</label>
+          <input type="date" id="sbTglAkhir" required>
+        </div>
+        <div class="form-row">
+          <label>Plant</label>
+          <select id="sbPlant">
+            <option value="">Semua Plant</option>
+            <option value="1111">1111</option>
+            <option value="1112">1112</option>
+            <option value="1113">1113</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label>Storage Location</label>
+          <input type="text" id="sbStorage" placeholder="Contoh: GDSP (opsional)">
+        </div>
+        <div class="form-row sb-filter-material">
+          <label>Material (Kode / Nama Barang)</label>
+          <input type="text" id="sbMaterial" placeholder="Kosongkan untuk tampilkan semua">
+        </div>
+      </div>
+      <div class="sb-filter-actions">
+        <label class="sb-detail-toggle">
+          <input type="checkbox" id="sbDetailToggle">
+          <span>Tampilkan Detail (Min/Max, Lead Time, ROP, Avg Usage)</span>
+        </label>
+        <button type="button" id="btnApplySbFilter" class="btn btn-primary">Tampilkan</button>
+      </div>
     </div>
 
     <div class="sb-summary">
@@ -441,8 +482,38 @@
       <span id="sbUpdatedAt"></span>
     </div>
 
-    <div id="sbList" class="sb-list">
-      <div class="empty-state">Memuat stock...</div>
+    <div class="sb-kategori-legend">
+      <span class="sb-kategori-legend-item"><span class="md-badge md-badge-a">A</span> Critical</span>
+      <span class="sb-kategori-legend-item"><span class="md-badge md-badge-b">B</span> Medium</span>
+      <span class="sb-kategori-legend-item"><span class="md-badge md-badge-c">C</span> Fast Moving</span>
+    </div>
+
+    <div class="card sb-table-card">
+      <div class="sb-table-wrap" id="sbTableWrap">
+        <table class="sb-table">
+          <thead>
+            <tr>
+              <th>Kode Barang</th>
+              <th>Nama Barang</th>
+              <th>Satuan</th>
+              <th>Kategori</th>
+              <th>Jenis</th>
+              <th class="sb-num">Beginning Balance</th>
+              <th class="sb-num">Receipt</th>
+              <th class="sb-num">Issued</th>
+              <th class="sb-num">Ending Balance</th>
+              <th class="sb-col-detail sb-num">Min</th>
+              <th class="sb-col-detail sb-num">Max</th>
+              <th class="sb-col-detail sb-num">Lead Time</th>
+              <th class="sb-col-detail sb-num">ROP</th>
+              <th class="sb-col-detail sb-num">Avg Usg</th>
+            </tr>
+          </thead>
+          <tbody id="sbTableBody">
+            <tr><td colspan="14" class="empty-state">Pilih periode, lalu klik "Tampilkan".</td></tr>
+          </tbody>
+        </table>
+      </div>
     </div>
 
   </section>
