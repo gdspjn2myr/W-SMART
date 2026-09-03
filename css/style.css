@@ -750,26 +750,32 @@ body {
 .ra-badge-reorder { background: #fdeaea; color: var(--red); }
 .ra-badge-near { background: #fff3d6; color: #a06a00; }
 
-/* Grup per-Plant di popup "Total SKU Terdaftar" (lihat renderDashPlantGroupedModalBody) */
-.ra-group + .ra-group { margin-top: 14px; }
-.ra-group-header {
+/* Filter chip Plant di popup "Total SKU Terdaftar" (lihat renderDashPlantFilterChips
+   & selectDashPlantFilter di dashboard.js) — dipakai supaya user bisa langsung
+   loncat ke 1 Plant tertentu, tanpa harus scroll ngelewatin Plant lain. */
+.dm-plant-filter {
   display: flex;
-  align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
-  font-size: 12.5px;
-  font-weight: 700;
-  color: var(--navy);
-  text-transform: uppercase;
-  letter-spacing: .02em;
-  margin-bottom: 8px;
-  padding-bottom: 6px;
-  border-bottom: 1px solid var(--border);
+  margin-bottom: 14px;
 }
-.ra-group-header .count-badge {
-  background: #e6edfb;
-  color: var(--navy);
+.dm-plant-chip {
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease, border-color .15s ease;
 }
-.ra-group .ra-item + .ra-item { margin-top: 10px; }
+.dm-plant-chip:hover { border-color: var(--navy-light); }
+.dm-plant-chip.active {
+  background: var(--navy);
+  border-color: var(--navy);
+  color: #fff;
+}
 
 .tp-list { display: flex; flex-direction: column; gap: 12px; }
 .tp-item-label {
@@ -891,6 +897,8 @@ body {
   top: 0;
 }
 .sb-table tbody tr:hover { background: #f8f9fc; }
+.sb-row-clickable { cursor: pointer; }
+.sb-row-clickable:focus-visible { outline: 2px solid var(--navy-light); outline-offset: -2px; }
 .sb-table td.empty-state, .sb-table th.empty-state { white-space: normal; }
 .sb-num { text-align: right; font-variant-numeric: tabular-nums; }
 .sb-num-in { color: var(--green); font-weight: 600; }
