@@ -1386,13 +1386,14 @@ body {
 
 .op-count-form { margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--border); }
 
+.op-item-wrap { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
 .op-item {
   display: flex; justify-content: space-between; align-items: center; gap: 10px;
-  padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px;
+  padding: 10px 12px; flex-wrap: wrap;
 }
 .op-item-title { font-weight: 600; font-size: 13.5px; }
 .op-item-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
-.op-item-side { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.op-item-side { display: flex; align-items: center; gap: 8px; flex-shrink: 0; flex-wrap: wrap; }
 .op-selisih-badge { font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 999px; white-space: nowrap; }
 .op-selisih-zero { background: #e6f7ee; color: var(--green); }
 .op-selisih-minus { background: #fdeaea; color: var(--red); }
@@ -1402,6 +1403,17 @@ body {
   cursor: pointer; padding: 2px 6px; border-radius: 6px;
 }
 .op-item-remove:hover { background: #fdeaea; color: var(--red); }
+
+.op-btn-koreksi-langsung { white-space: nowrap; }
+.op-koreksi-done {
+  font-size: 11px; font-weight: 700; color: var(--green); white-space: nowrap;
+  background: #e6f7ee; padding: 4px 10px; border-radius: 999px;
+}
+.op-koreksi-inline {
+  padding: 12px; border-top: 1px dashed var(--border); background: #f6f8fc;
+}
+.op-koreksi-inline .hint-text { margin-top: 0; margin-bottom: 10px; }
+.op-koreksi-inline-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
 
 /* ---------- Alert Order & Purchase Request ---------- */
 .ao-header { justify-content: space-between; flex-wrap: wrap; }
