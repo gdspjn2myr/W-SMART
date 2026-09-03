@@ -7,15 +7,40 @@
 // terpisah (tombol "+ Tambah ke Sesi Opname"), baru semuanya disimpan sekaligus
 // lewat "Simpan Hasil Opname". Ini cuma LOG/catatan selisih, BELUM otomatis
 // mengoreksi stock (lihat catatan di HEADER_STOCK_OPNAME, Code.gs).
+//
+// KOREKSI LANGSUNG — tiap item di Sesi yang selisihnya ≠ 0 dapat tombol
+// "Koreksi Langsung" (lihat renderOpSesiList). Beda dari alur di atas: ini
+// LANGSUNG memanggil Api.saveKoreksiStock (endpoint yang sama dengan halaman
+// Koreksi Stock Manual, js/koreksi.js) begitu Alasan diisi & dikonfirmasi —
+// jadi stock beneran berubah saat itu juga, tanpa harus pindah halaman &
+// cari ulang kode barangnya. Sesi Opname (log) TETAP jalan seperti biasa di
+// atasnya — "Koreksi Langsung" cuma jalan pintas ke aksi yang sudah ada,
+// bukan pengganti "Simpan Hasil Opname". Kalau Lokasi diisi saat menghitung,
+// koreksinya per-bin (persis logic ksLokasi di koreksi.js); kalau kosong,
+// koreksi total semua lokasi.
 // ============================================================================
 
 let opInitialized = false;
 let opMode = 'barang'; // 'barang' | 'bin'
 let opContextLokasi = ''; // keisi kalau item dibuka dari hasil scan Bin (prefill Lokasi di form hitung)
+let opCurrentItemBins = []; // breakdown per-bin item yang lagi dibuka (buat baseline selisih per-bin)
 let opSesiItems = [];
 
+// Bikin id DOM yang aman dari Kode Barang (buat input Alasan per-item di
+// Sesi Opname, karena bisa lebih dari satu item expanded form koreksinya).
+function opSafeId(kode) {
+  return String(kode).replace(/[^a-zA-Z0-9_-]/g, '_');
+}
+
+// Qty sisa di 1 lokasi tertentu, dari breakdown 'bins' item yang lagi dibuka
+// di #opDetailCard — dipakai buat baseline selisih waktu Lokasi diisi.
+function opFindBinQty(lokasi) {
+  const entry = opCurrentItemBins.find((b) => b.lokasi === lokasi);
+  return entry ? entry.qty : 0;
+}
+
 const OP_STATUS_LABEL = {
-  'Stock Out': 'Stock Out', 'Need Reorder': 'Need Reorder', 'Near ROP': 'Near ROP',
+  'Stock Out': 'Out of Stock', 'Need Reorder': 'Need Reorder', 'Near ROP': 'Near ROP',
   'Normal': 'Normal', 'Over Max': 'Over Max', 'Belum Terdaftar': 'Belum Terdaftar'
 };
 const OP_STATUS_CLASS = {
@@ -200,6 +225,7 @@ function renderOpDetailCard(item, riwayatKedatangan) {
   card.dataset.namaBarang = item.namaBarang || '';
   card.dataset.satuan = item.satuan || '';
   card.dataset.qtySistem = item.onHand;
+  opCurrentItemBins = item.bins || [];
 
   document.getElementById('btnTambahSesiOpname').addEventListener('click', addToSesi);
   document.getElementById('opQtyFisik').focus();
@@ -220,16 +246,24 @@ function addToSesi() {
     return;
   }
 
-  const qtySistem = Number(card.dataset.qtySistem) || 0;
+  const lokasi = document.getElementById('opDetailLokasi').value.trim();
+  // Kalau lagi menghitung 1 bin spesifik, baseline selisihnya qty di bin itu
+  // saja (bukan onHand total) — biar akurat & konsisten sama logic Koreksi
+  // Langsung/per-bin di koreksi.js. Kalau Lokasi dikosongkan, tetap pakai
+  // onHand total seperti sebelumnya.
+  const qtySistemTotal = Number(card.dataset.qtySistem) || 0;
+  const qtySistem = lokasi ? opFindBinQty(lokasi) : qtySistemTotal;
   const item = {
     kode: card.dataset.kode,
     namaBarang: card.dataset.namaBarang,
     satuan: card.dataset.satuan,
-    lokasi: document.getElementById('opDetailLokasi').value.trim(),
+    lokasi,
     catatan: document.getElementById('opCatatan').value.trim(),
     qtySistem: qtySistem,
     qtyFisik: Number(qtyFisik),
-    selisih: Number(qtyFisik) - qtySistem
+    selisih: Number(qtyFisik) - qtySistem,
+    dikoreksi: false,
+    koreksiExpanded: false
   };
 
   // Kalau kode yang sama sudah ada di sesi ini, timpa (bukan dobel) — biasanya
@@ -265,16 +299,45 @@ function renderOpSesiList() {
   wrap.innerHTML = opSesiItems.map((it) => {
     const selisihClass = it.selisih === 0 ? 'op-selisih-zero' : it.selisih < 0 ? 'op-selisih-minus' : 'op-selisih-plus';
     const selisihText = it.selisih > 0 ? '+' + it.selisih : String(it.selisih);
+    const safeId = opSafeId(it.kode);
+    const adaSelisih = it.selisih !== 0;
+
+    let koreksiAksiHtml = '';
+    if (adaSelisih) {
+      koreksiAksiHtml = it.dikoreksi
+        ? '<span class="op-koreksi-done">✓ Stock dikoreksi</span>'
+        : `<button type="button" class="btn btn-small op-btn-koreksi-langsung" data-kode="${escapeHtml(it.kode)}">Koreksi Langsung</button>`;
+    }
+
+    const labelLokasi = it.lokasi ? `di lokasi <strong>${escapeHtml(it.lokasi)}</strong>` : 'total <strong>semua lokasi</strong>';
+    const formInlineHtml = (it.koreksiExpanded && !it.dikoreksi) ? `
+      <div class="op-koreksi-inline">
+        <p class="hint-text">Ini akan LANGSUNG mengubah stock sistem ${labelLokasi} untuk <strong>${escapeHtml(it.kode)}</strong>, dari ${it.qtySistem} menjadi ${it.qtyFisik} ${escapeHtml(it.satuan || '')} (selisih ${selisihText}) — bukan cuma catatan opname.</p>
+        <div class="form-row">
+          <label>Alasan Koreksi *</label>
+          <input type="text" id="opKsAlasan-${safeId}" placeholder="Mis. hasil hitung ulang, ketemu di bin lain, dst." value="${escapeHtml(it.catatan || '')}">
+        </div>
+        <div class="op-koreksi-inline-actions">
+          <button type="button" class="btn btn-small btn-primary op-btn-koreksi-confirm" data-kode="${escapeHtml(it.kode)}">Konfirmasi & Ubah Stock</button>
+          <button type="button" class="btn btn-small op-btn-koreksi-cancel" data-kode="${escapeHtml(it.kode)}">Batal</button>
+        </div>
+      </div>
+    ` : '';
+
     return `
-      <div class="op-item">
-        <div>
-          <div class="op-item-title">${escapeHtml(it.kode)} — ${escapeHtml(it.namaBarang || '-')}</div>
-          <div class="op-item-sub">Sistem ${it.qtySistem} → Fisik ${it.qtyFisik} ${escapeHtml(it.satuan || '')}${it.lokasi ? ' · ' + escapeHtml(it.lokasi) : ''}</div>
+      <div class="op-item-wrap">
+        <div class="op-item">
+          <div>
+            <div class="op-item-title">${escapeHtml(it.kode)} — ${escapeHtml(it.namaBarang || '-')}</div>
+            <div class="op-item-sub">Sistem ${it.qtySistem} → Fisik ${it.qtyFisik} ${escapeHtml(it.satuan || '')}${it.lokasi ? ' · ' + escapeHtml(it.lokasi) : ''}</div>
+          </div>
+          <div class="op-item-side">
+            <span class="op-selisih-badge ${selisihClass}">Selisih ${selisihText}</span>
+            ${koreksiAksiHtml}
+            <button type="button" class="op-item-remove" data-kode="${escapeHtml(it.kode)}" title="Hapus dari sesi" aria-label="Hapus dari sesi">×</button>
+          </div>
         </div>
-        <div class="op-item-side">
-          <span class="op-selisih-badge ${selisihClass}">Selisih ${selisihText}</span>
-          <button type="button" class="op-item-remove" data-kode="${escapeHtml(it.kode)}" title="Hapus dari sesi" aria-label="Hapus dari sesi">×</button>
-        </div>
+        ${formInlineHtml}
       </div>
     `;
   }).join('');
@@ -282,6 +345,78 @@ function renderOpSesiList() {
   wrap.querySelectorAll('.op-item-remove').forEach((btn) => {
     btn.addEventListener('click', () => removeSesiItem(btn.dataset.kode));
   });
+  wrap.querySelectorAll('.op-btn-koreksi-langsung').forEach((btn) => {
+    btn.addEventListener('click', () => toggleKoreksiLangsung(btn.dataset.kode, true));
+  });
+  wrap.querySelectorAll('.op-btn-koreksi-cancel').forEach((btn) => {
+    btn.addEventListener('click', () => toggleKoreksiLangsung(btn.dataset.kode, false));
+  });
+  wrap.querySelectorAll('.op-btn-koreksi-confirm').forEach((btn) => {
+    btn.addEventListener('click', () => handleKoreksiLangsungConfirm(btn.dataset.kode));
+  });
+}
+
+function toggleKoreksiLangsung(kode, expand) {
+  const it = opSesiItems.find((x) => x.kode === kode);
+  if (!it) return;
+  it.koreksiExpanded = expand;
+  renderOpSesiList();
+  if (expand) {
+    const el = document.getElementById('opKsAlasan-' + opSafeId(kode));
+    if (el) el.focus();
+  }
+}
+
+// Langsung panggil endpoint yang sama dengan Koreksi Stock Manual
+// (Api.saveKoreksiStock) pakai data yang sudah dicatat waktu hitung fisik —
+// nggak perlu pindah halaman / cari ulang kode barangnya. Alasan tetap wajib
+// (jejak audit), Sesi Opname (log) di atas TIDAK berubah/kepengaruh.
+async function handleKoreksiLangsungConfirm(kode) {
+  const it = opSesiItems.find((x) => x.kode === kode);
+  if (!it) return;
+
+  const alasanInput = document.getElementById('opKsAlasan-' + opSafeId(kode));
+  const alasan = alasanInput.value.trim();
+  if (!alasan) {
+    showToast('Alasan koreksi wajib diisi.', 'error');
+    alasanInput.focus();
+    return;
+  }
+
+  const confirmBtn = document.querySelector(`.op-btn-koreksi-confirm[data-kode="${cssEscapeAttr(kode)}"]`);
+  const cancelBtn = document.querySelector(`.op-btn-koreksi-cancel[data-kode="${cssEscapeAttr(kode)}"]`);
+  if (confirmBtn) { confirmBtn.disabled = true; confirmBtn.textContent = 'Menyimpan...'; }
+  if (cancelBtn) cancelBtn.disabled = true;
+
+  const user = document.getElementById('opUser').value.trim();
+  try {
+    const res = await Api.saveKoreksiStock({
+      kode: it.kode,
+      namaBarang: it.namaBarang,
+      satuan: it.satuan,
+      qtyBaru: it.qtyFisik,
+      lokasi: it.lokasi,
+      alasan,
+      user,
+      sumber: 'Opname'
+    });
+    it.dikoreksi = true;
+    it.koreksiExpanded = false;
+    const labelLokasi = res.lokasi ? ` di ${res.lokasi}` : ' (total)';
+    showToast(`Stock ${it.kode}${labelLokasi} dikoreksi: ${res.qtySebelum} → ${res.qtyBaru}.`, 'success');
+    dashboardLoadedOnce = false; // supaya Dashboard refresh angka onHand terbaru saat dibuka lagi
+    renderOpSesiList();
+  } catch (err) {
+    showToast('Gagal koreksi: ' + err.message, 'error');
+    if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = 'Konfirmasi & Ubah Stock'; }
+    if (cancelBtn) cancelBtn.disabled = false;
+  }
+}
+
+// Kode Barang biasanya cuma alfanumerik/dash, tapi kalau ada karakter aneh
+// (spasi, kutip, dst.) escape dulu biar nggak merusak selector CSS querySelector.
+function cssEscapeAttr(value) {
+  return String(value).replace(/["\\]/g, '\\$&');
 }
 
 async function handleSimpanOpname() {
