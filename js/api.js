@@ -71,5 +71,7 @@ const Api = {
   saveStockOpname: (payload) => callApi('saveStockOpname', payload),
   saveKoreksiStock: (payload) => callApi('saveKoreksiStock', payload),
   getAlertOrder: () => callApi('getAlertOrder'),
-  createPR: (payload) => callApi('createPR', payload)
+  createPR: (payload) => callApi('createPR', payload),
+  getReceivingDetail: () => callApi('getReceivingDetail'),
+  getStockMutasi: (payload) => callApi('getStockMutasi', payload)
 };
