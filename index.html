@@ -149,15 +149,13 @@
       </div>
     </div>
 
-    <div class="card" id="reorderAlertCard">
+    <div class="card card-clickable" id="reorderAlertCard" role="button" tabindex="0" aria-haspopup="dialog">
       <div class="card-header">
         <svg viewBox="0 0 24 24" class="card-header-icon" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 2.5 17.5a1.5 1.5 0 0 0 1.3 2.2h16.4a1.5 1.5 0 0 0 1.3-2.2L13.7 3.9a1.5 1.5 0 0 0-2.6 0Z"/><path d="M12 9v4M12 16.2h.01"/></svg>
         Reorder Alert (Perlu Tindakan)
         <span class="count-badge" id="reorderAlertCount">0 Item</span>
       </div>
-      <div id="reorderAlertList" class="ra-list">
-        <div class="empty-state">Belum ada item yang perlu di-reorder.</div>
-      </div>
+      <div class="ra-card-hint" id="reorderAlertHint">Semua stock dalam kondisi normal.</div>
     </div>
 
     <div class="stat-grid">
@@ -797,6 +795,20 @@
       <button type="button" id="btnPnPutawayNow" class="btn btn-primary btn-block">Ya, Put Away Sekarang</button>
       <button type="button" id="btnPnPrintQr" class="btn btn-small btn-block">Cetak Label QR Dulu</button>
       <button type="button" id="btnPnPutawayLater" class="btn-link">Nanti</button>
+    </div>
+  </div>
+</div>
+
+<div id="reorderAlertModalBackdrop" class="modal-backdrop" hidden></div>
+<div id="reorderAlertModal" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="reorderAlertModalTitle">
+  <div class="modal-card card">
+    <div class="modal-header">
+      <span id="reorderAlertModalTitle">Reorder Alert (Perlu Tindakan)</span>
+      <button type="button" id="btnCloseReorderAlertModal" class="modal-close" aria-label="Tutup">×</button>
+    </div>
+    <p class="md-preview-hint">Gabungan barang berstatus Stock Out, Need Reorder, & Near ROP (paling kritis duluan) — beda dari kartu status di atas yang menghitung tiap status TERPISAH. Maksimal 50 item teratas ditampilkan.</p>
+    <div id="reorderAlertList" class="ra-list">
+      <div class="empty-state">Belum ada item yang perlu di-reorder.</div>
     </div>
   </div>
 </div>
