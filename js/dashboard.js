@@ -3,8 +3,10 @@
 // ============================================================================
 
 let dashboardLoadedOnce = false;
+let dashFullBalances = null; // cache Stock Balance LENGKAP (semua SKU + belum terdaftar), dipakai buat isi popup kartu2 statistik Dashboard — di-reset tiap loadDashboard() supaya nggak nampilin data basi
 
 async function loadDashboard() {
+  dashFullBalances = null;
   try {
     const res = await Api.getDashboard();
     renderStockStats(res);
@@ -93,6 +95,104 @@ function openReorderAlertModal() {
 function closeReorderAlertModal() {
   document.getElementById('reorderAlertModalBackdrop').hidden = true;
   document.getElementById('reorderAlertModal').hidden = true;
+}
+
+// ---------------------------------------------------------------------------
+// POPUP KARTU STATISTIK (Stock Saat Ini, Total SKU, Normal, Near ROP, Need
+// Reorder, Out of Stock) — semua kartu di Dashboard bisa diklik, isi popup-nya
+// menyesuaikan kartu mana yang diklik (lihat data-dash-filter di index.html
+// & handler-nya di app.js). Sumber datanya Stock Balance LENGKAP (Api.getStockBalance,
+// endpoint yang sama dengan halaman Stock Balance — sudah punya status &
+// belumAdaMaster per item, jadi nggak perlu endpoint baru), di-fetch SEKALI
+// & di-cache di dashFullBalances (di-reset tiap loadDashboard() dipanggil ulang).
+// ---------------------------------------------------------------------------
+const DASH_CARD_FILTERS = {
+  semua: {
+    title: 'Stock Saat Ini (Semua SKU)',
+    hint: 'Semua barang di gudang dengan stock > 0, TERMASUK yang belum terdaftar di Master Data — diurutkan dari stock terbanyak. Ini penjumlahan SEMUA barang, bukan stock 1 item tertentu.',
+    filter: (b) => b.onHand > 0,
+    sort: (a, b) => b.onHand - a.onHand
+  },
+  total: {
+    title: 'Total SKU Aktif',
+    hint: 'Semua barang yang sudah terdaftar & berstatus Aktif di Master Data, apapun kondisi stock-nya saat ini.',
+    filter: (b) => !b.belumAdaMaster,
+    sort: (a, b) => (a.namaBarang || '').localeCompare(b.namaBarang || '')
+  },
+  normal: {
+    title: 'Status Normal',
+    hint: 'Barang terdaftar dengan stock di atas ROP & masih dalam batas MAX.',
+    filter: (b) => !b.belumAdaMaster && b.status === 'Normal',
+    sort: (a, b) => (a.namaBarang || '').localeCompare(b.namaBarang || '')
+  },
+  'near-rop': {
+    title: 'Near ROP',
+    hint: 'Barang terdaftar yang stock-nya sudah dekat titik reorder (maksimal 20% di atas ROP) — belum wajib order, tapi perlu mulai dipantau.',
+    filter: (b) => !b.belumAdaMaster && b.status === 'Near ROP',
+    sort: (a, b) => a.onHand - b.onHand
+  },
+  'need-reorder': {
+    title: 'Need Reorder',
+    hint: 'Barang terdaftar yang stock-nya sudah di titik ROP atau di bawahnya, tapi belum benar-benar 0.',
+    filter: (b) => !b.belumAdaMaster && b.status === 'Need Reorder',
+    sort: (a, b) => a.onHand - b.onHand
+  },
+  'stock-out': {
+    title: 'Out of Stock',
+    hint: 'Barang terdaftar yang stock-nya sudah 0 — paling butuh perhatian & prioritas order.',
+    filter: (b) => !b.belumAdaMaster && b.status === 'Stock Out',
+    sort: (a, b) => (a.namaBarang || '').localeCompare(b.namaBarang || '')
+  }
+};
+
+async function openDashStatModal(filterKey) {
+  const cfg = DASH_CARD_FILTERS[filterKey];
+  if (!cfg) return;
+
+  document.getElementById('dashListModalTitle').textContent = cfg.title;
+  document.getElementById('dashListModalHint').textContent = cfg.hint;
+  document.getElementById('dashListModalBody').innerHTML = '<div class="empty-state">Memuat...</div>';
+  document.getElementById('dashListModalBackdrop').hidden = false;
+  document.getElementById('dashListModal').hidden = false;
+
+  try {
+    if (!dashFullBalances) {
+      const res = await Api.getStockBalance({});
+      dashFullBalances = res.data || [];
+    }
+    const items = dashFullBalances.filter(cfg.filter).sort(cfg.sort);
+    renderDashListModalBody(items);
+  } catch (err) {
+    document.getElementById('dashListModalBody').innerHTML =
+      `<div class="empty-state">Gagal memuat: ${escapeHtml(err.message)}</div>`;
+  }
+}
+
+function renderDashListModalBody(items) {
+  const body = document.getElementById('dashListModalBody');
+  if (!items.length) {
+    body.innerHTML = '<div class="empty-state">Tidak ada barang di kategori ini.</div>';
+    return;
+  }
+  body.innerHTML = items.map((it) => {
+    const badgeClass = it.belumAdaMaster ? 'ra-badge-unregistered' : (RA_STATUS_CLASS[it.status] || '');
+    const badgeLabel = it.belumAdaMaster ? 'Belum Terdaftar' : (STATUS_LABEL[it.status] || it.status);
+    const ropMaxText = (!it.belumAdaMaster && (it.rop || it.max)) ? ` · ROP ${it.rop} · MAX ${it.max}` : '';
+    return `
+      <div class="ra-item">
+        <div class="ra-item-main">
+          <div class="ra-item-title">${escapeHtml(it.kode)} — ${escapeHtml(it.namaBarang || '-')}</div>
+          <div class="ra-item-sub">Stock ${it.onHand} ${escapeHtml(it.satuan || '')}${ropMaxText}</div>
+        </div>
+        <span class="ra-badge ${badgeClass}">${escapeHtml(badgeLabel)}</span>
+      </div>
+    `;
+  }).join('');
+}
+
+function closeDashListModal() {
+  document.getElementById('dashListModalBackdrop').hidden = true;
+  document.getElementById('dashListModal').hidden = true;
 }
 
 function renderTopPemakaian(list) {
