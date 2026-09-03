@@ -11,6 +11,8 @@ let pwInitialized = false;
 let pwBelumMapping = [];
 
 function initPutawayPage() {
+  Auth.prefillUserField('pwUser'); // identitas selalu dari akun yang login (lihat js/auth.js)
+
   if (!pwInitialized) {
     pwInitialized = true;
 
