@@ -750,6 +750,27 @@ body {
 .ra-badge-reorder { background: #fdeaea; color: var(--red); }
 .ra-badge-near { background: #fff3d6; color: #a06a00; }
 
+/* Grup per-Plant di popup "Total SKU Terdaftar" (lihat renderDashPlantGroupedModalBody) */
+.ra-group + .ra-group { margin-top: 14px; }
+.ra-group-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--navy);
+  text-transform: uppercase;
+  letter-spacing: .02em;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+.ra-group-header .count-badge {
+  background: #e6edfb;
+  color: var(--navy);
+}
+.ra-group .ra-item + .ra-item { margin-top: 10px; }
+
 .tp-list { display: flex; flex-direction: column; gap: 12px; }
 .tp-item-label {
   display: flex;
@@ -789,82 +810,96 @@ body {
 .kt-legend-item strong { margin-left: auto; color: var(--navy); }
 .kt-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
 
-/* ---------- Stock Balance ---------- */
-.sb-summary {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 12px;
-  color: var(--text-muted);
-  padding: 0 2px 12px;
-}
-#sbCount { font-weight: 700; color: var(--navy); }
-
-.sb-list { display: flex; flex-direction: column; gap: 10px; }
-.sb-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 14px;
-  background: var(--card-bg);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  box-shadow: var(--shadow-card);
-  animation: fadeIn .25s ease;
-}
-.sb-item-main { min-width: 0; }
-.sb-item-title {
-  font-weight: 600;
-  font-size: 13.5px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.sb-item-sub { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
-.sb-belum-mapping {
-  display: inline-block;
-  margin-left: 6px;
-  color: #a06a00;
-  font-weight: 700;
-}
+/* ---------- Stock Balance ("Mutasi Stock") ---------- */
 .badge-belum-master {
   display: inline-block;
   margin-left: 6px;
   color: #a06a00;
   font-weight: 700;
 }
-.sb-item-side {
+
+.sb-filter-card { margin-bottom: 14px; }
+.sb-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 4px 14px;
+}
+.sb-filter-material { grid-column: 1 / -1; }
+@media (max-width: 480px) {
+  .sb-filter-grid { grid-template-columns: 1fr; }
+}
+.sb-filter-actions {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 5px;
-  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
 }
-.sb-onhand {
-  font-size: 19px;
-  font-weight: 800;
-  color: var(--navy);
-  line-height: 1;
-}
-.sb-onhand span {
-  font-size: 10.5px;
-  font-weight: 600;
+.sb-detail-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
   color: var(--text-muted);
-  margin-left: 3px;
+  cursor: pointer;
 }
-.sb-badge {
-  font-size: 10.5px;
-  font-weight: 700;
-  padding: 3px 9px;
-  border-radius: 999px;
+.sb-detail-toggle input { width: 16px; height: 16px; accent-color: var(--navy); cursor: pointer; }
+
+.sb-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: var(--text-muted);
+  padding: 0 2px 8px;
+}
+#sbCount { font-weight: 700; color: var(--navy); }
+
+.sb-kategori-legend {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  font-size: 12px;
+  color: var(--text-muted);
+  padding: 0 2px 12px;
+}
+.sb-kategori-legend-item { display: flex; align-items: center; gap: 6px; }
+
+.sb-table-card { padding: 0; overflow: hidden; }
+.sb-table-wrap { overflow-x: auto; }
+.sb-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
   white-space: nowrap;
 }
-.sb-badge-out { background: #ece9f3; color: #4b3b8a; }
-.sb-badge-reorder { background: #fdeaea; color: var(--red); }
-.sb-badge-near { background: #fff3d6; color: #a06a00; }
-.sb-badge-over { background: #e6edfb; color: var(--navy); }
-.sb-badge-normal { background: #e6f7ee; color: var(--green); }
+.sb-table th, .sb-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+}
+.sb-table th {
+  background: #f0f2f7;
+  font-weight: 700;
+  font-size: 11.5px;
+  color: var(--navy);
+  position: sticky;
+  top: 0;
+}
+.sb-table tbody tr:hover { background: #f8f9fc; }
+.sb-table td.empty-state, .sb-table th.empty-state { white-space: normal; }
+.sb-num { text-align: right; font-variant-numeric: tabular-nums; }
+.sb-num-in { color: var(--green); font-weight: 600; }
+.sb-num-out { color: var(--red); font-weight: 600; }
+.sb-num-ending { font-weight: 800; color: var(--navy); }
+.sb-kode-cell { font-weight: 700; }
+.sb-plant-tag { font-size: 10.5px; color: var(--text-muted); margin-top: 2px; font-weight: 500; }
+.sb-jenis-kosong { color: var(--text-muted); }
+.sb-table-wrap.detail-off .sb-col-detail { display: none; }
 
 /* ---------- Master Data ---------- */
 .md-toolbar {
