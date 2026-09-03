@@ -59,11 +59,20 @@ const STATUS_LABEL = {
   'Belum Terdaftar': 'Belum Terdaftar'
 };
 
+// Kartu di Dashboard cuma nunjukin RINGKASAN (jumlah + hint) — daftar lengkapnya
+// sengaja dipindah ke popup/modal (buka pas kartu diklik, lihat openReorderAlertModal
+// di app.js) biar Dashboard nggak kepanjangan discroll cuma gara-gara banyak
+// barang yang perlu diorder.
 function renderReorderAlert(list) {
   document.getElementById('reorderAlertCount').textContent = list.length + ' Item';
+  const hint = document.getElementById('reorderAlertHint');
+  hint.textContent = list.length
+    ? `${list.length} barang butuh diorder — ketuk buat lihat daftarnya`
+    : 'Semua stock dalam kondisi normal.';
+
   const wrap = document.getElementById('reorderAlertList');
   if (!list.length) {
-    wrap.innerHTML = '<div class="empty-state">Semua stock dalam kondisi normal.</div>';
+    wrap.innerHTML = '<div class="empty-state">Belum ada item yang perlu di-reorder.</div>';
     return;
   }
   wrap.innerHTML = list.map((it) => `
@@ -75,6 +84,15 @@ function renderReorderAlert(list) {
         <span class="ra-badge ${RA_STATUS_CLASS[it.status] || ''}">${escapeHtml(STATUS_LABEL[it.status] || it.status)}</span>
       </div>
     `).join('');
+}
+
+function openReorderAlertModal() {
+  document.getElementById('reorderAlertModalBackdrop').hidden = false;
+  document.getElementById('reorderAlertModal').hidden = false;
+}
+function closeReorderAlertModal() {
+  document.getElementById('reorderAlertModalBackdrop').hidden = true;
+  document.getElementById('reorderAlertModal').hidden = true;
 }
 
 function renderTopPemakaian(list) {
