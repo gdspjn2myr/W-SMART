@@ -892,7 +892,23 @@
       <button type="button" id="btnCloseDashListModal" class="modal-close" aria-label="Tutup">×</button>
     </div>
     <p class="md-preview-hint" id="dashListModalHint"></p>
+    <div id="dashListModalPlantFilter" class="dm-plant-filter" hidden></div>
     <div id="dashListModalBody" class="ra-list">
+      <div class="empty-state">Memuat...</div>
+    </div>
+  </div>
+</div>
+
+<!-- Popup Riwayat Transaksi 1 SKU (klik baris di halaman Stock Balance / Mutasi Stock) -->
+<div id="sbRiwayatModalBackdrop" class="modal-backdrop" hidden></div>
+<div id="sbRiwayatModal" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="sbRiwayatModalTitle">
+  <div class="modal-card card">
+    <div class="modal-header">
+      <span id="sbRiwayatModalTitle">Riwayat Transaksi</span>
+      <button type="button" id="btnCloseSbRiwayatModal" class="modal-close" aria-label="Tutup">×</button>
+    </div>
+    <p class="md-preview-hint" id="sbRiwayatModalHint"></p>
+    <div id="sbRiwayatModalBody" class="ra-list">
       <div class="empty-state">Memuat...</div>
     </div>
   </div>
