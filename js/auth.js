@@ -25,7 +25,6 @@ const PAGE_ROLES = {
   'qr-labels': ['Admin', 'Staff'],
   riwayat: ['Admin', 'Staff', 'Viewer'],
   opname: ['Admin', 'Staff'],
-  koreksi: ['Admin', 'Staff'],
   'alert-order': ['Admin', 'Staff', 'Viewer'],
   users: ['Admin']
 };
@@ -206,6 +205,80 @@ function wireLoginForm() {
     } finally {
       btnSubmit.disabled = false;
       btnSubmit.textContent = 'Masuk';
+    }
+  });
+}
+
+// Toggle antara form Login & form Daftar Akun di layar yang sama (login-card).
+// Dipisah dari wireLoginForm supaya init.js/app.js cukup panggil satu fungsi
+// buat wiring seluruh layar login (lihat pemanggilnya di bagian bawah app.js).
+function wireLoginRegisterToggle() {
+  const loginForm = document.getElementById('loginForm');
+  const registerForm = document.getElementById('registerForm');
+  const btnShowRegister = document.getElementById('btnShowRegister');
+  const btnShowLogin = document.getElementById('btnShowLogin');
+  if (!loginForm || !registerForm || !btnShowRegister || !btnShowLogin) return;
+
+  btnShowRegister.addEventListener('click', () => {
+    loginForm.hidden = true;
+    registerForm.hidden = false;
+    const el = document.getElementById('registerNama');
+    if (el) setTimeout(() => el.focus(), 50);
+  });
+  btnShowLogin.addEventListener('click', () => {
+    registerForm.hidden = true;
+    loginForm.hidden = false;
+    const el = document.getElementById('loginUsername');
+    if (el) setTimeout(() => el.focus(), 50);
+  });
+}
+
+function wireRegisterForm() {
+  const form = document.getElementById('registerForm');
+  if (!form) return;
+  const btnSubmit = document.getElementById('btnRegisterSubmit');
+  const errEl = document.getElementById('registerError');
+  const successEl = document.getElementById('registerSuccess');
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    errEl.hidden = true;
+    successEl.hidden = true;
+
+    const nama = document.getElementById('registerNama').value.trim();
+    const username = document.getElementById('registerUsername').value.trim();
+    const pin = document.getElementById('registerPin').value.trim();
+    const pinConfirm = document.getElementById('registerPinConfirm').value.trim();
+
+    if (!nama || !username || !pin || !pinConfirm) {
+      errEl.textContent = 'Semua field wajib diisi.';
+      errEl.hidden = false;
+      return;
+    }
+    if (!/^\d{4,}$/.test(pin)) {
+      errEl.textContent = 'PIN harus berupa angka, minimal 4 digit.';
+      errEl.hidden = false;
+      return;
+    }
+    if (pin !== pinConfirm) {
+      errEl.textContent = 'PIN & ulangi PIN tidak sama.';
+      errEl.hidden = false;
+      return;
+    }
+
+    btnSubmit.disabled = true;
+    btnSubmit.textContent = 'Mendaftar...';
+    try {
+      const res = await Api.register({ nama, username, pin });
+      form.reset();
+      successEl.textContent = res.message || 'Pendaftaran berhasil dikirim. Tunggu Admin menyetujui akun kamu.';
+      successEl.hidden = false;
+    } catch (err) {
+      errEl.textContent = err.message;
+      errEl.hidden = false;
+    } finally {
+      btnSubmit.disabled = false;
+      btnSubmit.textContent = 'Daftar';
     }
   });
 }

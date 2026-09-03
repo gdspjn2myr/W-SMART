@@ -218,6 +218,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // login/app shell yang tepat langsung kelihatan tanpa kedip.
   Auth.init();
   wireLoginForm();
+  wireRegisterForm();
+  wireLoginRegisterToggle();
   wireLogoutButton();
 
   initSidebar();
@@ -307,9 +309,6 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   Router.register('opname', () => {
     initOpnamePage();
-  });
-  Router.register('koreksi', () => {
-    initKoreksiPage();
   });
   Router.register('alert-order', () => {
     initAlertOrderPage();

@@ -906,6 +906,18 @@ body {
 .sb-num-ending { font-weight: 800; color: var(--navy); }
 .sb-kode-cell { font-weight: 700; }
 .sb-plant-tag { font-size: 10.5px; color: var(--text-muted); margin-top: 2px; font-weight: 500; }
+.inline-plant-picker {
+  display: inline-block;
+  width: auto;
+  margin-left: 4px;
+  padding: 3px 8px;
+  font-size: 12px;
+  font-weight: 700;
+  border: 1px solid var(--border, #d8dde8);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--navy);
+}
 .sb-jenis-kosong { color: var(--text-muted); }
 .sb-table-wrap.detail-off .sb-col-detail { display: none; }
 
@@ -1010,6 +1022,7 @@ body {
 }
 .status-aktif { background: #e6f7ee; color: var(--green); }
 .status-nonaktif { background: #eef1f8; color: var(--text-muted); }
+.status-pending { background: #fff4e0; color: #b3701a; cursor: default; }
 
 .btn-icon {
   display: inline-flex;
@@ -1561,6 +1574,15 @@ body {
 .form-error {
   background: #fdeaea;
   color: var(--red);
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 9px 12px;
+  border-radius: 10px;
+  margin-bottom: 12px;
+}
+.form-success {
+  background: #e7f7ee;
+  color: var(--green, #1a8a4c);
   font-size: 12.5px;
   font-weight: 600;
   padding: 9px 12px;

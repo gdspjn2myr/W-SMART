@@ -54,12 +54,21 @@ function setPmTanggalDisplay() {
 
 function handlePmKodeInput(e) {
   const kode = e.target.value.trim();
-  const match = masterBarangCache.find((b) => b.kodeBarang === kode);
+  // Satu Kode Barang bisa punya lebih dari 1 baris di Master Data (beda Plant,
+  // lihat js/master-data.js) — pakai .filter() bukan .find() supaya kita tahu
+  // semua Plant yang terdaftar buat kode ini, bukan cuma baris pertama yang
+  // ketemu (yang bisa jadi bukan Plant yang mau dipakai user).
+  const matches = masterBarangCache.filter((b) => b.kodeBarang === kode);
   const hint = document.getElementById('pmNamaHint');
 
-  if (match) {
-    document.getElementById('pmSatuan').value = match.satuan || '';
-    hint.textContent = '→ ' + match.namaBarang;
+  if (matches.length) {
+    document.getElementById('pmSatuan').value = matches[0].satuan || '';
+    if (matches.length > 1) {
+      const plants = matches.map((m) => m.plant).filter(Boolean).join(', ');
+      hint.textContent = '→ ' + matches[0].namaBarang + ' — kode ini ada di beberapa Plant (' + plants + '). Pastikan Plant di bawah sesuai tempat barang fisiknya, transaksi akan ditolak kalau stock-nya kosong di Plant yang dipilih.';
+    } else {
+      hint.textContent = '→ ' + matches[0].namaBarang;
+    }
     hint.hidden = false;
   } else {
     hint.hidden = true;
@@ -86,6 +95,11 @@ async function handlePmSubmit(e) {
     document.getElementById('pmTeknisi').focus();
     return;
   }
+  const plant = document.getElementById('pmPlant').value.trim();
+  if (!plant) {
+    showToast('Plant wajib dipilih — transaksi ini akan dicocokkan ke stock yang benar2 ada di Plant tsb.', 'error');
+    return;
+  }
 
   const match = masterBarangCache.find((b) => b.kodeBarang === kode);
 
@@ -97,7 +111,7 @@ async function handlePmSubmit(e) {
     teknisi,
     keterangan: document.getElementById('pmKeterangan').value.trim(),
     lokasi: pmLokasi,
-    plant: document.getElementById('pmPlant').value.trim(),
+    plant,
     sloc: document.getElementById('pmSLoc').value.trim()
   };
 

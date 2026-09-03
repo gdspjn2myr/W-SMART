@@ -25,9 +25,16 @@ function initUsersPage() {
     document.getElementById('usersList').addEventListener('click', (e) => {
       const editBtn = e.target.closest('[data-action="edit-user"]');
       const toggleBtn = e.target.closest('[data-action="toggle-user-status"]');
+      const approveBtn = e.target.closest('[data-action="approve-user"]');
+      const rejectBtn = e.target.closest('[data-action="reject-user"]');
       if (editBtn) {
         const u = usersCache.find((it) => it.username === editBtn.dataset.username);
         if (u) openUserModal(u);
+      } else if (approveBtn) {
+        const u = usersCache.find((it) => it.username === approveBtn.dataset.username);
+        if (u) openUserModal(u);
+      } else if (rejectBtn) {
+        rejectUser(rejectBtn.dataset.username);
       } else if (toggleBtn && !toggleBtn.disabled) {
         toggleUserStatus(toggleBtn.dataset.username, toggleBtn.dataset.nextStatus);
       }
@@ -49,6 +56,7 @@ async function loadUsers() {
 }
 
 const ROLE_BADGE_CLASS = { Admin: 'role-badge-admin', Staff: 'role-badge-staff', Viewer: 'role-badge-viewer' };
+const STATUS_PENDING = 'Menunggu Persetujuan'; // harus sama persis dengan STATUS_PENDING di Code.gs
 
 function renderUsersList() {
   const wrap = document.getElementById('usersList');
@@ -58,10 +66,37 @@ function renderUsersList() {
   }
 
   const me = Auth.getUser();
-  wrap.innerHTML = usersCache.map((u) => {
-    const isAktif = u.status !== 'Nonaktif';
+  // Pendaftar baru (menunggu persetujuan) ditaruh paling atas biar Admin tidak
+  // perlu scroll buat lihat siapa yang perlu ditindaklanjuti.
+  const sorted = usersCache.slice().sort((a, b) => {
+    const aPending = a.status === STATUS_PENDING ? 0 : 1;
+    const bPending = b.status === STATUS_PENDING ? 0 : 1;
+    return aPending - bPending;
+  });
+
+  wrap.innerHTML = sorted.map((u) => {
+    const isPending = u.status === STATUS_PENDING;
+    const isAktif = u.status !== 'Nonaktif' && !isPending;
     const isSelf = !!(me && me.username && me.username.toLowerCase() === String(u.username).toLowerCase());
     const badgeClass = ROLE_BADGE_CLASS[u.role] || 'role-badge-staff';
+
+    if (isPending) {
+      return `
+        <div class="md-item">
+          <div class="md-item-main">
+            <div class="md-item-title">
+              <span class="status-pill status-pending">Menunggu Persetujuan</span>
+              ${escapeHtml(u.nama)}
+            </div>
+            <div class="md-item-sub">@${escapeHtml(u.username)} · Daftar sendiri, belum punya Role</div>
+          </div>
+          <div class="md-item-actions">
+            <button type="button" class="btn btn-small" data-action="reject-user" data-username="${escapeHtml(u.username)}">Tolak</button>
+            <button type="button" class="btn btn-small btn-primary" data-action="approve-user" data-username="${escapeHtml(u.username)}">Setujui</button>
+          </div>
+        </div>`;
+    }
+
     return `
       <div class="md-item">
         <div class="md-item-main">
@@ -89,13 +124,18 @@ function renderUsersList() {
 function openUserModal(user) {
   editingUsername = user ? user.username : null;
   const isEdit = !!user;
-  document.getElementById('userModalTitle').textContent = isEdit ? 'Edit User' : 'Tambah User';
+  const isApproving = !!(user && user.status === STATUS_PENDING);
+  document.getElementById('userModalTitle').textContent = isApproving ? 'Setujui User' : (isEdit ? 'Edit User' : 'Tambah User');
   document.getElementById('userNama').value = user ? user.nama : '';
   document.getElementById('userUsername').value = user ? user.username : '';
   document.getElementById('userUsername').disabled = isEdit; // username = kunci, tidak diubah setelah dibuat
   document.getElementById('userPin').value = '';
-  document.getElementById('userPin').placeholder = isEdit ? 'Kosongkan jika PIN tidak diubah' : 'PIN (angka, min 4 digit)';
-  document.getElementById('userRole').value = user ? user.role : 'Staff';
+  document.getElementById('userPin').placeholder = isApproving
+    ? 'Kosongkan supaya PIN yang dia daftarkan tetap dipakai'
+    : (isEdit ? 'Kosongkan jika PIN tidak diubah' : 'PIN (angka, min 4 digit)');
+  // Pendaftar-sendiri belum punya Role — default-kan ke Staff, Admin tinggal
+  // ganti kalau perlu sebelum klik Simpan (Simpan = otomatis menyetujui akun).
+  document.getElementById('userRole').value = user && user.role ? user.role : 'Staff';
   document.getElementById('userFormError').hidden = true;
 
   document.getElementById('userModalBackdrop').hidden = false;
@@ -135,11 +175,13 @@ async function submitUserForm(e) {
     return;
   }
 
+  const wasApproving = !!(editingUsername && usersCache.find((it) => it.username === editingUsername && it.status === STATUS_PENDING));
+
   const btnSubmit = document.getElementById('btnSaveUser');
   btnSubmit.disabled = true;
   try {
     await Api.saveUser({ originalUsername: editingUsername || '', nama, username, pin, role });
-    showToast(editingUsername ? 'User diperbarui.' : 'User baru ditambahkan.', 'success');
+    showToast(wasApproving ? 'User disetujui & diaktifkan.' : (editingUsername ? 'User diperbarui.' : 'User baru ditambahkan.'), 'success');
     closeUserModal();
     loadUsers();
   } catch (err) {
@@ -147,6 +189,17 @@ async function submitUserForm(e) {
     errEl.hidden = false;
   } finally {
     btnSubmit.disabled = false;
+  }
+}
+
+async function rejectUser(username) {
+  if (!confirm('Tolak pendaftaran "' + username + '"? Data pendaftarannya akan dihapus permanen.')) return;
+  try {
+    await Api.rejectUser({ username });
+    showToast('Pendaftaran ditolak.', 'success');
+    loadUsers();
+  } catch (err) {
+    showToast(err.message, 'error');
   }
 }
 

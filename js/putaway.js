@@ -9,6 +9,12 @@
 
 let pwInitialized = false;
 let pwBelumMapping = [];
+// Plant yang sudah "terkunci" buat kode yang lagi dipilih di form — dipakai
+// pas kode itu multi-Plant (ada >1 baris di pwBelumMapping dg kode yang sama,
+// beda Plant) supaya handlePwSubmit tahu persis baris MANA yang dimaksud,
+// BUKAN asal ambil baris pertama yang kebetulan ketemu (itu bug lama yang
+// bikin Put Away bisa "nyedot" belum-ter-mapping dari Plant yang salah).
+let pwSelectedPlant = '';
 
 function initPutawayPage() {
   Auth.prefillUserField('pwUser'); // identitas selalu dari akun yang login (lihat js/auth.js)
@@ -52,10 +58,10 @@ function renderPwBelumMappingList() {
     return;
   }
   wrap.innerHTML = pwBelumMapping.map((it) => `
-      <div class="pw-item" data-action="pick" data-kode="${escapeHtml(it.kode)}">
+      <div class="pw-item" data-action="pick" data-kode="${escapeHtml(it.kode)}" data-plant="${escapeHtml(it.plant || '')}">
         <div class="pw-item-main">
           <div class="pw-item-title">${escapeHtml(it.kode)} — ${escapeHtml(it.namaBarang || '-')}</div>
-          <div class="pw-item-sub">${escapeHtml(it.satuan || '-')}${it.belumAdaMaster ? '<span class="badge-belum-master">⚠ Belum terdaftar di Master Data</span>' : ''}</div>
+          <div class="pw-item-sub">${escapeHtml(it.satuan || '-')}${it.plant ? ' · <span class="sb-plant-tag">Plant ' + escapeHtml(it.plant) + '</span>' : ''}${it.belumAdaMaster ? '<span class="badge-belum-master">⚠ Belum terdaftar di Master Data</span>' : ''}</div>
         </div>
         <div class="pw-item-side">
           <button type="button" class="pw-print-btn" data-action="print" data-kode="${escapeHtml(it.kode)}" title="Cetak Label QR" aria-label="Cetak Label QR untuk ${escapeHtml(it.kode)}">
@@ -66,7 +72,7 @@ function renderPwBelumMappingList() {
       </div>
     `).join('');
   wrap.querySelectorAll('[data-action="pick"]').forEach((el) => {
-    el.addEventListener('click', () => pickPwItem(el.dataset.kode));
+    el.addEventListener('click', () => pickPwItem(el.dataset.kode, el.dataset.plant));
   });
   wrap.querySelectorAll('.pw-print-btn').forEach((btn) => {
     btn.addEventListener('click', (e) => {
@@ -85,27 +91,74 @@ function updatePwDatalist() {
     .join('');
 }
 
-function findPwItem(kode) {
+// Semua baris pwBelumMapping yang kode-nya cocok (bisa lebih dari 1 kalau
+// kode itu multi-Plant — lihat komentar pwSelectedPlant di atas).
+function findPwItemMatches(kode) {
   const norm = kode.trim().toLowerCase();
-  return pwBelumMapping.find((it) => String(it.kode).toLowerCase() === norm);
+  return pwBelumMapping.filter((it) => String(it.kode).toLowerCase() === norm);
 }
 
-function pickPwItem(kode) {
-  const item = findPwItem(kode);
-  if (!item) return;
-  document.getElementById('pwKode').value = item.kode;
+// Cari SATU baris spesifik: kalau plant dikasih, cocokkan persis; kalau tidak
+// & cuma ada 1 match, itu yang dipakai; kalau ambigu (>1 match, plant kosong),
+// return undefined — pemanggil (handlePwSubmit) yang WAJIB minta plant dulu.
+function findPwItem(kode, plant) {
+  const matches = findPwItemMatches(kode);
+  if (matches.length <= 1) return matches[0];
+  if (plant) return matches.find((it) => String(it.plant || '') === plant);
+  return undefined;
+}
+
+function pickPwItem(kode, plant) {
+  const matches = findPwItemMatches(kode);
   const hint = document.getElementById('pwNamaHint');
-  hint.textContent = `${item.namaBarang} — sisa belum ter-mapping: ${item.belumTerMapping} ${item.satuan || ''}`;
+  const qtyInput = document.getElementById('pwQty');
+
+  if (!matches.length) {
+    hint.hidden = true;
+    pwSelectedPlant = '';
+    return;
+  }
+
+  let item = matches.length === 1 ? matches[0] : (plant ? matches.find((it) => String(it.plant || '') === plant) : undefined);
+
+  if (!item && matches.length > 1) {
+    // Multi-Plant & belum jelas Plant mana yang dimaksud — minta user pilih
+    // dulu lewat dropdown kecil di area hint, JANGAN asal ambil salah satu.
+    pwSelectedPlant = '';
+    qtyInput.value = '';
+    qtyInput.max = '';
+    const options = matches.map((m) => `<option value="${escapeHtml(m.plant || '')}">Plant ${escapeHtml(m.plant || '-')} (sisa ${m.belumTerMapping} ${escapeHtml(m.satuan || '')})</option>`).join('');
+    hint.innerHTML = `${escapeHtml(matches[0].namaBarang)} — kode ini ada di beberapa Plant, pilih dulu: ` +
+      `<select id="pwPlantPicker" class="inline-plant-picker"><option value="" disabled selected>Pilih Plant</option>${options}</select>`;
+    hint.hidden = false;
+    const picker = document.getElementById('pwPlantPicker');
+    if (picker) picker.addEventListener('change', (e) => pickPwItem(kode, e.target.value));
+    return;
+  }
+
+  if (!item) {
+    hint.hidden = true;
+    pwSelectedPlant = '';
+    return;
+  }
+
+  pwSelectedPlant = item.plant || '';
+  document.getElementById('pwKode').value = item.kode;
+  hint.textContent = `${item.namaBarang}${item.plant ? ' · Plant ' + item.plant : ''} — sisa belum ter-mapping: ${item.belumTerMapping} ${item.satuan || ''}`;
   hint.hidden = false;
   document.getElementById('pwSatuan').value = item.satuan || '';
-  document.getElementById('pwQty').max = item.belumTerMapping;
-  document.getElementById('pwQty').focus();
+  qtyInput.max = item.belumTerMapping;
+  qtyInput.focus();
 }
 
 function handlePwKodeInput(e) {
-  const item = findPwItem(e.target.value);
-  if (item) pickPwItem(item.kode);
-  else document.getElementById('pwNamaHint').hidden = true;
+  const matches = findPwItemMatches(e.target.value);
+  if (!matches.length) {
+    document.getElementById('pwNamaHint').hidden = true;
+    pwSelectedPlant = '';
+    return;
+  }
+  pickPwItem(e.target.value);
 }
 
 async function handlePwSubmit(e) {
@@ -115,10 +168,15 @@ async function handlePwSubmit(e) {
   const qty = Number(document.getElementById('pwQty').value) || 0;
   const lokasi = document.getElementById('pwLokasi').value.trim();
   const user = document.getElementById('pwUser').value.trim();
-  const item = findPwItem(kode);
+  const matches = findPwItemMatches(kode);
+  const item = findPwItem(kode, pwSelectedPlant);
 
-  if (!item) {
+  if (!matches.length) {
     showToast('Pilih item dari daftar "Belum Ter-mapping" (atau ketik kode yang sesuai).', 'error');
+    return;
+  }
+  if (!item) {
+    showToast('Kode ini ada di beberapa Plant — pilih dulu Plant yang sesuai lewat dropdown di bawah Kode Barang.', 'error');
     return;
   }
   if (!lokasi) {
@@ -145,7 +203,8 @@ async function handlePwSubmit(e) {
       satuan: item.satuan,
       qty,
       lokasi,
-      user
+      user,
+      plant: item.plant || ''
     });
     showToast('Put away tersimpan.', 'success');
     resetPwItemFields();
@@ -164,6 +223,7 @@ function resetPwItemFields() {
   document.getElementById('pwQty').value = '';
   document.getElementById('pwSatuan').value = '';
   document.getElementById('pwNamaHint').hidden = true;
+  pwSelectedPlant = '';
   // Lokasi & User SENGAJA tidak direset — biasanya scan sekali lokasi, lalu
   // taruh beberapa item berbeda ke bin yang sama secara berurutan.
 }

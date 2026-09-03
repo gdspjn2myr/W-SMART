@@ -19,6 +19,7 @@
     <img src="icons/icon-192.png" class="login-logo" alt="Logo W-SMART">
     <div class="login-title">W-SMART</div>
     <div class="login-subtitle">Smart Spare Part Inventory</div>
+
     <form id="loginForm" class="login-form">
       <div class="form-row">
         <label>Username</label>
@@ -30,6 +31,31 @@
       </div>
       <div id="loginError" class="form-error" hidden></div>
       <button type="submit" id="btnLoginSubmit" class="btn btn-primary btn-block">Masuk</button>
+      <button type="button" id="btnShowRegister" class="btn btn-link btn-block">Belum punya akun? Daftar di sini</button>
+    </form>
+
+    <form id="registerForm" class="login-form" hidden>
+      <div class="form-row">
+        <label>Nama Lengkap</label>
+        <input type="text" id="registerNama" autocomplete="name" placeholder="Nama lengkap kamu" required>
+      </div>
+      <div class="form-row">
+        <label>Username</label>
+        <input type="text" id="registerUsername" autocomplete="username" placeholder="Username yang mau dipakai" required>
+      </div>
+      <div class="form-row">
+        <label>PIN</label>
+        <input type="password" id="registerPin" inputmode="numeric" autocomplete="new-password" placeholder="PIN (angka, min 4 digit)" required>
+      </div>
+      <div class="form-row">
+        <label>Ulangi PIN</label>
+        <input type="password" id="registerPinConfirm" inputmode="numeric" autocomplete="new-password" placeholder="Ketik ulang PIN" required>
+      </div>
+      <p class="md-preview-hint">Akun baru butuh persetujuan Admin dulu sebelum bisa dipakai login.</p>
+      <div id="registerError" class="form-error" hidden></div>
+      <div id="registerSuccess" class="form-success" hidden></div>
+      <button type="submit" id="btnRegisterSubmit" class="btn btn-primary btn-block">Daftar</button>
+      <button type="button" id="btnShowLogin" class="btn btn-link btn-block">Sudah punya akun? Masuk</button>
     </form>
   </div>
 </div>
@@ -89,10 +115,6 @@
     <a href="#/opname" class="nav-item" data-nav="opname">
       <svg viewBox="0 0 24 24" class="nav-icon"><rect x="3.5" y="3.5" width="6" height="6" rx="1" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 6.5h2M6.5 8v2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M14.5 5.5h6M14.5 9.5h6M14.5 13.5h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="m14.5 18.5 2 2 4-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       <span>Stock Opname</span>
-    </a>
-    <a href="#/koreksi" class="nav-item" data-nav="koreksi">
-      <svg viewBox="0 0 24 24" class="nav-icon"><path d="M4 12a8 8 0 0 1 13.66-5.66M20 12a8 8 0 0 1-13.66 5.66" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M17.5 3v4h-4M6.5 21v-4h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      <span>Koreksi Stock</span>
     </a>
     <a href="#/alert-order" class="nav-item" data-nav="alert-order">
       <svg viewBox="0 0 24 24" class="nav-icon"><path d="M12 3a6 6 0 0 0-6 6c0 4.5-2 6-2 6h16s-2-1.5-2-6a6 6 0 0 0-6-6Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 20a2 2 0 0 0 4 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
@@ -455,8 +477,13 @@
       </div>
       <div class="form-row-pair">
         <div class="form-row">
-          <label>Plant</label>
-          <input type="text" id="pmPlant" placeholder="Contoh: 1111">
+          <label>Plant *</label>
+          <select id="pmPlant" required>
+            <option value="" disabled selected>Pilih Plant</option>
+            <option value="1111">1111</option>
+            <option value="1112">1112</option>
+            <option value="1113">1113</option>
+          </select>
         </div>
         <div class="form-row">
           <label>S. Loc</label>
@@ -728,29 +755,6 @@
 
   </section>
 
-  <!-- ============================= KOREKSI STOCK MANUAL ============================= -->
-  <section id="page-koreksi" class="page" hidden>
-
-    <div class="card">
-      <div class="card-header">Koreksi Stock Manual</div>
-      <p class="md-preview-hint">Buat menyesuaikan qty stock yang tercatat sistem ke qty yang sebenarnya (barang ketemu, rusak/hilang, atau reconcile selisih hasil Stock Opname). Beda dari Stock Opname — ini LANGSUNG mengubah stock begitu disimpan, jadi Alasan wajib diisi buat jejak audit.</p>
-
-      <div class="form-row">
-        <label>Kode Barang</label>
-        <div class="scan-lokasi-row">
-          <button type="button" id="btnScanKsBarang" class="btn btn-small btn-scan">
-            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7V5a1 1 0 0 1 1-1h2M17 4h2a1 1 0 0 1 1 1v2M20 17v2a1 1 0 0 1-1 1h-2M7 20H5a1 1 0 0 1-1-1v-2"/><rect x="8" y="8" width="8" height="8" rx="1"/></svg>
-            Scan QR Barang
-          </button>
-        </div>
-        <input type="text" id="ksKode" list="listMasterBarang" placeholder="Ketik atau scan Kode Barang" autocomplete="off">
-      </div>
-      <button type="button" id="btnKsCari" class="btn btn-small">Cari</button>
-    </div>
-
-    <div id="ksDetailCard" class="card" hidden></div>
-
-  </section>
 
   <!-- ============================= ALERT ORDER ============================= -->
   <section id="page-alert-order" class="page" hidden>
@@ -1067,7 +1071,6 @@
 <script src="js/qr-labels.js"></script>
 <script src="js/riwayat.js"></script>
 <script src="js/opname.js"></script>
-<script src="js/koreksi.js"></script>
 <script src="js/alert-order.js"></script>
 <script src="js/users.js"></script>
 <script src="js/app.js"></script>

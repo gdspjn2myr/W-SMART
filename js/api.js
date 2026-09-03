@@ -18,7 +18,7 @@ const API_TIMEOUT_MS_LONG = { scanSPB: 60000 };
 // login justru tujuannya BIKIN sesi baru). Semua action lain otomatis disisipi
 // payload.sessionToken di bawah, supaya tiap halaman/fungsi tidak perlu ingat
 // nambahin sendiri-sendiri.
-const API_ACTIONS_NO_SESSION = { login: true };
+const API_ACTIONS_NO_SESSION = { login: true, register: true };
 
 async function callApi(action, payload) {
   const cfg = window.WSMART_CONFIG;
@@ -73,10 +73,12 @@ async function callApi(action, payload) {
 
 const Api = {
   login: (payload) => callApi('login', payload),
+  register: (payload) => callApi('register', payload),
   logout: (payload) => callApi('logout', payload),
   getUsers: () => callApi('getUsers'),
   saveUser: (payload) => callApi('saveUser', payload),
   toggleUserStatus: (payload) => callApi('toggleUserStatus', payload),
+  rejectUser: (payload) => callApi('rejectUser', payload),
   savePenerimaan: (payload) => callApi('savePenerimaan', payload),
   scanSPB: (payload) => callApi('scanSPB', payload),
   getDashboard: () => callApi('getDashboard'),
