@@ -18,7 +18,7 @@
   <div class="login-card">
     <img src="icons/icon-192.png" class="login-logo" alt="Logo W-SMART">
     <div class="login-title">W-SMART</div>
-    <div class="login-subtitle">Smart Spare Part Inventory</div>
+    <div class="login-subtitle">Warehouse Spare Part Management &amp; Replenishment Tracking</div>
 
     <form id="loginForm" class="login-form">
       <div class="form-row">
@@ -26,8 +26,8 @@
         <input type="text" id="loginUsername" autocomplete="username" placeholder="Username kamu" required>
       </div>
       <div class="form-row">
-        <label>PIN</label>
-        <input type="password" id="loginPin" inputmode="numeric" autocomplete="current-password" placeholder="PIN" required>
+        <label>Password</label>
+        <input type="password" id="loginPin" autocomplete="current-password" placeholder="Password" required>
       </div>
       <div id="loginError" class="form-error" hidden></div>
       <button type="submit" id="btnLoginSubmit" class="btn btn-primary btn-block">Masuk</button>
@@ -44,12 +44,12 @@
         <input type="text" id="registerUsername" autocomplete="username" placeholder="Username yang mau dipakai" required>
       </div>
       <div class="form-row">
-        <label>PIN</label>
-        <input type="password" id="registerPin" inputmode="numeric" autocomplete="new-password" placeholder="PIN (angka, min 4 digit)" required>
+        <label>Password</label>
+        <input type="password" id="registerPin" autocomplete="new-password" placeholder="Password (min 4 karakter)" required>
       </div>
       <div class="form-row">
-        <label>Ulangi PIN</label>
-        <input type="password" id="registerPinConfirm" inputmode="numeric" autocomplete="new-password" placeholder="Ketik ulang PIN" required>
+        <label>Ulangi Password</label>
+        <input type="password" id="registerPinConfirm" autocomplete="new-password" placeholder="Ketik ulang Password" required>
       </div>
       <p class="md-preview-hint">Akun baru butuh persetujuan Admin dulu sebelum bisa dipakai login.</p>
       <div id="registerError" class="form-error" hidden></div>
@@ -933,8 +933,8 @@
         <input type="text" id="userUsername" autocomplete="off" required>
       </div>
       <div class="form-row">
-        <label>PIN</label>
-        <input type="password" id="userPin" inputmode="numeric" autocomplete="new-password" placeholder="PIN (angka, min 4 digit)">
+        <label>Password</label>
+        <input type="password" id="userPin" autocomplete="new-password" placeholder="Password (min 4 karakter)">
       </div>
       <div class="form-row">
         <label>Role *</label>

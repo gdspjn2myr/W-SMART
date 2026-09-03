@@ -187,7 +187,7 @@ function wireLoginForm() {
     const username = document.getElementById('loginUsername').value.trim();
     const pin = document.getElementById('loginPin').value.trim();
     if (!username || !pin) {
-      errEl.textContent = 'Username & PIN wajib diisi.';
+      errEl.textContent = 'Username & Password wajib diisi.';
       errEl.hidden = false;
       return;
     }
@@ -255,13 +255,13 @@ function wireRegisterForm() {
       errEl.hidden = false;
       return;
     }
-    if (!/^\d{4,}$/.test(pin)) {
-      errEl.textContent = 'PIN harus berupa angka, minimal 4 digit.';
+    if (pin.length < 4) {
+      errEl.textContent = 'Password minimal 4 karakter.';
       errEl.hidden = false;
       return;
     }
     if (pin !== pinConfirm) {
-      errEl.textContent = 'PIN & ulangi PIN tidak sama.';
+      errEl.textContent = 'Password & ulangi Password tidak sama.';
       errEl.hidden = false;
       return;
     }

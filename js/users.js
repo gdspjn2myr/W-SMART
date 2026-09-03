@@ -131,8 +131,8 @@ function openUserModal(user) {
   document.getElementById('userUsername').disabled = isEdit; // username = kunci, tidak diubah setelah dibuat
   document.getElementById('userPin').value = '';
   document.getElementById('userPin').placeholder = isApproving
-    ? 'Kosongkan supaya PIN yang dia daftarkan tetap dipakai'
-    : (isEdit ? 'Kosongkan jika PIN tidak diubah' : 'PIN (angka, min 4 digit)');
+    ? 'Kosongkan supaya Password yang dia daftarkan tetap dipakai'
+    : (isEdit ? 'Kosongkan jika Password tidak diubah' : 'Password (min 4 karakter)');
   // Pendaftar-sendiri belum punya Role — default-kan ke Staff, Admin tinggal
   // ganti kalau perlu sebelum klik Simpan (Simpan = otomatis menyetujui akun).
   document.getElementById('userRole').value = user && user.role ? user.role : 'Staff';
@@ -165,12 +165,12 @@ async function submitUserForm(e) {
     return;
   }
   if (!editingUsername && !pin) {
-    errEl.textContent = 'PIN wajib diisi untuk user baru.';
+    errEl.textContent = 'Password wajib diisi untuk user baru.';
     errEl.hidden = false;
     return;
   }
-  if (pin && !/^\d{4,}$/.test(pin)) {
-    errEl.textContent = 'PIN harus angka, minimal 4 digit.';
+  if (pin && pin.length < 4) {
+    errEl.textContent = 'Password minimal 4 karakter.';
     errEl.hidden = false;
     return;
   }
