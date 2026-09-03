@@ -1531,9 +1531,106 @@ body {
 }
 .ao-print-table th { background: #f0f2f7; font-weight: 700; }
 
+/* ---------- Login & Kelola User (Fase 5 — Login & Hak Akses per Role) ---------- */
+.login-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  background: var(--gradient-navy-soft);
+}
+.login-screen[hidden] { display: none; }
+.login-card {
+  width: 100%;
+  max-width: 340px;
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  padding: 32px 24px 26px;
+  box-shadow: var(--shadow-card-hover);
+  text-align: center;
+  animation: cardIn .4s cubic-bezier(.22,.61,.36,1) both;
+}
+.login-logo { width: 56px; height: 56px; border-radius: 14px; margin-bottom: 12px; }
+.login-title { font-weight: 800; font-size: 20px; color: var(--navy); letter-spacing: 0.4px; }
+.login-subtitle { font-size: 12.5px; color: var(--text-muted); margin-bottom: 22px; }
+.login-form { text-align: left; }
+
+.form-error {
+  background: #fdeaea;
+  color: var(--red);
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 9px 12px;
+  border-radius: 10px;
+  margin-bottom: 12px;
+}
+.form-row input[readonly] {
+  background: #eef1f8;
+  color: var(--text-muted);
+  cursor: default;
+}
+
+/* ---------- Sidebar: info user login & tombol Logout ---------- */
+.sidebar-user-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 16px;
+  margin-top: 8px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+}
+.sidebar-user-info { min-width: 0; }
+.sidebar-user-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sidebar-user-role {
+  font-size: 11px;
+  color: #8f9fc4;
+  margin-top: 2px;
+}
+.sidebar-logout-btn {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 9px;
+  background: rgba(255,255,255,0.06);
+  color: #d99a9a;
+  cursor: pointer;
+}
+.sidebar-logout-btn:hover { background: rgba(214,69,69,0.22); color: #ffb1b1; }
+.sidebar-logout-btn svg { width: 17px; height: 17px; }
+
+/* ---------- Role badge (halaman Kelola User) — 3 warna sama seperti tier
+   Kategori A/B/C Master Data, dipetakan ke tingkat keleluasaan akses. ---------- */
+.role-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.role-badge-admin { background: #fdeaea; color: var(--red); }
+.role-badge-staff { background: #fff3d6; color: #a06a00; }
+.role-badge-viewer { background: #e6f7ee; color: var(--green); }
+
 /* Cetak: cuma grid label yang tampil, satu label nggak boleh kepotong 2 halaman. */
 @media print {
-  .topbar, .sidebar, .sidebar-backdrop, .toast, .qr-scan-overlay, .update-banner,
+  .topbar, .sidebar, .sidebar-backdrop, .toast, .qr-scan-overlay, .update-banner, .login-screen,
   .mode-switch, #qrPanelBarang, #qrPanelBin, .qr-label-result-header,
   .page:not(#page-qr-labels):not(#page-alert-order) {
     display: none !important;
