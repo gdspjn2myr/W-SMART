@@ -43,6 +43,22 @@ function renderStockStats(res) {
 
 const RA_STATUS_CLASS = { 'Stock Out': 'ra-badge-out', 'Need Reorder': 'ra-badge-reorder', 'Near ROP': 'ra-badge-near' };
 
+// Label TAMPILAN status barang — dipakai bareng di semua halaman yang nampilin
+// status (Dashboard, Alert Order, Stock Balance, Stock Opname, Koreksi Stock).
+// Value INTERNAL dari backend (dipakai buat urgencyRank/perbandingan logic di
+// Code.gs & di semua *_STATUS_CLASS map) TETAP 'Stock Out' — cuma teks yang
+// dilihat user yang diganti jadi lebih jelas. "Stock Out" = qty di sistem
+// sudah 0 (bukan cuma di bawah ROP, tapi beneran habis/kosong) — makanya
+// user-facing-nya "Out of Stock".
+const STATUS_LABEL = {
+  'Stock Out': 'Out of Stock',
+  'Need Reorder': 'Need Reorder',
+  'Near ROP': 'Near ROP',
+  'Normal': 'Normal',
+  'Over Max': 'Over Max',
+  'Belum Terdaftar': 'Belum Terdaftar'
+};
+
 function renderReorderAlert(list) {
   document.getElementById('reorderAlertCount').textContent = list.length + ' Item';
   const wrap = document.getElementById('reorderAlertList');
@@ -56,7 +72,7 @@ function renderReorderAlert(list) {
           <div class="ra-item-title">${escapeHtml(it.kode)} — ${escapeHtml(it.namaBarang)}</div>
           <div class="ra-item-sub">Stock ${it.onHand} · ROP ${it.rop} · MAX ${it.max} · Order Qty <strong>${it.orderQty}</strong></div>
         </div>
-        <span class="ra-badge ${RA_STATUS_CLASS[it.status] || ''}">${escapeHtml(it.status)}</span>
+        <span class="ra-badge ${RA_STATUS_CLASS[it.status] || ''}">${escapeHtml(STATUS_LABEL[it.status] || it.status)}</span>
       </div>
     `).join('');
 }
