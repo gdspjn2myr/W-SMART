@@ -227,6 +227,29 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.key === 'Escape' && !document.getElementById('reorderAlertModal').hidden) closeReorderAlertModal();
   });
 
+  // Kartu-kartu statistik lain di Dashboard (Stock Saat Ini, Total SKU, Normal,
+  // Near ROP, Need Reorder, Out of Stock) — SEMUA klik-able, popup isinya
+  // menyesuaikan kartu mana yang diklik lewat atribut data-dash-filter (lihat
+  // DASH_CARD_FILTERS & openDashStatModal di dashboard.js). Delegated ke
+  // #page-dashboard biar 1 listener aja buat semua kartu, bukan pasang 1-1.
+  const dashboardPage = document.getElementById('page-dashboard');
+  if (dashboardPage) {
+    dashboardPage.addEventListener('click', (e) => {
+      const card = e.target.closest('[data-dash-filter]');
+      if (card) openDashStatModal(card.dataset.dashFilter);
+    });
+    dashboardPage.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      const card = e.target.closest('[data-dash-filter]');
+      if (card) { e.preventDefault(); openDashStatModal(card.dataset.dashFilter); }
+    });
+  }
+  document.getElementById('btnCloseDashListModal').addEventListener('click', closeDashListModal);
+  document.getElementById('dashListModalBackdrop').addEventListener('click', closeDashListModal);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !document.getElementById('dashListModal').hidden) closeDashListModal();
+  });
+
   Router.register('dashboard', () => {
     if (!dashboardLoadedOnce) loadDashboard();
   });
