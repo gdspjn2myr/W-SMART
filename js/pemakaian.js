@@ -95,7 +95,9 @@ async function handlePmSubmit(e) {
     satuan: document.getElementById('pmSatuan').value.trim(),
     teknisi,
     keterangan: document.getElementById('pmKeterangan').value.trim(),
-    lokasi: pmLokasi
+    lokasi: pmLokasi,
+    plant: document.getElementById('pmPlant').value.trim(),
+    sloc: document.getElementById('pmSLoc').value.trim()
   };
 
   const submitBtn = e.target.querySelector('button[type="submit"]');
