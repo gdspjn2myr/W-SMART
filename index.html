@@ -85,7 +85,7 @@
   <!-- ============================= DASHBOARD ============================= -->
   <section id="page-dashboard" class="page">
 
-    <div class="stat-card stat-card-hero">
+    <div class="stat-card stat-card-hero stat-card-clickable" role="button" tabindex="0" data-dash-filter="semua">
       <div class="stat-icon stat-icon-stock">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8 12 3 3 8v8l9 5 9-5Z"/><path d="M3 8l9 5 9-5"/><path d="M12 13v8"/></svg>
       </div>
@@ -97,7 +97,7 @@
     </div>
 
     <div class="stat-grid" id="stockStatGrid">
-      <div class="stat-card">
+      <div class="stat-card stat-card-clickable" role="button" tabindex="0" data-dash-filter="total">
         <div class="stat-icon stat-icon-a">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4h13A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18.5v-13Z"/><path d="M4 9.5h16M9 9.5V20"/></svg>
         </div>
@@ -107,7 +107,7 @@
           <div class="stat-unit">item aktif</div>
         </div>
       </div>
-      <div class="stat-card">
+      <div class="stat-card stat-card-clickable" role="button" tabindex="0" data-dash-filter="normal">
         <div class="stat-icon stat-icon-normal">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8.5 12.5 2.5 2.5 4.5-5"/></svg>
         </div>
@@ -117,7 +117,7 @@
           <div class="stat-unit" id="statStokNormalPct">0%</div>
         </div>
       </div>
-      <div class="stat-card">
+      <div class="stat-card stat-card-clickable" role="button" tabindex="0" data-dash-filter="near-rop">
         <div class="stat-icon stat-icon-near">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M10.3 3.9 2.5 17.5a1.5 1.5 0 0 0 1.3 2.2h16.4a1.5 1.5 0 0 0 1.3-2.2L13.7 3.9a1.5 1.5 0 0 0-2.6 0Z"/><path d="M12 16.2h.01"/></svg>
         </div>
@@ -127,7 +127,7 @@
           <div class="stat-unit" id="statStokNearRopPct">0%</div>
         </div>
       </div>
-      <div class="stat-card">
+      <div class="stat-card stat-card-clickable" role="button" tabindex="0" data-dash-filter="need-reorder">
         <div class="stat-icon stat-icon-reorder">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="20" r="1.3"/><circle cx="18" cy="20" r="1.3"/><path d="M2.5 3.5h2l2.6 12.2a1.5 1.5 0 0 0 1.5 1.2h8.6a1.5 1.5 0 0 0 1.5-1.2l1.3-6.7H6"/></svg>
         </div>
@@ -137,7 +137,7 @@
           <div class="stat-unit" id="statStokNeedReorderPct">0%</div>
         </div>
       </div>
-      <div class="stat-card">
+      <div class="stat-card stat-card-clickable" role="button" tabindex="0" data-dash-filter="stock-out">
         <div class="stat-icon stat-icon-out">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m9 9 6 6M15 9l-6 6"/></svg>
         </div>
@@ -809,6 +809,20 @@
     <p class="md-preview-hint">Gabungan barang berstatus Stock Out, Need Reorder, & Near ROP (paling kritis duluan) — beda dari kartu status di atas yang menghitung tiap status TERPISAH. Maksimal 50 item teratas ditampilkan.</p>
     <div id="reorderAlertList" class="ra-list">
       <div class="empty-state">Belum ada item yang perlu di-reorder.</div>
+    </div>
+  </div>
+</div>
+
+<div id="dashListModalBackdrop" class="modal-backdrop" hidden></div>
+<div id="dashListModal" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="dashListModalTitle">
+  <div class="modal-card card">
+    <div class="modal-header">
+      <span id="dashListModalTitle">Daftar Barang</span>
+      <button type="button" id="btnCloseDashListModal" class="modal-close" aria-label="Tutup">×</button>
+    </div>
+    <p class="md-preview-hint" id="dashListModalHint"></p>
+    <div id="dashListModalBody" class="ra-list">
+      <div class="empty-state">Memuat...</div>
     </div>
   </div>
 </div>
