@@ -205,6 +205,14 @@ function initServiceWorker() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Setiap kali app ini DIBUKA (bukan hashchange biasa di dalam sesi yang sama),
+  // selalu mulai dari Dashboard — beberapa browser/PWA runtime (terutama HP)
+  // suka "mengingat" URL/hash terakhir sebelum app ditutup dan langsung balik ke
+  // situ waktu dibuka lagi, padahal maunya selalu balik ke Dashboard dulu.
+  if (window.location.hash && window.location.hash !== '#/dashboard') {
+    history.replaceState(null, '', window.location.pathname + window.location.search);
+  }
+
   initSidebar();
 
   const btnCloseQrScan = document.getElementById('btnCloseQrScan');
@@ -248,6 +256,22 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('dashListModalBackdrop').addEventListener('click', closeDashListModal);
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && !document.getElementById('dashListModal').hidden) closeDashListModal();
+  });
+
+  // Chip filter Plant di popup "Total SKU Terdaftar" (lihat renderDashPlantFilterChips
+  // & selectDashPlantFilter di dashboard.js) — delegated karena isi chip-nya
+  // dibangun ulang tiap kali popup dibuka/plant dipilih.
+  document.getElementById('dashListModalPlantFilter').addEventListener('click', (e) => {
+    const chip = e.target.closest('[data-plant]');
+    if (chip) selectDashPlantFilter(chip.dataset.plant);
+  });
+
+  // Popup Riwayat Transaksi 1 SKU (klik baris di halaman Stock Balance / Mutasi
+  // Stock — lihat openSbRiwayatModal di stock-balance.js).
+  document.getElementById('btnCloseSbRiwayatModal').addEventListener('click', closeSbRiwayatModal);
+  document.getElementById('sbRiwayatModalBackdrop').addEventListener('click', closeSbRiwayatModal);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !document.getElementById('sbRiwayatModal').hidden) closeSbRiwayatModal();
   });
 
   Router.register('dashboard', () => {
