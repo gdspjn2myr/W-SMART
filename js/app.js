@@ -213,6 +213,13 @@ document.addEventListener('DOMContentLoaded', () => {
     history.replaceState(null, '', window.location.pathname + window.location.search);
   }
 
+  // Login & Hak Akses per Role (lihat js/auth.js) — cek dulu apa ada sesi
+  // tersimpan (localStorage) SEBELUM apa pun lain dijalankan, supaya layar
+  // login/app shell yang tepat langsung kelihatan tanpa kedip.
+  Auth.init();
+  wireLoginForm();
+  wireLogoutButton();
+
   initSidebar();
 
   const btnCloseQrScan = document.getElementById('btnCloseQrScan');
@@ -307,7 +314,19 @@ document.addEventListener('DOMContentLoaded', () => {
   Router.register('alert-order', () => {
     initAlertOrderPage();
   });
-  Router.init();
+  Router.register('users', () => {
+    initUsersPage();
+  });
+
+  // Router HANYA di-init (daftar listener hashchange + render pertama) kalau
+  // sudah ada sesi login valid tersimpan. Kalau belum, layar login yang
+  // tampil duluan (lihat showLoginScreen di auth.js) — Router baru dijalankan
+  // dari startAppAfterLogin() begitu login berhasil.
+  if (Auth.isLoggedIn()) {
+    startAppAfterLogin();
+  } else {
+    showLoginScreen();
+  }
 
   initServiceWorker();
 });
