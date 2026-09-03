@@ -61,13 +61,13 @@ function renderSbList(items) {
           </div>
           <div class="sb-item-sub">
             ${escapeHtml(it.satuan || '-')}${it.lokasiDefault ? ' · ' + escapeHtml(it.lokasiDefault) : ''}
-            · Min ${it.minStock} · ROP ${it.rop} · MAX ${it.max}
+            ${it.belumAdaMaster ? '<span class="badge-belum-master">⚠ Belum terdaftar di Master Data</span>' : `· Min ${it.minStock} · ROP ${it.rop} · MAX ${it.max}`}
             ${it.belumTerMapping > 0 ? `<span class="sb-belum-mapping">⚠ ${it.belumTerMapping} belum ter-mapping</span>` : ''}
           </div>
         </div>
         <div class="sb-item-side">
           <div class="sb-onhand">${it.onHand}<span>${escapeHtml(it.satuan || 'pcs')}</span></div>
-          <span class="sb-badge ${SB_STATUS_CLASS[it.status] || ''}">${escapeHtml(it.status)}</span>
+          <span class="sb-badge ${SB_STATUS_CLASS[it.status] || ''}">${escapeHtml(STATUS_LABEL[it.status] || it.status)}</span>
         </div>
       </div>
     `;
