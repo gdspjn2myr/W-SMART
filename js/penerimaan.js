@@ -11,6 +11,7 @@ let pnLastSavedItems = []; // item terakhir yang berhasil disimpan (buat opsi "C
 
 function initPenerimaanPage() {
   loadMasterData(); // dipanggil tiap kali halaman ini dibuka — no-op kalau sudah pernah & belum di-invalidate
+  Auth.prefillUserField('fUser'); // identitas selalu dari akun yang login (lihat js/auth.js)
 
   if (penerimaanInitialized) return;
   penerimaanInitialized = true;
@@ -210,7 +211,9 @@ function fillFormFromParsed(parsed) {
   document.getElementById('fVendor').value = parsed.vendor || '';
   document.getElementById('fPlant').value = parsed.plant || '';
   document.getElementById('fSLoc').value = parsed.sloc || '';
-  // fUser & fKeterangan SENGAJA tidak diisi otomatis — selalu manual.
+  // fKeterangan SENGAJA tidak diisi otomatis dari hasil scan — selalu manual.
+  // fUser BUKAN dari hasil scan/OCR — selalu dari akun yang login (lihat
+  // Auth.prefillUserField di initPenerimaanPage), field-nya sudah readonly.
 
   clearItemRows();
   if (parsed.items && parsed.items.length) {
