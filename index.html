@@ -84,38 +84,59 @@
       <svg viewBox="0 0 24 24" class="nav-icon"><path d="M3 11.5 12 4l9 7.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.5 10v9a1 1 0 0 0 1 1H10v-6h4v6h3.5a1 1 0 0 0 1-1v-9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       <span>Dashboard</span>
     </a>
-    <a href="#/penerimaan" class="nav-item" data-nav="penerimaan">
-      <svg viewBox="0 0 24 24" class="nav-icon"><path d="M3 7.5 12 3l9 4.5v9L12 21l-9-4.5v-9Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M3 7.5 12 12l9-4.5M12 12v9" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
-      <span>Barang Masuk</span>
-    </a>
-    <a href="#/putaway" class="nav-item" data-nav="putaway">
-      <svg viewBox="0 0 24 24" class="nav-icon"><rect x="4" y="4" width="7" height="7" rx="1" fill="none" stroke="currentColor" stroke-width="2"/><rect x="13" y="4" width="7" height="7" rx="1" fill="none" stroke="currentColor" stroke-width="2"/><rect x="4" y="13" width="7" height="7" rx="1" fill="none" stroke="currentColor" stroke-width="2"/><path d="M15.5 17.5 17 19l3-3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      <span>Put Away</span>
-    </a>
-    <a href="#/pemakaian" class="nav-item" data-nav="pemakaian">
-      <svg viewBox="0 0 24 24" class="nav-icon"><path d="M12 3v12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="m7 10 5 5 5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      <span>Barang Keluar</span>
-    </a>
-    <a href="#/stock-balance" class="nav-item" data-nav="stock-balance">
-      <svg viewBox="0 0 24 24" class="nav-icon"><path d="M3 9.5 12 4l9 5.5v9a1 1 0 0 1-1 1h-4v-6H10v6H4a1 1 0 0 1-1-1v-9Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 12h6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-      <span>Stock Balance</span>
-    </a>
-    <a href="#/master-data" class="nav-item" data-nav="master-data">
-      <svg viewBox="0 0 24 24" class="nav-icon"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4h13A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18.5v-13Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M4 9.5h16M9 9.5V20" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
-      <span>Master Data</span>
-    </a>
-    <a href="#/qr-labels" class="nav-item" data-nav="qr-labels">
-      <svg viewBox="0 0 24 24" class="nav-icon"><rect x="3.5" y="3.5" width="7" height="7" rx="1" fill="none" stroke="currentColor" stroke-width="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="1" fill="none" stroke="currentColor" stroke-width="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="1" fill="none" stroke="currentColor" stroke-width="2"/><path d="M14.5 14.5h3M17.5 14.5v3M20.5 14.5v6M14.5 20.5h3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      <span>Cetak Label QR</span>
-    </a>
-    <a href="#/riwayat" class="nav-item" data-nav="riwayat">
-      <svg viewBox="0 0 24 24" class="nav-icon"><path d="M3 12a9 9 0 1 0 2.64-6.36" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 4v5h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 7v5l4 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      <span>Riwayat Transaksi</span>
-    </a>
-    <a href="#/opname" class="nav-item" data-nav="opname">
-      <svg viewBox="0 0 24 24" class="nav-icon"><rect x="3.5" y="3.5" width="6" height="6" rx="1" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 6.5h2M6.5 8v2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M14.5 5.5h6M14.5 9.5h6M14.5 13.5h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="m14.5 18.5 2 2 4-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      <span>Stock Opname</span>
-    </a>
+
+    <div class="nav-group" data-group="transaksi">
+      <button type="button" class="nav-group-toggle" data-group-toggle="transaksi" aria-expanded="false">
+        <svg viewBox="0 0 24 24" class="nav-icon"><path d="M7 7h11M18 7l-3.5-3.5M18 7l-3.5 3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 17H6M6 17l3.5-3.5M6 17l3.5 3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>Transaksi</span>
+        <svg viewBox="0 0 24 24" class="nav-chevron"><path d="m8 10 4 4 4-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div class="nav-flyout">
+        <a href="#/penerimaan" class="nav-item nav-subitem" data-nav="penerimaan">
+          <svg viewBox="0 0 24 24" class="nav-icon"><path d="M3 7.5 12 3l9 4.5v9L12 21l-9-4.5v-9Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M3 7.5 12 12l9-4.5M12 12v9" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+          <span>Barang Masuk</span>
+        </a>
+        <a href="#/putaway" class="nav-item nav-subitem" data-nav="putaway">
+          <svg viewBox="0 0 24 24" class="nav-icon"><rect x="4" y="4" width="7" height="7" rx="1" fill="none" stroke="currentColor" stroke-width="2"/><rect x="13" y="4" width="7" height="7" rx="1" fill="none" stroke="currentColor" stroke-width="2"/><rect x="4" y="13" width="7" height="7" rx="1" fill="none" stroke="currentColor" stroke-width="2"/><path d="M15.5 17.5 17 19l3-3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span>Put Away</span>
+        </a>
+        <a href="#/pemakaian" class="nav-item nav-subitem" data-nav="pemakaian">
+          <svg viewBox="0 0 24 24" class="nav-icon"><path d="M12 3v12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="m7 10 5 5 5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span>Barang Keluar</span>
+        </a>
+      </div>
+    </div>
+
+    <div class="nav-group" data-group="stock-control">
+      <button type="button" class="nav-group-toggle" data-group-toggle="stock-control" aria-expanded="false">
+        <svg viewBox="0 0 24 24" class="nav-icon"><path d="M3 9.5 12 4l9 5.5v9a1 1 0 0 1-1 1h-4v-6H10v6H4a1 1 0 0 1-1-1v-9Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 12h6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <span>Stock Control</span>
+        <svg viewBox="0 0 24 24" class="nav-chevron"><path d="m8 10 4 4 4-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div class="nav-flyout">
+        <a href="#/stock-balance" class="nav-item nav-subitem" data-nav="stock-balance">
+          <svg viewBox="0 0 24 24" class="nav-icon"><path d="M3 9.5 12 4l9 5.5v9a1 1 0 0 1-1 1h-4v-6H10v6H4a1 1 0 0 1-1-1v-9Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 12h6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          <span>Stock Balance</span>
+        </a>
+        <a href="#/opname" class="nav-item nav-subitem" data-nav="opname">
+          <svg viewBox="0 0 24 24" class="nav-icon"><rect x="3.5" y="3.5" width="6" height="6" rx="1" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 6.5h2M6.5 8v2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M14.5 5.5h6M14.5 9.5h6M14.5 13.5h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="m14.5 18.5 2 2 4-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span>Stock Opname</span>
+        </a>
+        <a href="#/riwayat" class="nav-item nav-subitem" data-nav="riwayat">
+          <svg viewBox="0 0 24 24" class="nav-icon"><path d="M3 12a9 9 0 1 0 2.64-6.36" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 4v5h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 7v5l4 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span>Riwayat Transaksi</span>
+        </a>
+        <a href="#/master-data" class="nav-item nav-subitem" data-nav="master-data">
+          <svg viewBox="0 0 24 24" class="nav-icon"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4h13A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18.5v-13Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M4 9.5h16M9 9.5V20" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+          <span>Master Data</span>
+        </a>
+        <a href="#/qr-labels" class="nav-item nav-subitem" data-nav="qr-labels">
+          <svg viewBox="0 0 24 24" class="nav-icon"><rect x="3.5" y="3.5" width="7" height="7" rx="1" fill="none" stroke="currentColor" stroke-width="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="1" fill="none" stroke="currentColor" stroke-width="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="1" fill="none" stroke="currentColor" stroke-width="2"/><path d="M14.5 14.5h3M17.5 14.5v3M20.5 14.5v6M14.5 20.5h3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span>Cetak Label QR</span>
+        </a>
+      </div>
+    </div>
+
     <a href="#/alert-order" class="nav-item" data-nav="alert-order">
       <svg viewBox="0 0 24 24" class="nav-icon"><path d="M12 3a6 6 0 0 0-6 6c0 4.5-2 6-2 6h16s-2-1.5-2-6a6 6 0 0 0-6-6Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 20a2 2 0 0 0 4 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
       <span>Alert Order</span>

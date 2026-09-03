@@ -113,6 +113,15 @@ function applyRoleVisibility() {
     const ok = !allowed || !role || allowed.indexOf(role) !== -1;
     el.style.display = ok ? '' : 'none';
   });
+  // Grup "Transaksi"/"Stock Control" (lihat index.html & js/app.js) ikut
+  // disembunyikan total kalau SEMUA anaknya tidak boleh diakses Role ini —
+  // supaya Role itu tidak lihat header grup kosong yang kalau dibuka
+  // submenu-nya tidak ada isinya sama sekali.
+  document.querySelectorAll('.sidebar-nav .nav-group').forEach((group) => {
+    const anyVisible = Array.from(group.querySelectorAll('.nav-item[data-nav]'))
+      .some((el) => el.style.display !== 'none');
+    group.style.display = anyVisible ? '' : 'none';
+  });
 }
 
 function renderSidebarUserBox() {

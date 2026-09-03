@@ -61,6 +61,37 @@ function initSidebar() {
 }
 
 // ---------------------------------------------------------------------------
+// GRUP NAVIGASI (Transaksi / Stock Control) — accordion tap-to-expand.
+// Di device dengan mouse (hover:hover & pointer:fine), submenu-nya justru
+// tampil sebagai flyout melayang pas di-hover (murni CSS, lihat style.css) —
+// klik di sini tetap jalan juga di situ tapi gak kepakai karena hover udah
+// nutupin. Di HP/tablet (gak ada hover presisi) INI yang jadi cara utama:
+// tap togglenya -> submenu meluas ke bawah di tempat, tap lagi -> nutup.
+// Buka salah satu grup otomatis nutup grup lain biar sidebar gak kepanjangan.
+// ---------------------------------------------------------------------------
+function initNavGroups() {
+  const groups = document.querySelectorAll('.sidebar-nav .nav-group');
+  if (!groups.length) return;
+
+  groups.forEach((group) => {
+    const toggle = group.querySelector('.nav-group-toggle');
+    if (!toggle) return;
+    toggle.addEventListener('click', () => {
+      const willExpand = !group.classList.contains('expanded');
+      groups.forEach((g) => {
+        g.classList.remove('expanded');
+        const t = g.querySelector('.nav-group-toggle');
+        if (t) t.setAttribute('aria-expanded', 'false');
+      });
+      if (willExpand) {
+        group.classList.add('expanded');
+        toggle.setAttribute('aria-expanded', 'true');
+      }
+    });
+  });
+}
+
+// ---------------------------------------------------------------------------
 // SERVICE WORKER & NOTIFIKASI UPDATE VERSI
 // ---------------------------------------------------------------------------
 // Minta nomor versi ke sebuah service worker (installing/waiting/controller)
@@ -223,6 +254,7 @@ document.addEventListener('DOMContentLoaded', () => {
   wireLogoutButton();
 
   initSidebar();
+  initNavGroups();
 
   const btnCloseQrScan = document.getElementById('btnCloseQrScan');
   if (btnCloseQrScan) btnCloseQrScan.addEventListener('click', closeQrScanner);

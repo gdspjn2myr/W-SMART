@@ -6,6 +6,6 @@
 // ============================================================================
 
 window.WSMART_CONFIG = {
-  WORKER_URL: 'https://w-smart.gdsp-jn2myr.workers.dev/', // contoh: https://wsmart-api.namamu.workers.dev
+  WORKER_URL: 'https://w-smart.gdsp-jn2myr.workers.dev/',
   APP_NAME: 'W-SMART'
 };

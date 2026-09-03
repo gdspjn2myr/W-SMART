@@ -560,7 +560,8 @@ body {
 }
 
 /* ---------- Sidebar nav items ---------- */
-.sidebar-nav .nav-item {
+.sidebar-nav .nav-item,
+.sidebar-nav .nav-group-toggle {
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -573,13 +574,105 @@ body {
   border-radius: 10px;
   border-left: 3px solid transparent;
 }
-.sidebar-nav .nav-item:hover { background: rgba(255,255,255,0.06); color: #fff; }
+.sidebar-nav .nav-item:hover,
+.sidebar-nav .nav-group-toggle:hover { background: rgba(255,255,255,0.06); color: #fff; }
 .sidebar-nav .nav-item.active {
   background: linear-gradient(90deg, rgba(255,183,3,0.18), rgba(255,183,3,0.03));
   color: var(--gold-light);
   border-left-color: var(--gold);
 }
 .nav-icon { width: 20px; height: 20px; flex-shrink: 0; }
+
+/* ---------- Sidebar nav groups (Transaksi / Stock Control) ----------
+   Struktur: .nav-group bungkus tombol .nav-group-toggle (bukan link — cuma
+   buka/tutup submenu) + .nav-flyout (isinya link .nav-item.nav-subitem asli).
+   Dua mode interaksi beda total tergantung device:
+   - Mouse (hover:hover & pointer:fine)  -> flyout MELAYANG di sisi kanan
+     sidebar pas di-hover, nutup otomatis pas mouse-nya pergi (lihat blok
+     @media di bawah).
+   - Sentuh (HP/tablet, atau device tanpa hover presisi) -> jadi accordion
+     biasa: tap togglenya, submenu meluas ke bawah di tempat (lihat JS
+     initNavGroups di app.js yang toggle class .expanded). */
+.sidebar-nav .nav-group { position: relative; }
+.sidebar-nav .nav-group-toggle {
+  width: 100%;
+  background: none;
+  border: none;
+  border-left: 3px solid transparent;
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+.nav-chevron {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  margin-left: auto;
+  transition: transform .2s ease;
+}
+.sidebar-nav .nav-group.expanded .nav-group-toggle .nav-chevron { transform: rotate(180deg); }
+/* Grup yang lagi berisi halaman aktif ikut disorot kaya nav-item aktif,
+   biar kelihatan grup mana yang lagi dibuka walau flyout/accordion-nya
+   sendiri lagi tertutup. */
+.sidebar-nav .nav-group:has(.nav-item.active) > .nav-group-toggle {
+  background: linear-gradient(90deg, rgba(255,183,3,0.18), rgba(255,183,3,0.03));
+  color: var(--gold-light);
+  border-left-color: var(--gold);
+}
+
+.nav-flyout {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.nav-flyout .nav-subitem { font-size: 13px; padding: 9px 12px 9px 14px; }
+
+/* --- Mode sentuh / default: accordion, meluas inline di bawah togglenya --- */
+.nav-flyout {
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: max-height .28s ease, opacity .2s ease, margin-top .28s ease;
+}
+.sidebar-nav .nav-group.expanded .nav-flyout {
+  max-height: 320px;
+  opacity: 1;
+  margin-top: 3px;
+}
+
+/* --- Mode mouse: flyout melayang smooth ke kanan sidebar pas di-hover --- */
+@media (hover: hover) and (pointer: fine) {
+  .nav-flyout {
+    position: absolute;
+    left: calc(100% + 8px);
+    top: 0;
+    min-width: 210px;
+    max-height: none;
+    overflow: visible;
+    margin-top: 0;
+    padding: 8px;
+    background: var(--navy-dark);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.35);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translateX(-6px);
+    transition: opacity .18s ease, transform .18s ease, visibility .18s ease;
+    z-index: 40;
+  }
+  /* :hover di .nav-group tetap "nyala" walau kursor pindah dari toggle ke
+     flyout-nya, karena flyout ini anak dari .nav-group juga -> jadi bisa
+     smooth pindah ke submenu tanpa flyout-nya nutup duluan. Begitu kursor
+     bener-bener keluar dari keduanya, otomatis nutup (sesuai request). */
+  .sidebar-nav .nav-group:hover .nav-flyout {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateX(0);
+  }
+}
 
 .sidebar-footer {
   margin-top: auto;
