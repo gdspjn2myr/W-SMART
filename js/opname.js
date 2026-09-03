@@ -50,6 +50,7 @@ const OP_STATUS_CLASS = {
 
 function initOpnamePage() {
   loadMasterData(); // supaya datalist #listMasterBarang keisi (dipakai bareng Penerimaan/Pemakaian/Put Away)
+  Auth.prefillUserField('opUser'); // identitas selalu dari akun yang login (lihat js/auth.js)
 
   if (opInitialized) return;
   opInitialized = true;
