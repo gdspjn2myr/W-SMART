@@ -14,6 +14,7 @@ let pmLokasi = '';
 
 function initPemakaianPage() {
   loadMasterData(); // pastikan datalist #listMasterBarang & masterBarangCache terisi
+  Auth.prefillUserField('pmTeknisi'); // identitas selalu dari akun yang login (lihat js/auth.js)
 
   if (!pemakaianInitialized) {
     pemakaianInitialized = true;
