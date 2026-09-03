@@ -32,7 +32,7 @@ const AO_EXPORT_COLUMNS = [
   { header: 'Nama Barang', get: (it) => it.namaBarang },
   { header: 'Satuan', get: (it) => it.satuan },
   { header: 'Kategori', get: (it) => it.kategori },
-  { header: 'Status', get: (it) => it.status },
+  { header: 'Status', get: (it) => STATUS_LABEL[it.status] || it.status },
   { header: 'Stock Saat Ini', get: (it) => it.onHand, numeric: true },
   { header: 'Min Stock', get: (it) => it.minStock, numeric: true },
   { header: 'ROP', get: (it) => it.rop, numeric: true },
@@ -85,7 +85,7 @@ function renderAlertOrderList() {
         <div class="ao-item-top">
           <div>
             <div class="ao-item-title">
-              <span class="ra-badge ${AO_STATUS_CLASS[it.status] || ''}">${escapeHtml(it.status)}</span>
+              <span class="ra-badge ${AO_STATUS_CLASS[it.status] || ''}">${escapeHtml(STATUS_LABEL[it.status] || it.status)}</span>
               ${escapeHtml(it.kode)} — ${escapeHtml(it.namaBarang || '-')}
             </div>
             <div class="ao-item-sub">Stock ${it.onHand} · Min ${it.minStock} · ROP ${it.rop} · MAX ${it.max} · Order Qty <strong>${it.orderQty}</strong></div>
@@ -239,7 +239,7 @@ function printAlertOrderPdf() {
     <tr>
       <td>${escapeHtml(it.kode)}</td>
       <td>${escapeHtml(it.namaBarang || '-')}</td>
-      <td>${escapeHtml(it.status)}</td>
+      <td>${escapeHtml(STATUS_LABEL[it.status] || it.status)}</td>
       <td>${it.onHand}</td>
       <td>${it.minStock}</td>
       <td>${it.rop}</td>
