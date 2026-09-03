@@ -210,6 +210,23 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnCloseQrScan = document.getElementById('btnCloseQrScan');
   if (btnCloseQrScan) btnCloseQrScan.addEventListener('click', closeQrScanner);
 
+  // Kartu Reorder Alert di Dashboard: klik/Enter buat buka popup daftar
+  // lengkapnya (lihat renderReorderAlert & openReorderAlertModal di dashboard.js) —
+  // dibiarkan di sini (bukan di initDashboardPage) karena Dashboard memang
+  // tidak punya fungsi init tersendiri, cuma loadDashboard() yang dipanggil ulang.
+  const reorderAlertCard = document.getElementById('reorderAlertCard');
+  if (reorderAlertCard) {
+    reorderAlertCard.addEventListener('click', openReorderAlertModal);
+    reorderAlertCard.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openReorderAlertModal(); }
+    });
+  }
+  document.getElementById('btnCloseReorderAlertModal').addEventListener('click', closeReorderAlertModal);
+  document.getElementById('reorderAlertModalBackdrop').addEventListener('click', closeReorderAlertModal);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !document.getElementById('reorderAlertModal').hidden) closeReorderAlertModal();
+  });
+
   Router.register('dashboard', () => {
     if (!dashboardLoadedOnce) loadDashboard();
   });
