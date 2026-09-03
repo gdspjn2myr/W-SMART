@@ -14,13 +14,24 @@
 const API_TIMEOUT_MS = 30000;
 const API_TIMEOUT_MS_LONG = { scanSPB: 60000 };
 
+// Action yang TIDAK butuh sessionToken (belum tentu ada sesi saat dipanggil —
+// login justru tujuannya BIKIN sesi baru). Semua action lain otomatis disisipi
+// payload.sessionToken di bawah, supaya tiap halaman/fungsi tidak perlu ingat
+// nambahin sendiri-sendiri.
+const API_ACTIONS_NO_SESSION = { login: true };
+
 async function callApi(action, payload) {
   const cfg = window.WSMART_CONFIG;
   if (!cfg.WORKER_URL || cfg.WORKER_URL.indexOf('PASTE_CLOUDFLARE_WORKER_URL') !== -1) {
     throw new Error('WORKER_URL belum di-set di js/config.js');
   }
 
-  const body = JSON.stringify({ action: action, payload: payload || {} });
+  const finalPayload = Object.assign({}, payload || {});
+  if (!API_ACTIONS_NO_SESSION[action] && typeof Auth !== 'undefined') {
+    finalPayload.sessionToken = Auth.getToken();
+  }
+
+  const body = JSON.stringify({ action: action, payload: finalPayload });
   const timeoutMs = API_TIMEOUT_MS_LONG[action] || API_TIMEOUT_MS;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -48,12 +59,24 @@ async function callApi(action, payload) {
 
   const json = await res.json();
   if (!json.ok) {
+    // Server bilang sesi login sudah tidak valid lagi (habis masa berlaku di
+    // CacheService GAS, atau logout dari tab/perangkat lain) — paksa balik ke
+    // layar login lewat auth.js, bukan cuma nampilin toast error yang
+    // membingungkan tiap kali user coba aksi apa pun.
+    if (json.sessionExpired && typeof window.handleSessionExpired === 'function') {
+      window.handleSessionExpired();
+    }
     throw new Error(json.error || 'Terjadi kesalahan pada server.');
   }
   return json;
 }
 
 const Api = {
+  login: (payload) => callApi('login', payload),
+  logout: (payload) => callApi('logout', payload),
+  getUsers: () => callApi('getUsers'),
+  saveUser: (payload) => callApi('saveUser', payload),
+  toggleUserStatus: (payload) => callApi('toggleUserStatus', payload),
   savePenerimaan: (payload) => callApi('savePenerimaan', payload),
   scanSPB: (payload) => callApi('scanSPB', payload),
   getDashboard: () => callApi('getDashboard'),
