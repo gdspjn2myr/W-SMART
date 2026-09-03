@@ -13,6 +13,29 @@
 </head>
 <body>
 
+<!-- ============================= LOGIN ============================= -->
+<div id="loginScreen" class="login-screen">
+  <div class="login-card">
+    <img src="icons/icon-192.png" class="login-logo" alt="Logo W-SMART">
+    <div class="login-title">W-SMART</div>
+    <div class="login-subtitle">Smart Spare Part Inventory</div>
+    <form id="loginForm" class="login-form">
+      <div class="form-row">
+        <label>Username</label>
+        <input type="text" id="loginUsername" autocomplete="username" placeholder="Username kamu" required>
+      </div>
+      <div class="form-row">
+        <label>PIN</label>
+        <input type="password" id="loginPin" inputmode="numeric" autocomplete="current-password" placeholder="PIN" required>
+      </div>
+      <div id="loginError" class="form-error" hidden></div>
+      <button type="submit" id="btnLoginSubmit" class="btn btn-primary btn-block">Masuk</button>
+    </form>
+  </div>
+</div>
+
+<div id="appShell" class="app-shell" hidden>
+
 <header class="topbar">
   <div class="topbar-inner">
     <button type="button" id="btnMenuToggle" class="menu-toggle" aria-label="Buka menu" aria-expanded="false" aria-controls="sidebar">
@@ -75,7 +98,20 @@
       <svg viewBox="0 0 24 24" class="nav-icon"><path d="M12 3a6 6 0 0 0-6 6c0 4.5-2 6-2 6h16s-2-1.5-2-6a6 6 0 0 0-6-6Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 20a2 2 0 0 0 4 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
       <span>Alert Order</span>
     </a>
+    <a href="#/users" class="nav-item" data-nav="users">
+      <svg viewBox="0 0 24 24" class="nav-icon"><path d="M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3.5 20c0-3.6 2.5-6 5.5-6s5.5 2.4 5.5 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M16 5.5c1.5.4 2.5 1.7 2.5 3.2S17.5 11.5 16 12M19 20c0-2.8-1.6-4.9-3.8-5.7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span>Kelola User</span>
+    </a>
   </nav>
+  <div id="sidebarUserBox" class="sidebar-user-box">
+    <div class="sidebar-user-info">
+      <div class="sidebar-user-name" id="sidebarUserName">—</div>
+      <div class="sidebar-user-role" id="sidebarUserRole">—</div>
+    </div>
+    <button type="button" id="btnLogout" class="sidebar-logout-btn" title="Keluar" aria-label="Keluar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+    </button>
+  </div>
   <button type="button" id="sidebarFooter" class="sidebar-footer" title="Klik untuk cek update">W-SMART <span id="sidebarVersion"></span></button>
 </aside>
 <div id="sidebarBackdrop" class="sidebar-backdrop" hidden></div>
@@ -297,7 +333,7 @@
       </div>
       <div class="form-row">
         <label>User (Penerima)</label>
-        <input type="text" id="fUser" placeholder="Nama yang menerima barang (boleh dikosongkan, diisi belakangan)">
+        <input type="text" id="fUser" placeholder="Otomatis terisi dari akun yang login" readonly>
       </div>
       <div class="form-row-pair">
         <div class="form-row">
@@ -360,7 +396,7 @@
       </div>
       <div class="form-row">
         <label>Nama User *</label>
-        <input type="text" id="pwUser" placeholder="Nama yang scan/put away" required>
+        <input type="text" id="pwUser" placeholder="Otomatis terisi dari akun yang login" readonly required>
       </div>
 
       <button type="submit" class="btn btn-primary btn-block">Simpan Put Away</button>
@@ -415,7 +451,7 @@
       </div>
       <div class="form-row">
         <label>Nama Teknisi / User *</label>
-        <input type="text" id="pmTeknisi" placeholder="Nama yang mengambil barang" required>
+        <input type="text" id="pmTeknisi" placeholder="Otomatis terisi dari akun yang login" readonly required>
       </div>
       <div class="form-row-pair">
         <div class="form-row">
@@ -685,7 +721,7 @@
       </div>
       <div class="form-row">
         <label>Nama User (yang opname)</label>
-        <input type="text" id="opUser" placeholder="Nama yang melakukan opname">
+        <input type="text" id="opUser" placeholder="Otomatis terisi dari akun yang login" readonly>
       </div>
       <button type="button" id="btnSimpanOpname" class="btn btn-primary btn-block" disabled>Simpan Hasil Opname</button>
     </div>
@@ -755,7 +791,28 @@
 
   </section>
 
+  <!-- ============================= KELOLA USER ============================= -->
+  <section id="page-users" class="page" hidden>
+
+    <div class="card md-hint">
+      <strong>Admin</strong>: semua akses termasuk Master Data &amp; Kelola User. &nbsp;·&nbsp;
+      <strong>Staff</strong>: bisa input transaksi (Barang Masuk/Keluar/Put Away/Koreksi/Opname), tidak bisa ubah Master Data/User. &nbsp;·&nbsp;
+      <strong>Viewer</strong>: cuma bisa lihat Dashboard, Stock Balance, Riwayat Transaksi &amp; Alert Order.
+    </div>
+
+    <div class="md-toolbar">
+      <button type="button" id="btnAddUser" class="btn btn-primary">+ Tambah User</button>
+    </div>
+
+    <div id="usersList" class="md-list">
+      <div class="empty-state">Memuat data...</div>
+    </div>
+
+  </section>
+
 </main>
+
+</div><!-- /#appShell -->
 
 <!-- Modal Tambah/Edit Item Master Data -->
 <div id="mdModalBackdrop" class="modal-backdrop" hidden></div>
@@ -850,6 +907,41 @@
       <p class="md-preview-hint">ROP = Min Stock + (Avg Usage × Lead Time) — ini titik kapan kamu harus order, supaya stock nggak sempat turun di bawah Min selagi nunggu barang datang.</p>
 
       <button type="submit" class="btn btn-primary btn-block">Simpan Item</button>
+    </form>
+  </div>
+</div>
+
+<!-- Modal Tambah/Edit User (Kelola User) -->
+<div id="userModalBackdrop" class="modal-backdrop" hidden></div>
+<div id="userModal" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="userModalTitle">
+  <div class="modal-card card">
+    <div class="modal-header">
+      <span id="userModalTitle">Tambah User</span>
+      <button type="button" id="btnCloseUserModal" class="modal-close" aria-label="Tutup">×</button>
+    </div>
+    <form id="userForm">
+      <div class="form-row">
+        <label>Nama Lengkap *</label>
+        <input type="text" id="userNama" required>
+      </div>
+      <div class="form-row">
+        <label>Username *</label>
+        <input type="text" id="userUsername" autocomplete="off" required>
+      </div>
+      <div class="form-row">
+        <label>PIN</label>
+        <input type="password" id="userPin" inputmode="numeric" autocomplete="new-password" placeholder="PIN (angka, min 4 digit)">
+      </div>
+      <div class="form-row">
+        <label>Role *</label>
+        <select id="userRole">
+          <option value="Admin">Admin</option>
+          <option value="Staff" selected>Staff</option>
+          <option value="Viewer">Viewer</option>
+        </select>
+      </div>
+      <div id="userFormError" class="form-error" hidden></div>
+      <button type="submit" id="btnSaveUser" class="btn btn-primary btn-block">Simpan User</button>
     </form>
   </div>
 </div>
@@ -961,6 +1053,7 @@
 
 <script src="js/config.js"></script>
 <script src="js/feedback.js"></script>
+<script src="js/auth.js"></script>
 <script src="js/api.js"></script>
 <script src="js/router.js"></script>
 <script src="js/qr-scan.js"></script>
@@ -976,6 +1069,7 @@
 <script src="js/opname.js"></script>
 <script src="js/koreksi.js"></script>
 <script src="js/alert-order.js"></script>
+<script src="js/users.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>
