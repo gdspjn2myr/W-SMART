@@ -103,6 +103,7 @@ const Api = {
   getAlertOrder: () => callApi('getAlertOrder'),
   createPR: (payload) => callApi('createPR', payload),
   getReceivingDetail: () => callApi('getReceivingDetail'),
+  getPemakaianDetail: () => callApi('getPemakaianDetail'),
   getStockMutasi: (payload) => callApi('getStockMutasi', payload),
   getItemMutasiRiwayat: (payload) => callApi('getItemMutasiRiwayat', payload)
 };
