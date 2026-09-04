@@ -118,13 +118,16 @@ function renderQrBarangSuggest() {
   }
 
   const shown = matches.slice(0, QR_BARANG_SUGGEST_LIMIT);
-  const rows = shown.map((it) => `
+  const rows = shown.map((it) => {
+    const meta = itemMetaLine({ plant: it.plant, kategori: it.kategori, itemJenis: it.jenis });
+    return `
       <button type="button" class="qr-pick-suggest-item" data-add-kode="${escapeHtml(it.kodeBarang)}">
         <span class="qr-pick-suggest-kode">${escapeHtml(it.kodeBarang)}</span>
-        <span class="qr-pick-suggest-nama">${escapeHtml(it.namaBarang || '-')}</span>
+        <span class="qr-pick-suggest-nama">${escapeHtml(it.namaBarang || '-')}${meta ? ` <span class="item-meta-line">· ${meta}</span>` : ''}</span>
         <span class="qr-pick-suggest-satuan">${escapeHtml(it.satuan || '-')}</span>
       </button>
-    `).join('');
+    `;
+  }).join('');
 
   const moreNote = matches.length > shown.length
     ? `<div class="qr-pick-suggest-more">+${matches.length - shown.length} hasil lain — perjelas pencarian buat lihat.</div>`
@@ -167,9 +170,10 @@ function renderQrBarangSelected() {
   const chips = [...qrBarangSelected].map((kode) => {
     const it = qrBarangItems.find((x) => x.kodeBarang === kode);
     const nama = it ? it.namaBarang : '';
+    const meta = it ? itemMetaLine({ plant: it.plant, kategori: it.kategori, itemJenis: it.jenis }) : '';
     return `
       <span class="qr-pick-chip">
-        <span class="qr-pick-chip-text">${escapeHtml(kode)}${nama ? ' — ' + escapeHtml(nama) : ''}</span>
+        <span class="qr-pick-chip-text">${escapeHtml(kode)}${nama ? ' — ' + escapeHtml(nama) : ''}${meta ? ` <span class="item-meta-line">· ${meta}</span>` : ''}</span>
         <button type="button" class="qr-pick-chip-remove" data-remove-kode="${escapeHtml(kode)}" aria-label="Hapus dari pilihan">×</button>
       </span>`;
   }).join('');
