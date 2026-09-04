@@ -53,7 +53,7 @@ const AO_EXPORT_COLUMNS = [
 function initAlertOrderPage() {
   if (!aoInitialized) {
     aoInitialized = true;
-    document.getElementById('btnRefreshAlertOrder').addEventListener('click', loadAlertOrder);
+    wireRefreshButton('btnRefreshAlertOrder', loadAlertOrder);
     document.getElementById('btnDownloadAlertOrderCsv').addEventListener('click', downloadAlertOrderCsv);
     document.getElementById('btnDownloadAlertOrderExcel').addEventListener('click', downloadAlertOrderExcel);
     document.getElementById('btnDownloadAlertOrderPdf').addEventListener('click', printAlertOrderPdf);
