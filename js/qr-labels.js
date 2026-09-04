@@ -14,6 +14,8 @@ let qrBarangSelected = new Set();
 let qrBarangSearchText = '';
 let qrLabelsPendingItems = null; // dipakai buat "cetak QR langsung" dari halaman lain (lihat goToQrLabelsForItems)
 
+const QR_BARANG_SUGGEST_LIMIT = 8; // maksimal saran yang ditampilkan sekaligus biar gak balik jadi daftar panjang
+
 function initQrLabelsPage() {
   if (!qrLabelsInitialized) {
     qrLabelsInitialized = true;
@@ -21,11 +23,29 @@ function initQrLabelsPage() {
     document.getElementById('btnQrModeBarang').addEventListener('click', () => setQrMode('barang'));
     document.getElementById('btnQrModeBin').addEventListener('click', () => setQrMode('bin'));
 
-    document.getElementById('qrBarangSearch').addEventListener('input', (e) => {
+    const searchInput = document.getElementById('qrBarangSearch');
+    searchInput.addEventListener('input', (e) => {
       qrBarangSearchText = e.target.value.trim().toLowerCase();
-      renderQrBarangList();
+      renderQrBarangSuggest();
     });
-    document.getElementById('btnQrBarangSelectAll').addEventListener('click', toggleQrBarangSelectAll);
+    searchInput.addEventListener('focus', renderQrBarangSuggest);
+    // Klik di luar search/suggest -> tutup dropdown saran (biar gak nutupin
+    // tombol/isian lain pas orang lanjut ke field berikutnya).
+    document.addEventListener('click', (e) => {
+      const wrap = document.getElementById('qrBarangSearch').closest('.qr-pick-search-wrap');
+      if (wrap && !wrap.contains(e.target)) {
+        document.getElementById('qrBarangSuggest').hidden = true;
+      }
+    });
+
+    document.getElementById('qrBarangSelected').addEventListener('click', (e) => {
+      const removeBtn = e.target.closest('[data-remove-kode]');
+      if (!removeBtn) return;
+      qrBarangSelected.delete(removeBtn.dataset.removeKode);
+      renderQrBarangSelected();
+      renderQrBarangSuggest(); // barang yg baru dilepas bisa muncul lagi di saran kalau masih cocok pencarian
+    });
+
     document.getElementById('btnGenerateQrBarang').addEventListener('click', generateQrBarangLabels);
     document.getElementById('btnGenerateQrBin').addEventListener('click', generateQrBinLabels);
     document.getElementById('btnPrintQrLabels').addEventListener('click', () => window.print());
@@ -62,56 +82,98 @@ function setQrMode(mode) {
 }
 
 async function loadQrBarangItems() {
-  const wrap = document.getElementById('qrBarangList');
   try {
     const res = await Api.getMasterBarang();
     qrBarangItems = (res.data || []).filter((it) => it.status !== 'Nonaktif');
-    renderQrBarangList();
+    renderQrBarangSuggest();
+    renderQrBarangSelected();
   } catch (err) {
-    wrap.innerHTML = `<div class="empty-state">Gagal memuat data barang: ${escapeHtml(err.message)}</div>`;
+    document.getElementById('qrBarangSuggest').innerHTML = `<div class="qr-pick-suggest-empty">Gagal memuat data barang: ${escapeHtml(err.message)}</div>`;
   }
 }
 
-function renderQrBarangList() {
-  const wrap = document.getElementById('qrBarangList');
-  let items = qrBarangItems;
-  if (qrBarangSearchText) {
-    items = items.filter((it) =>
-      (it.kodeBarang || '').toLowerCase().includes(qrBarangSearchText) ||
-      (it.namaBarang || '').toLowerCase().includes(qrBarangSearchText)
-    );
-  }
-  if (!items.length) {
-    wrap.innerHTML = qrBarangItems.length
-      ? '<div class="empty-state">Tidak ada barang yang cocok dengan pencarian.</div>'
-      : '<div class="empty-state">Belum ada data master barang aktif.</div>';
+// Dropdown "saran" — SENGAJA tidak nampilin semua barang sekaligus (dulu
+// bikin halaman kepanjangan & bikin bingung mau pilih yang mana), cuma
+// muncul begitu user mulai ngetik, dibatasi QR_BARANG_SUGGEST_LIMIT hasil.
+// Barang yang sudah dipilih (lihat qrBarangSelected) disembunyikan dari
+// saran supaya gak keklik dobel — sudah pindah ke daftar "dipilih" di bawah.
+function renderQrBarangSuggest() {
+  const box = document.getElementById('qrBarangSuggest');
+  if (!qrBarangSearchText) {
+    box.hidden = true;
+    box.innerHTML = '';
     return;
   }
-  wrap.innerHTML = items.map((it) => `
-      <label class="pw-item qr-pick-item">
-        <input type="checkbox" class="qr-pick-checkbox" data-kode="${escapeHtml(it.kodeBarang)}" ${qrBarangSelected.has(it.kodeBarang) ? 'checked' : ''}>
-        <div class="pw-item-main">
-          <div class="pw-item-title">${escapeHtml(it.kodeBarang)} — ${escapeHtml(it.namaBarang || '-')}</div>
-          <div class="pw-item-sub">${escapeHtml(it.satuan || '-')}</div>
-        </div>
-      </label>
+
+  const matches = qrBarangItems.filter((it) =>
+    !qrBarangSelected.has(it.kodeBarang) &&
+    ((it.kodeBarang || '').toLowerCase().includes(qrBarangSearchText) ||
+     (it.namaBarang || '').toLowerCase().includes(qrBarangSearchText))
+  );
+
+  if (!matches.length) {
+    box.hidden = false;
+    box.innerHTML = '<div class="qr-pick-suggest-empty">Tidak ada barang aktif yang cocok.</div>';
+    return;
+  }
+
+  const shown = matches.slice(0, QR_BARANG_SUGGEST_LIMIT);
+  const rows = shown.map((it) => `
+      <button type="button" class="qr-pick-suggest-item" data-add-kode="${escapeHtml(it.kodeBarang)}">
+        <span class="qr-pick-suggest-kode">${escapeHtml(it.kodeBarang)}</span>
+        <span class="qr-pick-suggest-nama">${escapeHtml(it.namaBarang || '-')}</span>
+        <span class="qr-pick-suggest-satuan">${escapeHtml(it.satuan || '-')}</span>
+      </button>
     `).join('');
-  wrap.querySelectorAll('.qr-pick-checkbox').forEach((cb) => {
-    cb.addEventListener('change', () => {
-      if (cb.checked) qrBarangSelected.add(cb.dataset.kode);
-      else qrBarangSelected.delete(cb.dataset.kode);
-    });
+
+  const moreNote = matches.length > shown.length
+    ? `<div class="qr-pick-suggest-more">+${matches.length - shown.length} hasil lain — perjelas pencarian buat lihat.</div>`
+    : '';
+  // "Tambah semua hasil ini" nambahin SELURUH matches (bukan cuma yang
+  // ditampilkan) — cara cepat kalau memang mau ambil satu grup barang
+  // sekaligus (mis. cari "fuse" terus tambahin semuanya).
+  const addAllBtn = matches.length > 1
+    ? `<button type="button" class="qr-pick-suggest-addall" id="btnQrAddAllMatches">+ Tambah semua ${matches.length} hasil pencarian ini</button>`
+    : '';
+
+  box.hidden = false;
+  box.innerHTML = rows + moreNote + addAllBtn;
+
+  box.querySelectorAll('[data-add-kode]').forEach((btn) => {
+    btn.addEventListener('click', () => addQrBarangToSelection([btn.dataset.addKode]));
   });
+  const addAllEl = document.getElementById('btnQrAddAllMatches');
+  if (addAllEl) {
+    addAllEl.addEventListener('click', () => addQrBarangToSelection(matches.map((it) => it.kodeBarang)));
+  }
 }
 
-function toggleQrBarangSelectAll() {
-  const allSelected = qrBarangItems.length > 0 && qrBarangItems.every((it) => qrBarangSelected.has(it.kodeBarang));
-  if (allSelected) {
-    qrBarangSelected.clear();
-  } else {
-    qrBarangItems.forEach((it) => qrBarangSelected.add(it.kodeBarang));
+function addQrBarangToSelection(kodeList) {
+  kodeList.forEach((kode) => qrBarangSelected.add(kode));
+  document.getElementById('qrBarangSearch').value = '';
+  qrBarangSearchText = '';
+  document.getElementById('qrBarangSuggest').hidden = true;
+  renderQrBarangSelected();
+}
+
+// Daftar "Barang Dipilih" — chip yang bisa dihapus satu-satu (× di tiap
+// chip). Ini yang dipakai generateQrBarangLabels(), bukan hasil pencarian.
+function renderQrBarangSelected() {
+  const wrap = document.getElementById('qrBarangSelected');
+  if (!qrBarangSelected.size) {
+    wrap.innerHTML = '<div class="qr-pick-selected-empty">Belum ada barang dipilih — cari &amp; klik dari saran di atas.</div>';
+    return;
   }
-  renderQrBarangList();
+  const chips = [...qrBarangSelected].map((kode) => {
+    const it = qrBarangItems.find((x) => x.kodeBarang === kode);
+    const nama = it ? it.namaBarang : '';
+    return `
+      <span class="qr-pick-chip">
+        <span class="qr-pick-chip-text">${escapeHtml(kode)}${nama ? ' — ' + escapeHtml(nama) : ''}</span>
+        <button type="button" class="qr-pick-chip-remove" data-remove-kode="${escapeHtml(kode)}" aria-label="Hapus dari pilihan">×</button>
+      </span>`;
+  }).join('');
+  wrap.innerHTML = `<div class="qr-pick-selected-count">${qrBarangSelected.size} barang dipilih</div><div class="qr-pick-chip-list">${chips}</div>`;
 }
 
 async function generateQrBarangLabels() {
