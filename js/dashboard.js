@@ -276,7 +276,7 @@ function renderDashListModalBody(items) {
 function dashStockItemHtml(it) {
   const badgeClass = it.belumAdaMaster ? 'ra-badge-unregistered' : (RA_STATUS_CLASS[it.status] || '');
   const badgeLabel = it.belumAdaMaster ? 'Belum Terdaftar' : (STATUS_LABEL[it.status] || it.status);
-  const ropMaxText = (!it.belumAdaMaster && (it.rop || it.max)) ? ` · ROP ${it.rop} · MAX ${it.max}` : '';
+  const ropMaxText = (!it.belumAdaMaster && (it.minStock || it.rop || it.max)) ? ` · Min ${it.minStock || 0} · ROP ${it.rop} · MAX ${it.max}` : '';
   const meta = itemMetaLine(it);
   // Tombol "Daftarkan" CUMA buat barang belumAdaMaster — pintasan biar nggak
   // perlu pindah manual ke Master Data & ngetik ulang kode/nama/satuan/Plant
