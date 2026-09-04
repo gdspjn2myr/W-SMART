@@ -8,6 +8,7 @@ let masterDataLoaded = false;
 let masterBarangCache = []; // dipakai bareng halaman Pemakaian untuk autofill nama/satuan by kode
 let selectedImage = null; // { imageBase64, mimeType } — hanya di memori, tidak pernah disimpan
 let pnLastSavedItems = []; // item terakhir yang berhasil disimpan (buat opsi "Cetak Label QR Dulu" di popup)
+let pemesanDirectoryCache = []; // { nama, nik, email } user AKTIF terdaftar — dipakai buat autocomplete & auto-match Pemesan tipe USER (lihat updatePemesanMatchState)
 
 function initPenerimaanPage() {
   loadMasterData(); // dipanggil tiap kali halaman ini dibuka — no-op kalau sudah pernah & belum di-invalidate
@@ -56,6 +57,12 @@ function initPenerimaanPage() {
   // ada orang yang minta langsung -> namanya WAJIB diisi di situ, karena itu
   // beda orang dari yang nerima barangnya).
   document.getElementById('fPemesanTipe').addEventListener('change', updatePemesanNamaVisibility);
+  // Nama & NIK Pemesan saling melengkapi buat nyari user yang SUDAH terdaftar
+  // akunnya (lihat updatePemesanMatchState) — ketik salah satu, yang lain ikut
+  // ke-isi otomatis kalau ketemu. Kalau nggak ketemu, dianggap belum punya
+  // akun & Email Pemesan wajib diisi manual (buat kirim notif barang datang).
+  document.getElementById('fPemesanNama').addEventListener('input', updatePemesanMatchState);
+  document.getElementById('fPemesanNik').addEventListener('input', updatePemesanMatchState);
 
   document.getElementById('btnPnPutawayLater').addEventListener('click', () => closePutawayPrompt('later'));
   document.getElementById('btnPnPutawayNow').addEventListener('click', () => closePutawayPrompt('putaway'));
@@ -102,7 +109,96 @@ function closePutawayPrompt(action) {
 function updatePemesanNamaVisibility() {
   const isUser = document.getElementById('fPemesanTipe').value === 'USER';
   document.getElementById('fPemesanNamaWrap').hidden = !isUser;
-  if (!isUser) document.getElementById('fPemesanNama').value = '';
+  document.getElementById('fPemesanNikWrap').hidden = !isUser;
+  if (!isUser) {
+    document.getElementById('fPemesanNama').value = '';
+    document.getElementById('fPemesanNik').value = '';
+    document.getElementById('fPemesanEmail').value = '';
+    document.getElementById('fPemesanEmail').readOnly = false;
+  }
+  updatePemesanMatchState();
+}
+
+// Dicocokkan ke pemesanDirectoryCache (user AKTIF terdaftar, lihat
+// loadMasterData) — NIK diprioritaskan (lebih spesifik/jarang typo daripada
+// nama), baru nama kalau NIK kosong. Exact match saja (bukan partial) —
+// datalist yang bantu user milih dari saran yang benar.
+function findPemesanMatch(namaVal, nikVal) {
+  const nik = String(nikVal || '').trim();
+  const nama = String(namaVal || '').trim().toLowerCase();
+  if (nik) {
+    const byNik = pemesanDirectoryCache.find((u) => String(u.nik || '').trim() === nik);
+    if (byNik) return byNik;
+  }
+  if (nama) {
+    const byNama = pemesanDirectoryCache.find((u) => String(u.nama || '').trim().toLowerCase() === nama);
+    if (byNama) return byNama;
+  }
+  return null;
+}
+
+// Dipanggil tiap kali Nama/NIK Pemesan diketik (atau Pemesan Tipe diganti) —
+// nentuin apakah orang yang diketik itu SUDAH punya akun terdaftar (kalau
+// iya, Nama/NIK/Email-nya di-auto-lengkapi dari situ & Email dikunci readonly
+// biar konsisten sama data akunnya) atau BELUM (kalau iya, Email Pemesan jadi
+// wajib diisi manual — itu-itu satunya cara sistem tahu ke mana kirim notif
+// "barang sudah datang" buat orang yang belum punya akun W-SMART).
+function updatePemesanMatchState() {
+  const emailWrap = document.getElementById('fPemesanEmailWrap');
+  const emailInput = document.getElementById('fPemesanEmail');
+  const emailLabel = document.getElementById('fPemesanEmailLabel');
+  const statusHint = document.getElementById('fPemesanStatusHint');
+  const isUser = document.getElementById('fPemesanTipe').value === 'USER';
+
+  if (!isUser) {
+    emailWrap.hidden = true;
+    statusHint.hidden = true;
+    return;
+  }
+
+  const namaVal = document.getElementById('fPemesanNama').value.trim();
+  const nikVal = document.getElementById('fPemesanNik').value.trim();
+
+  if (!namaVal && !nikVal) {
+    // Belum mulai ngetik apa-apa — jangan langsung nampilin Email dulu supaya
+    // form nggak kelihatan penuh dari awal.
+    emailWrap.hidden = true;
+    statusHint.hidden = true;
+    return;
+  }
+
+  emailWrap.hidden = false;
+  const match = findPemesanMatch(namaVal, nikVal);
+
+  if (match) {
+    // Ketemu akun terdaftar — sinkronkan Nama/NIK ke data akunnya (jaga2 kalau
+    // yang dipilih dari datalist NIK tapi Nama-nya belum sempat ikut ke-isi,
+    // atau sebaliknya).
+    if (match.nama) document.getElementById('fPemesanNama').value = match.nama;
+    if (match.nik) document.getElementById('fPemesanNik').value = match.nik;
+
+    if (match.email) {
+      emailInput.value = match.email;
+      emailInput.readOnly = true;
+      emailInput.required = false;
+      emailLabel.textContent = 'Email Pemesan';
+      statusHint.hidden = false;
+      statusHint.textContent = '✓ Akun terdaftar ditemukan — notif otomatis dikirim ke ' + match.email + '.';
+    } else {
+      // Akunnya ada tapi Email-nya belum sempat dilengkapi di Kelola User.
+      emailInput.readOnly = false;
+      emailInput.required = true;
+      emailLabel.textContent = 'Email Pemesan *';
+      statusHint.hidden = false;
+      statusHint.textContent = '✓ Akun terdaftar ditemukan, tapi belum ada Email tersimpan di akunnya — isi manual di atas biar tetap bisa dikirimi notif.';
+    }
+  } else {
+    emailInput.readOnly = false;
+    emailInput.required = true;
+    emailLabel.textContent = 'Email Pemesan *';
+    statusHint.hidden = false;
+    statusHint.textContent = 'Belum ketemu di daftar akun terdaftar — berarti belum punya akun W-SMART, isi Email di atas biar tetap bisa dikirimi notif otomatis pas barangnya datang.';
+  }
 }
 
 function setMode(mode) {
@@ -115,7 +211,7 @@ function setMode(mode) {
 async function loadMasterData() {
   if (masterDataLoaded) return;
   try {
-    const [barangRes, supplierRes] = await Promise.all([Api.getMasterBarang(), Api.getSupplier()]);
+    const [barangRes, supplierRes, pemesanRes] = await Promise.all([Api.getMasterBarang(), Api.getSupplier(), Api.getPemesanDirectory()]);
     masterBarangCache = (barangRes.data || []).filter((b) => b.status !== 'Nonaktif');
 
     const listBarang = document.getElementById('listMasterBarang');
@@ -126,6 +222,17 @@ async function loadMasterData() {
     const listSupplier = document.getElementById('listSupplier');
     listSupplier.innerHTML = (supplierRes.data || [])
       .map((s) => `<option value="${escapeHtml(s.namaSupplier)}"></option>`)
+      .join('');
+
+    // Dipakai buat autocomplete & auto-match Nama/NIK Pemesan (khusus Pemesan
+    // tipe USER) — lihat findPemesanMatch/updatePemesanMatchState.
+    pemesanDirectoryCache = pemesanRes.data || [];
+    document.getElementById('listPemesanNama').innerHTML = pemesanDirectoryCache
+      .map((u) => `<option value="${escapeHtml(u.nama)}"></option>`)
+      .join('');
+    document.getElementById('listPemesanNik').innerHTML = pemesanDirectoryCache
+      .filter((u) => u.nik)
+      .map((u) => `<option value="${escapeHtml(u.nik)}">${escapeHtml(u.nama)}</option>`)
       .join('');
 
     masterDataLoaded = true;
@@ -317,6 +424,23 @@ async function handleSubmit(e) {
     document.getElementById('fPemesanNama').focus();
     return;
   }
+  const pemesanNik = document.getElementById('fPemesanNik').value.trim();
+  // Email Pemesan WAJIB khusus tipe USER — itu alamat yang dipakai kirim
+  // notif otomatis "barang pesanan sudah datang" (lihat
+  // sendPemesanNotificationEmail_ di Code.gs). Kalau Pemesan-nya user yang
+  // SUDAH terdaftar akunnya, field ini otomatis kesisi & terkunci dari
+  // updatePemesanMatchState — kalau belum terdaftar, wajib diisi manual.
+  const pemesanEmail = document.getElementById('fPemesanEmail').value.trim();
+  if (pemesanTipe === 'USER' && !pemesanEmail) {
+    showToast('Email Pemesan wajib diisi kalau Pemesan-nya USER (buat kirim notif barang datang).', 'error');
+    document.getElementById('fPemesanEmail').focus();
+    return;
+  }
+  if (pemesanTipe === 'USER' && !isValidEmail(pemesanEmail)) {
+    showToast('Format Email Pemesan tidak valid.', 'error');
+    document.getElementById('fPemesanEmail').focus();
+    return;
+  }
 
   const payload = {
     tanggal: document.getElementById('fTanggal').value, // tanggal dokumen/PO — Kedatangan diisi server = hari ini
@@ -325,6 +449,8 @@ async function handleSubmit(e) {
     user: userVal,
     pemesanTipe,
     pemesanNama: pemesanTipe === 'USER' ? pemesanNama : '',
+    pemesanNik: pemesanTipe === 'USER' ? pemesanNik : '',
+    pemesanEmail: pemesanTipe === 'USER' ? pemesanEmail : '',
     plant: document.getElementById('fPlant').value.trim(),
     sloc: slocVal,
     keterangan: document.getElementById('fKeterangan').value.trim(),
@@ -337,7 +463,8 @@ async function handleSubmit(e) {
 
   try {
     const res = await Api.savePenerimaan(payload);
-    showToast('Tersimpan (' + res.jumlahItem + ' item).', 'success');
+    const emailNote = (pemesanTipe === 'USER' && pemesanEmail) ? (res.emailSent ? ' + email notif terkirim.' : ' (email notif gagal terkirim, cek koneksi/kuota Gmail).') : '';
+    showToast('Tersimpan (' + res.jumlahItem + ' item).' + emailNote, 'success');
     resetForm();
     dashboardLoadedOnce = false; // supaya dashboard refresh saat dibuka lagi
     openPutawayPrompt(res.jumlahItem, items);
