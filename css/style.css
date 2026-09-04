@@ -1268,6 +1268,18 @@ body {
 .pn-putaway-modal-actions .btn-block { margin-top: 0; }
 .pn-putaway-modal-actions .btn-link { padding-top: 4px; }
 
+.confirm-modal-card { max-width: 400px; }
+.confirm-modal-card #confirmModalMessage { margin-bottom: 0; }
+.confirm-modal-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
+.confirm-modal-actions .btn-block { margin-top: 0; }
+.confirm-modal-actions .btn-link { padding-top: 2px; }
+.btn-danger {
+  background: linear-gradient(135deg, #e35d5d, var(--red));
+  color: #fff;
+  box-shadow: 0 6px 14px rgba(214,69,69,0.35);
+}
+.btn-danger:hover:not(:disabled) { background: linear-gradient(135deg, #eb7373, #c53a3a); }
+
 /* ---------- Scan Lokasi (Put Away & Pemakaian) ---------- */
 .scan-lokasi-row {
   display: flex;
