@@ -396,6 +396,19 @@
         <label>User (Penerima)</label>
         <input type="text" id="fUser" placeholder="Otomatis terisi dari akun yang login" readonly>
       </div>
+      <div class="form-row">
+        <label>Pemesan</label>
+        <select id="fPemesanTipe">
+          <option value="">-- Pilih (opsional) --</option>
+          <option value="OBS">OBS</option>
+          <option value="FAST MOVING">FAST MOVING</option>
+          <option value="USER">USER</option>
+        </select>
+      </div>
+      <div class="form-row" id="fPemesanNamaWrap" hidden>
+        <label>Nama Pemesan *</label>
+        <input type="text" id="fPemesanNama" placeholder="Nama yang order barang ini (bukan penerima)">
+      </div>
       <div class="form-row-pair">
         <div class="form-row">
           <label>Plant</label>
