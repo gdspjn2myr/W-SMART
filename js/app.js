@@ -471,6 +471,9 @@ document.addEventListener('DOMContentLoaded', () => {
   Router.register('users', () => {
     initUsersPage();
   });
+  Router.register('pengaturan', () => {
+    initPengaturanPage();
+  });
 
   // Router HANYA di-init (daftar listener hashchange + render pertama) kalau
   // sudah ada sesi login valid tersimpan. Kalau belum, layar login yang
