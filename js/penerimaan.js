@@ -49,6 +49,14 @@ function initPenerimaanPage() {
   // biar kelihatan langsung & konsisten sama yang bakal disimpan/dicocokkan.
   wireUppercaseInput('fSLoc');
 
+  // Pemesan: field TERPISAH dari User (Penerima) di atas — User (Penerima)
+  // tetap identitas akun yang login (dipakai buat Riwayat Transaksi/audit,
+  // jangan diutak-atik), sedangkan Pemesan ini nyatet SUMBER pemesanan barang
+  // ini (OBS/Fast Moving = replenishment rutin per kategori barang, USER =
+  // ada orang yang minta langsung -> namanya WAJIB diisi di situ, karena itu
+  // beda orang dari yang nerima barangnya).
+  document.getElementById('fPemesanTipe').addEventListener('change', updatePemesanNamaVisibility);
+
   document.getElementById('btnPnPutawayLater').addEventListener('click', () => closePutawayPrompt('later'));
   document.getElementById('btnPnPutawayNow').addEventListener('click', () => closePutawayPrompt('putaway'));
   document.getElementById('btnPnPrintQr').addEventListener('click', () => closePutawayPrompt('print'));
@@ -89,6 +97,12 @@ function closePutawayPrompt(action) {
     goToQrLabelsForItems(itemsWithKode);
   }
   // action === 'later' -> tetap di halaman Barang Masuk, form sudah direset saat submit.
+}
+
+function updatePemesanNamaVisibility() {
+  const isUser = document.getElementById('fPemesanTipe').value === 'USER';
+  document.getElementById('fPemesanNamaWrap').hidden = !isUser;
+  if (!isUser) document.getElementById('fPemesanNama').value = '';
 }
 
 function setMode(mode) {
@@ -286,11 +300,25 @@ async function handleSubmit(e) {
   // ngeblok proses input barang cuma gara-gara belum sempat catat nama.
   const userVal = document.getElementById('fUser').value.trim();
 
+  // Pemesan juga opsional (boleh gak dipilih sama sekali) — TAPI begitu
+  // dipilih "USER", nama pemesannya wajib diisi (itu inti fiturnya: catat
+  // siapa yang ORDER barang ini, beda dari fUser di atas yang nyatet siapa
+  // yang NERIMA/nginput transaksinya).
+  const pemesanTipe = document.getElementById('fPemesanTipe').value;
+  const pemesanNama = document.getElementById('fPemesanNama').value.trim();
+  if (pemesanTipe === 'USER' && !pemesanNama) {
+    showToast('Nama Pemesan wajib diisi kalau Pemesan-nya USER.', 'error');
+    document.getElementById('fPemesanNama').focus();
+    return;
+  }
+
   const payload = {
     tanggal: document.getElementById('fTanggal').value, // tanggal dokumen/PO — Kedatangan diisi server = hari ini
     noPO: document.getElementById('fNoPO').value.trim(),
     vendor: document.getElementById('fVendor').value.trim(),
     user: userVal,
+    pemesanTipe,
+    pemesanNama: pemesanTipe === 'USER' ? pemesanNama : '',
     plant: document.getElementById('fPlant').value.trim(),
     sloc: slocVal,
     keterangan: document.getElementById('fKeterangan').value.trim(),
@@ -318,6 +346,7 @@ async function handleSubmit(e) {
 function resetForm() {
   document.getElementById('formPenerimaan').reset();
   setKedatanganDisplay();
+  updatePemesanNamaVisibility(); // form.reset() balikin <select> ke default, tapi hidden-nya harus disamain manual
   clearItemRows();
   addItemRow();
   selectedImage = null;
