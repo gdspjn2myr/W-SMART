@@ -90,7 +90,26 @@ function initSidebar() {
   sidebar.querySelectorAll('.nav-item').forEach((el) => {
     el.addEventListener('click', () => {
       const isDesktopPointer = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
-      if (!isDesktopPointer) closeSidebar();
+      if (!isDesktopPointer) { closeSidebar(); return; }
+
+      // Desktop: sidebar KESELURUHAN tetap terbuka (lihat catatan di atas) —
+      // tapi kalau link yang diklik ada di dalam flyout submenu (Transaksi/
+      // Stock Control), flyout itu SENDIRI harus langsung nutup begitu
+      // dipilih. Tanpa ini, flyout-nya cuma nutup pas kursor bener2 pindah
+      // (murni CSS :hover) — kalau kursor diem di tempat abis klik (yang
+      // wajar, klik gak selalu diikuti gerak mouse), flyout-nya kelihatan
+      // "nyangkut" ngambang di atas halaman yang baru aja dibuka (keluhan
+      // user: "setelah memilih halaman harusnya ke-close si navigation tab").
+      // Class .just-picked maksa nutup instan lewat CSS (lihat style.css),
+      // dilepas lagi begitu kursor beneran ninggalin grup-nya (atau abis
+      // 1.5 detik sebagai jaga-jaga kalau mouseleave gak sempat kepicu).
+      const group = el.closest('.nav-group');
+      if (group) {
+        group.classList.add('just-picked');
+        const clearJustPicked = () => group.classList.remove('just-picked');
+        group.addEventListener('mouseleave', clearJustPicked, { once: true });
+        setTimeout(() => { group.removeEventListener('mouseleave', clearJustPicked); clearJustPicked(); }, 1500);
+      }
     });
   });
 }
