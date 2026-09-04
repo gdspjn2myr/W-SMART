@@ -278,6 +278,14 @@ function dashStockItemHtml(it) {
   const badgeLabel = it.belumAdaMaster ? 'Belum Terdaftar' : (STATUS_LABEL[it.status] || it.status);
   const ropMaxText = (!it.belumAdaMaster && (it.rop || it.max)) ? ` · ROP ${it.rop} · MAX ${it.max}` : '';
   const meta = itemMetaLine(it);
+  // Tombol "Daftarkan" CUMA buat barang belumAdaMaster — pintasan biar nggak
+  // perlu pindah manual ke Master Data & ngetik ulang kode/nama/satuan/Plant
+  // (lihat gotoRegisterMasterData di bawah & handler-nya di app.js).
+  const daftarkanBtn = it.belumAdaMaster ? `
+        <button type="button" class="btn-goto-master" data-goto-master
+          data-kode="${escapeHtml(it.kode)}" data-nama="${escapeHtml(it.namaBarang || '')}"
+          data-satuan="${escapeHtml(it.satuan || '')}" data-plant="${escapeHtml(it.plant || '')}"
+          data-kategori="${escapeHtml(it.kategori || 'B')}">Daftarkan →</button>` : '';
   return `
       <div class="ra-item">
         <div class="ra-item-main">
@@ -285,9 +293,39 @@ function dashStockItemHtml(it) {
           <div class="ra-item-sub">Stock ${it.onHand} ${escapeHtml(it.satuan || '')}${ropMaxText}</div>
           ${meta ? `<div class="item-meta-line">${meta}</div>` : ''}
         </div>
-        <span class="ra-badge ${badgeClass}">${escapeHtml(badgeLabel)}</span>
+        <div class="ra-item-side">
+          <span class="ra-badge ${badgeClass}">${escapeHtml(badgeLabel)}</span>
+          ${daftarkanBtn}
+        </div>
       </div>
     `;
+}
+
+// Pindah dari popup Dashboard ke halaman Master Data & langsung buka form
+// Tambah Item yang sudah keisi (kode dikunci nggak ke-lock, tetap mode TAMBAH
+// — lihat opts.forceAddMode di openMdModal, Code.gs). setTimeout kecil di sini
+// cuma buat kasih waktu Router pindah halaman/render dulu sebelum modal-nya
+// ditumpuk (openMdModal sendiri nggak butuh nunggu loadMdList() kelar, cuma
+// butuh DOM Master Data-nya udah ke-render/kelihatan).
+function gotoRegisterMasterData(data) {
+  closeDashListModal();
+  window.location.hash = '#/master-data';
+  setTimeout(() => {
+    openMdModal({
+      kodeBarang: data.kode,
+      namaBarang: data.nama || '',
+      satuan: data.satuan || '',
+      kategori: data.kategori || 'B',
+      lokasiDefault: '',
+      jenis: '',
+      area: '',
+      plant: data.plant || '',
+      avgUsage: 0,
+      leadTime: 0,
+      minStock: 0,
+      max: 0
+    }, { forceAddMode: true, title: 'Daftarkan Item' });
+  }, 60);
 }
 
 // ---------------------------------------------------------------------------
