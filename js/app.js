@@ -104,6 +104,53 @@ function wirePasswordToggles() {
 }
 
 // ---------------------------------------------------------------------------
+// MODAL KONFIRMASI — pengganti confirm() bawaan browser (popupnya jelek &
+// gak senada sama tampilan app, keluhan user). Dipanggil kayak gini:
+//   const ok = await showConfirmModal({ message: 'Yakin?', danger: true });
+//   if (!ok) return;
+// Cuma boleh ada 1 yang aktif dalam satu waktu (dipakai berurutan, bukan
+// bertumpuk), jadi 1 variabel resolver module-level sudah cukup.
+// ---------------------------------------------------------------------------
+let confirmModalResolve = null;
+
+function showConfirmModal(opts) {
+  const o = opts || {};
+  return new Promise((resolve) => {
+    confirmModalResolve = resolve;
+    document.getElementById('confirmModalTitle').textContent = o.title || 'Konfirmasi';
+    document.getElementById('confirmModalMessage').textContent = o.message || 'Yakin mau lanjut?';
+    const okBtn = document.getElementById('btnConfirmModalOk');
+    okBtn.textContent = o.confirmText || 'OK';
+    okBtn.classList.toggle('btn-danger', !!o.danger);
+    okBtn.classList.toggle('btn-primary', !o.danger);
+    document.getElementById('btnConfirmModalCancel').textContent = o.cancelText || 'Batal';
+    document.getElementById('confirmModalBackdrop').hidden = false;
+    document.getElementById('confirmModal').hidden = false;
+    okBtn.focus();
+  });
+}
+
+function resolveConfirmModal(result) {
+  document.getElementById('confirmModalBackdrop').hidden = true;
+  document.getElementById('confirmModal').hidden = true;
+  if (confirmModalResolve) {
+    const resolve = confirmModalResolve;
+    confirmModalResolve = null;
+    resolve(result);
+  }
+}
+
+function wireConfirmModal() {
+  document.getElementById('btnConfirmModalOk').addEventListener('click', () => resolveConfirmModal(true));
+  document.getElementById('btnConfirmModalCancel').addEventListener('click', () => resolveConfirmModal(false));
+  document.getElementById('btnCloseConfirmModal').addEventListener('click', () => resolveConfirmModal(false));
+  document.getElementById('confirmModalBackdrop').addEventListener('click', () => resolveConfirmModal(false));
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !document.getElementById('confirmModal').hidden) resolveConfirmModal(false);
+  });
+}
+
+// ---------------------------------------------------------------------------
 // GRUP NAVIGASI (Transaksi / Stock Control) — accordion tap-to-expand.
 // Di device dengan mouse (hover:hover & pointer:fine), submenu-nya justru
 // tampil sebagai flyout melayang pas di-hover (murni CSS, lihat style.css) —
@@ -299,6 +346,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initSidebar();
   initNavGroups();
   wirePasswordToggles();
+  wireConfirmModal();
 
   const btnCloseQrScan = document.getElementById('btnCloseQrScan');
   if (btnCloseQrScan) btnCloseQrScan.addEventListener('click', closeQrScanner);
