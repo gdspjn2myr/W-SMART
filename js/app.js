@@ -78,8 +78,20 @@ function initSidebar() {
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') closeSidebar();
   });
+  // Di device sentuh (HP/tablet) sidebar-nya drawer sekali-pakai — cocok
+  // ditutup otomatis abis pilih 1 halaman. Tapi di desktop (mouse), sidebar
+  // ini overlay yang harus dibuka manual lewat hamburger tiap kali, jadi
+  // kalau ikut auto-close abis klik, user kepaksa buka-hover-klik ulang dari
+  // nol buat pindah ke halaman lain (keluhan user: "susah buat pindah
+  // halaman"). Makanya di desktop sidebar DIBIARKAN TERBUKA abis klik link,
+  // biar bisa lanjut klik halaman lain tanpa perlu buka-tutup berulang.
+  // Dicek pas klik (bukan sekali di awal) biar tetap benar kalau device-nya
+  // hybrid (laptop layar sentuh, dst).
   sidebar.querySelectorAll('.nav-item').forEach((el) => {
-    el.addEventListener('click', closeSidebar);
+    el.addEventListener('click', () => {
+      const isDesktopPointer = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+      if (!isDesktopPointer) closeSidebar();
+    });
   });
 }
 
