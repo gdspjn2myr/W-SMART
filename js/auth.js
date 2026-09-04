@@ -256,11 +256,26 @@ function wireRegisterForm() {
 
     const nama = document.getElementById('registerNama').value.trim();
     const username = document.getElementById('registerUsername').value.trim();
+    const email = document.getElementById('registerEmail').value.trim();
+    const nik = document.getElementById('registerNIK').value.trim();
     const pin = document.getElementById('registerPin').value.trim();
     const pinConfirm = document.getElementById('registerPinConfirm').value.trim();
 
-    if (!nama || !username || !pin || !pinConfirm) {
+    if (!nama || !username || !email || !nik || !pin || !pinConfirm) {
       errEl.textContent = 'Semua field wajib diisi.';
+      errEl.hidden = false;
+      return;
+    }
+    // Email & NIK wajib & formatnya divalidasi dari awal daftar — rencananya
+    // dipakai buat fitur notifikasi email otomatis ke user (belum
+    // diimplementasi, ini baru nyiapin datanya).
+    if (!isValidEmail(email)) {
+      errEl.textContent = 'Format Email tidak valid.';
+      errEl.hidden = false;
+      return;
+    }
+    if (!/^\d{16}$/.test(nik)) {
+      errEl.textContent = 'NIK harus 16 digit angka.';
       errEl.hidden = false;
       return;
     }
@@ -278,7 +293,7 @@ function wireRegisterForm() {
     btnSubmit.disabled = true;
     btnSubmit.textContent = 'Mendaftar...';
     try {
-      const res = await Api.register({ nama, username, pin });
+      const res = await Api.register({ nama, username, email, nik, pin });
       form.reset();
       successEl.textContent = res.message || 'Pendaftaran berhasil dikirim. Tunggu Admin menyetujui akun kamu.';
       successEl.hidden = false;
