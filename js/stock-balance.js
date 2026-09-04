@@ -27,6 +27,12 @@ function initStockBalancePage() {
     document.getElementById('sbTglAkhir').valueAsDate = today;
 
     document.getElementById('btnApplySbFilter').addEventListener('click', applySbFilter);
+    // Halaman ini sebenarnya SUDAH narik data ulang tiap kali dikunjungi (lihat
+    // applySbFilter() di bawah initStockBalancePage), tapi tombol Refresh ini
+    // tetap dikasih (konsisten sama pola di Riwayat Transaksi/Alert Order) buat
+    // narik ulang data TERBARU tanpa perlu pindah halaman/reload, mis. abis
+    // nambah Barang Masuk baru di tab lain sementara halaman ini masih kebuka.
+    document.getElementById('btnRefreshStockBalance').addEventListener('click', applySbFilter);
     document.getElementById('sbDetailToggle').addEventListener('change', (e) => {
       document.getElementById('sbTableWrap').classList.toggle('detail-off', !e.target.checked);
     });
