@@ -711,6 +711,16 @@ body {
     pointer-events: auto;
     transform: translateX(0);
   }
+  /* Begitu link di dalam flyout diklik (lihat .just-picked di app.js), maksa
+     flyout nutup INSTAN (tanpa transisi) walau kursor masih diem di situ dan
+     :hover masih aktif secara teknis — !important buat ngalahin rule hover
+     di atas. Dilepas lagi begitu kursor beneran pindah / grup di-hover ulang. */
+  .sidebar-nav .nav-group.just-picked .nav-flyout {
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+    transition: none !important;
+  }
 }
 
 .sidebar-footer {
