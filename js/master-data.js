@@ -41,9 +41,16 @@ function initMasterDataPage() {
       const statusBtn = e.target.closest('[data-action="toggle-status"]');
       const editBtn = e.target.closest('[data-action="edit"]');
       if (statusBtn) {
-        handleToggleStatus(statusBtn.dataset.kode);
+        handleToggleStatus(statusBtn.dataset.kode, statusBtn.dataset.plant || '');
       } else if (editBtn) {
-        const item = mdItems.find((it) => it.kodeBarang === editBtn.dataset.kode);
+        // Cocokkan kode DAN Plant (bukan kode doang) — 1 Kode Barang bisa punya
+        // lebih dari 1 baris di mdItems (multi-Plant, mis. Plant 1111 & 1112).
+        // Kalau cuma dicocokkan dari kode, klik Edit di baris Plant 1112 bisa
+        // salah muka data baris Plant 1111 ke form (baris yang KETEMU DULUAN di
+        // array, bukan yang diklik) — konsisten sama fix findMasterBarangRowByKodePlant_
+        // di Code.gs buat masalah yang sama pas SAVE.
+        const plant = editBtn.dataset.plant || '';
+        const item = mdItems.find((it) => it.kodeBarang === editBtn.dataset.kode && (it.plant || '') === plant);
         if (item) openMdModal(item);
       }
     });
@@ -107,8 +114,8 @@ function renderMdList() {
         </div>
         <div class="md-item-actions">
           <button type="button" class="status-pill ${isAktif ? 'status-aktif' : 'status-nonaktif'}"
-            data-action="toggle-status" data-kode="${escapeHtml(it.kodeBarang)}">${isAktif ? 'Aktif' : 'Nonaktif'}</button>
-          <button type="button" class="btn-icon" data-action="edit" data-kode="${escapeHtml(it.kodeBarang)}" title="Edit item" aria-label="Edit item">
+            data-action="toggle-status" data-kode="${escapeHtml(it.kodeBarang)}" data-plant="${escapeHtml(it.plant || '')}">${isAktif ? 'Aktif' : 'Nonaktif'}</button>
+          <button type="button" class="btn-icon" data-action="edit" data-kode="${escapeHtml(it.kodeBarang)}" data-plant="${escapeHtml(it.plant || '')}" title="Edit item" aria-label="Edit item">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
           </button>
         </div>
@@ -117,12 +124,22 @@ function renderMdList() {
   }).join('');
 }
 
-function openMdModal(item) {
-  mdEditingKode = item ? item.kodeBarang : null;
-  document.getElementById('mdModalTitle').textContent = item ? 'Edit Item' : 'Tambah Item';
+// opts.forceAddMode: dipakai buat "Daftarkan" dari kartu Belum Terdaftar di
+// Dashboard (lihat gotoRegisterMasterData di dashboard.js) — kita PUNYA data
+// buat prefill (kode/nama/satuan/Plant, dari balances) tapi barangnya BELUM
+// ada barisnya sama sekali di Master Data, jadi harus tetap kelaku sebagai
+// mode TAMBAH (kode barang boleh diedit, mdEditingKode null, judul "Tambah
+// Item"/custom) — BUKAN mode Edit (yang ngunci field Kode & nganggep
+// findMasterBarangRowByKodePlant_ di server bakal ketemu barisnya).
+// opts.title: override judul modal (default "Edit Item"/"Tambah Item").
+function openMdModal(item, opts) {
+  opts = opts || {};
+  const isEdit = !!item && !opts.forceAddMode;
+  mdEditingKode = isEdit ? item.kodeBarang : null;
+  document.getElementById('mdModalTitle').textContent = opts.title || (isEdit ? 'Edit Item' : 'Tambah Item');
 
   document.getElementById('mdKode').value = item ? item.kodeBarang : '';
-  document.getElementById('mdKode').disabled = !!item; // kode barang jadi kunci, tidak diubah saat edit
+  document.getElementById('mdKode').disabled = isEdit; // kode barang jadi kunci, tidak diubah saat edit baris yang SUDAH ada
   document.getElementById('mdNama').value = item ? item.namaBarang : '';
   document.getElementById('mdSatuan').value = item ? (item.satuan || '') : '';
   document.getElementById('mdKategori').value = item ? (item.kategori || 'B') : 'B';
@@ -130,10 +147,10 @@ function openMdModal(item) {
   document.getElementById('mdJenis').value = item ? (item.jenis || '') : '';
   document.getElementById('mdArea').value = item ? (item.area || '') : '';
   document.getElementById('mdPlant').value = item ? (item.plant || '') : '';
-  document.getElementById('mdAvgUsage').value = item ? item.avgUsage : 0;
-  document.getElementById('mdLeadTime').value = item ? item.leadTime : 0;
-  document.getElementById('mdMinStock').value = item ? item.minStock : 0;
-  document.getElementById('mdMaxStock').value = item ? item.max : 0;
+  document.getElementById('mdAvgUsage').value = item ? (item.avgUsage || 0) : 0;
+  document.getElementById('mdLeadTime').value = item ? (item.leadTime || 0) : 0;
+  document.getElementById('mdMinStock').value = item ? (item.minStock || 0) : 0;
+  document.getElementById('mdMaxStock').value = item ? (item.max || 0) : 0;
   updateMdPreview();
 
   document.getElementById('mdModalBackdrop').hidden = false;
@@ -227,12 +244,12 @@ async function handleMdSubmit(e) {
   }
 }
 
-async function handleToggleStatus(kode) {
-  const item = mdItems.find((it) => it.kodeBarang === kode);
+async function handleToggleStatus(kode, plant) {
+  const item = mdItems.find((it) => it.kodeBarang === kode && (it.plant || '') === (plant || ''));
   if (!item) return;
   const newStatus = item.status === 'Nonaktif' ? 'Aktif' : 'Nonaktif';
   try {
-    await Api.toggleMasterBarangStatus({ kodeBarang: kode, status: newStatus });
+    await Api.toggleMasterBarangStatus({ kodeBarang: kode, plant: plant || '', status: newStatus });
     item.status = newStatus;
     renderMdList();
     showToast(newStatus === 'Aktif' ? 'Item diaktifkan.' : 'Item dinonaktifkan.', 'success');
