@@ -686,6 +686,21 @@ body {
     transition: opacity .18s ease, transform .18s ease, visibility .18s ease;
     z-index: 40;
   }
+  /* "Jembatan" tak-terlihat yang nutup celah 8px antara tombol & flyout —
+     tanpa ini, kursor yang lewat celah itu keluar dari .nav-flyout sesaat
+     (karena posisinya absolute & terpisah), bikin :hover di .nav-group lepas
+     dan flyout-nya nutup duluan sebelum kursor sempat sampai (makanya harus
+     "presisi banget" & "cepat tertutup" — keluhan user). Jembatan ini masih
+     anak dari .nav-flyout, jadi ikut menjaga :hover tetap nyala selama kursor
+     ada di jalur toggle -> flyout, walau flyout-nya sendiri masih invisible. */
+  .nav-flyout::before {
+    content: '';
+    position: absolute;
+    left: -8px;
+    top: 0;
+    width: 8px;
+    height: 100%;
+  }
   /* :hover di .nav-group tetap "nyala" walau kursor pindah dari toggle ke
      flyout-nya, karena flyout ini anak dari .nav-group juga -> jadi bisa
      smooth pindah ke submenu tanpa flyout-nya nutup duluan. Begitu kursor
