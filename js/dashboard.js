@@ -79,15 +79,19 @@ function renderReorderAlert(list) {
     wrap.innerHTML = '<div class="empty-state">Belum ada item yang perlu di-reorder.</div>';
     return;
   }
-  wrap.innerHTML = list.map((it) => `
+  wrap.innerHTML = list.map((it) => {
+    const meta = itemMetaLine(it);
+    return `
       <div class="ra-item">
         <div class="ra-item-main">
           <div class="ra-item-title">${escapeHtml(it.kode)} — ${escapeHtml(it.namaBarang)}</div>
           <div class="ra-item-sub">Stock ${it.onHand} · ROP ${it.rop} · MAX ${it.max} · Order Qty <strong>${it.orderQty}</strong></div>
+          ${meta ? `<div class="item-meta-line">${meta}</div>` : ''}
         </div>
         <span class="ra-badge ${RA_STATUS_CLASS[it.status] || ''}">${escapeHtml(STATUS_LABEL[it.status] || it.status)}</span>
       </div>
-    `).join('');
+    `;
+  }).join('');
 }
 
 function openReorderAlertModal() {
@@ -242,16 +246,17 @@ function renderDashListModalBody(items) {
   body.innerHTML = items.map((it) => dashStockItemHtml(it)).join('');
 }
 
-function dashStockItemHtml(it, showPlant) {
+function dashStockItemHtml(it) {
   const badgeClass = it.belumAdaMaster ? 'ra-badge-unregistered' : (RA_STATUS_CLASS[it.status] || '');
   const badgeLabel = it.belumAdaMaster ? 'Belum Terdaftar' : (STATUS_LABEL[it.status] || it.status);
   const ropMaxText = (!it.belumAdaMaster && (it.rop || it.max)) ? ` · ROP ${it.rop} · MAX ${it.max}` : '';
-  const plantText = (showPlant && it.plant) ? ` · Plant ${escapeHtml(it.plant)}` : '';
+  const meta = itemMetaLine(it);
   return `
       <div class="ra-item">
         <div class="ra-item-main">
           <div class="ra-item-title">${escapeHtml(it.kode)} — ${escapeHtml(it.namaBarang || '-')}</div>
-          <div class="ra-item-sub">Stock ${it.onHand} ${escapeHtml(it.satuan || '')}${ropMaxText}${plantText}</div>
+          <div class="ra-item-sub">Stock ${it.onHand} ${escapeHtml(it.satuan || '')}${ropMaxText}</div>
+          ${meta ? `<div class="item-meta-line">${meta}</div>` : ''}
         </div>
         <span class="ra-badge ${badgeClass}">${escapeHtml(badgeLabel)}</span>
       </div>
@@ -300,10 +305,7 @@ function renderDashPlantFilteredList() {
     body.innerHTML = '<div class="empty-state">Tidak ada barang terdaftar di Plant ini.</div>';
     return;
   }
-  // showPlant cuma perlu kalau lagi nampilin "Semua Plant" — begitu difilter ke
-  // 1 Plant spesifik, semua baris pasti Plant yang sama, jadi label-nya nggak perlu diulang.
-  const showPlant = !dashTotalPlantSelected;
-  body.innerHTML = items.map((it) => dashStockItemHtml(it, showPlant)).join('');
+  body.innerHTML = items.map((it) => dashStockItemHtml(it)).join('');
 }
 
 function selectDashPlantFilter(value) {
@@ -326,11 +328,13 @@ function renderDashReceivingModalBody(items, emptyText) {
     const poVendorText = (it.noPO || it.vendor)
       ? ` · PO ${escapeHtml(it.noPO || '-')}${it.vendor ? ' · ' + escapeHtml(it.vendor) : ''}`
       : '';
+    const meta = itemMetaLine(it);
     return `
       <div class="ra-item">
         <div class="ra-item-main">
           <div class="ra-item-title">${escapeHtml(it.kode)} — ${escapeHtml(it.namaBarang || '-')}</div>
           <div class="ra-item-sub">Qty ${it.qty} ${escapeHtml(it.satuan || '')}${poVendorText}</div>
+          ${meta ? `<div class="item-meta-line">${meta}</div>` : ''}
         </div>
       </div>
     `;
@@ -366,15 +370,19 @@ function renderTopPemakaian(list) {
     return;
   }
   const max = Math.max(1, ...list.map((it) => it.qty));
-  wrap.innerHTML = list.map((it) => `
+  wrap.innerHTML = list.map((it) => {
+    const meta = itemMetaLine(it);
+    return `
       <div class="tp-item">
         <div class="tp-item-label">
-          <span>${escapeHtml(it.namaBarang || it.kode)}</span>
+          <span>${escapeHtml(it.kode)} — ${escapeHtml(it.namaBarang || '-')}</span>
           <strong>${it.qty}${it.satuan ? ' ' + escapeHtml(it.satuan) : ''}</strong>
         </div>
+        ${meta ? `<div class="item-meta-line">${meta}</div>` : ''}
         <div class="tp-bar-track"><div class="tp-bar-fill" style="width:${Math.max(4, (it.qty / max) * 100)}%"></div></div>
       </div>
-    `).join('');
+    `;
+  }).join('');
 }
 
 function renderStats(res) {
@@ -577,4 +585,46 @@ function roundRectPath(ctx, x, y, w, h, r) {
 function escapeHtml(str) {
   return String(str == null ? '' : str)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// ---------------------------------------------------------------------------
+// META LINE (Plant · S.Loc · Kategori · Jenis) — dipakai di SEMUA list yang
+// nampilin Kode+Nama Barang (Dashboard, Stock Balance, Put Away, Riwayat
+// Transaksi, Stock Opname, Alert Order, hint pencarian Penerimaan/Pemakaian/
+// QR Label) biar user selalu tau Plant/S.Loc/Kategori/Jenis barang itu tanpa
+// buka Master Data terpisah (keluhan user: "plantnya belum muncul ini").
+// File ini (dashboard.js) di-load PALING AWAL dari semua halaman lain (lihat
+// urutan <script> di index.html), jadi fungsi ini aman dipakai global oleh
+// file manapun setelahnya.
+// ---------------------------------------------------------------------------
+const KATEGORI_META_LABEL = { A: 'Kategori A', B: 'Kategori B', C: 'Kategori C' };
+
+function itemMetaLine(it) {
+  if (!it) return '';
+  const parts = [];
+  if (it.plant) parts.push('Plant ' + escapeHtml(it.plant));
+
+  if (Array.isArray(it.slocBreakdown) && it.slocBreakdown.length) {
+    // Rincian per S.Loc (dari hitungBalances_ — 1 kode+plant bisa nyebar di
+    // lebih dari 1 S.Loc), mis. "S.Loc: GDJT 30, GDSP 20".
+    const slocText = it.slocBreakdown
+      .map((s) => escapeHtml(s.sloc) + ' ' + s.onHand)
+      .join(', ');
+    parts.push('S.Loc: ' + slocText);
+  } else if (it.sloc) {
+    // Baris transaksi tunggal (Riwayat, Put Away, Opname, dst) — 1 S.Loc saja.
+    parts.push('S.Loc ' + escapeHtml(it.sloc));
+  }
+
+  // `itemKategori`/`itemJenis` dipakai (bukan `kategori`/`jenis` polos) di
+  // endpoint yang sudah punya field `jenis` lain (jenis TRANSAKSI:
+  // Penerimaan/Pemakaian/dst) — lihat handleGetRiwayatTerpadu di Code.gs.
+  // Cek keduanya biar helper ini aman dipakai di semua endpoint tanpa perlu
+  // hafal mana yang pakai konvensi mana.
+  const kategoriVal = it.itemKategori || it.kategori;
+  if (kategoriVal) parts.push(escapeHtml(KATEGORI_META_LABEL[String(kategoriVal).toUpperCase()] || ('Kategori ' + kategoriVal)));
+  const jenisText = it.itemJenis || it.jenis;
+  if (jenisText) parts.push('Jenis ' + escapeHtml(jenisText));
+
+  return parts.join(' · ');
 }
