@@ -27,7 +27,13 @@
       </div>
       <div class="form-row">
         <label>Password</label>
-        <input type="password" id="loginPin" autocomplete="current-password" placeholder="Password" required>
+        <div class="password-field">
+          <input type="password" id="loginPin" autocomplete="current-password" placeholder="Password" required>
+          <button type="button" class="toggle-password" data-target="loginPin" aria-label="Tampilkan Password">
+            <svg viewBox="0 0 24 24" class="icon-eye"><path d="M1.5 12S5 5 12 5s10.5 7 10.5 7-3.5 7-10.5 7S1.5 12 1.5 12Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+            <svg viewBox="0 0 24 24" class="icon-eye-off" hidden><path d="M3 3l18 18M10.6 10.6a3 3 0 0 0 4.24 4.24M9.5 5.2A10.4 10.4 0 0 1 12 5c7 0 10.5 7 10.5 7a13.4 13.4 0 0 1-3.15 3.9M6.3 6.3C3.4 8.1 1.5 12 1.5 12s3.5 7 10.5 7a10.4 10.4 0 0 0 3.1-.47" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
       </div>
       <div id="loginError" class="form-error" hidden></div>
       <button type="submit" id="btnLoginSubmit" class="btn btn-primary btn-block">Masuk</button>
@@ -45,11 +51,23 @@
       </div>
       <div class="form-row">
         <label>Password</label>
-        <input type="password" id="registerPin" autocomplete="new-password" placeholder="Password (min 4 karakter)" required>
+        <div class="password-field">
+          <input type="password" id="registerPin" autocomplete="new-password" placeholder="Password (min 4 karakter)" required>
+          <button type="button" class="toggle-password" data-target="registerPin" aria-label="Tampilkan Password">
+            <svg viewBox="0 0 24 24" class="icon-eye"><path d="M1.5 12S5 5 12 5s10.5 7 10.5 7-3.5 7-10.5 7S1.5 12 1.5 12Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+            <svg viewBox="0 0 24 24" class="icon-eye-off" hidden><path d="M3 3l18 18M10.6 10.6a3 3 0 0 0 4.24 4.24M9.5 5.2A10.4 10.4 0 0 1 12 5c7 0 10.5 7 10.5 7a13.4 13.4 0 0 1-3.15 3.9M6.3 6.3C3.4 8.1 1.5 12 1.5 12s3.5 7 10.5 7a10.4 10.4 0 0 0 3.1-.47" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
       </div>
       <div class="form-row">
         <label>Ulangi Password</label>
-        <input type="password" id="registerPinConfirm" autocomplete="new-password" placeholder="Ketik ulang Password" required>
+        <div class="password-field">
+          <input type="password" id="registerPinConfirm" autocomplete="new-password" placeholder="Ketik ulang Password" required>
+          <button type="button" class="toggle-password" data-target="registerPinConfirm" aria-label="Tampilkan Password">
+            <svg viewBox="0 0 24 24" class="icon-eye"><path d="M1.5 12S5 5 12 5s10.5 7 10.5 7-3.5 7-10.5 7S1.5 12 1.5 12Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+            <svg viewBox="0 0 24 24" class="icon-eye-off" hidden><path d="M3 3l18 18M10.6 10.6a3 3 0 0 0 4.24 4.24M9.5 5.2A10.4 10.4 0 0 1 12 5c7 0 10.5 7 10.5 7a13.4 13.4 0 0 1-3.15 3.9M6.3 6.3C3.4 8.1 1.5 12 1.5 12s3.5 7 10.5 7a10.4 10.4 0 0 0 3.1-.47" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
       </div>
       <p class="md-preview-hint">Akun baru butuh persetujuan Admin dulu sebelum bisa dipakai login.</p>
       <div id="registerError" class="form-error" hidden></div>
@@ -955,7 +973,13 @@
       </div>
       <div class="form-row">
         <label>Password</label>
-        <input type="password" id="userPin" autocomplete="new-password" placeholder="Password (min 4 karakter)">
+        <div class="password-field">
+          <input type="password" id="userPin" autocomplete="new-password" placeholder="Password (min 4 karakter)">
+          <button type="button" class="toggle-password" data-target="userPin" aria-label="Tampilkan Password">
+            <svg viewBox="0 0 24 24" class="icon-eye"><path d="M1.5 12S5 5 12 5s10.5 7 10.5 7-3.5 7-10.5 7S1.5 12 1.5 12Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+            <svg viewBox="0 0 24 24" class="icon-eye-off" hidden><path d="M3 3l18 18M10.6 10.6a3 3 0 0 0 4.24 4.24M9.5 5.2A10.4 10.4 0 0 1 12 5c7 0 10.5 7 10.5 7a13.4 13.4 0 0 1-3.15 3.9M6.3 6.3C3.4 8.1 1.5 12 1.5 12s3.5 7 10.5 7a10.4 10.4 0 0 0 3.1-.47" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
       </div>
       <div class="form-row">
         <label>Role *</label>
