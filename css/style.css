@@ -563,6 +563,17 @@ body {
   padding: 6px 12px;
   font-size: 12.5px;
 }
+.btn-small:disabled { opacity: 0.6; cursor: not-allowed; }
+/* Tombol Refresh (Dashboard/Stock Balance/Riwayat Transaksi/Alert Order) —
+   ikon muter + tombol nonaktif sesaat pas diklik (lihat wireRefreshButton di
+   app.js), biar kelihatan jelas klik-nya "kena" walau data barunya baru
+   muncul sesaat kemudian. */
+@keyframes wsmart-refresh-spin { to { transform: rotate(360deg); } }
+.btn-small.is-refreshing svg { animation: wsmart-refresh-spin 0.6s linear infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .btn-small.is-refreshing svg { animation: none; }
+  .btn-small.is-refreshing { opacity: 0.6; }
+}
 .dash-toolbar {
   display: flex;
   justify-content: flex-end;
