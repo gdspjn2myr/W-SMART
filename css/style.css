@@ -1091,6 +1091,30 @@ body {
 }
 .md-hint strong { color: var(--navy); }
 
+/* ---------- Pengaturan: pratinjau template email ---------- */
+.pg-preview-label {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+.pg-preview-subject {
+  font-weight: 700;
+  color: var(--navy);
+  padding-bottom: 8px;
+  margin-bottom: 8px;
+  border-bottom: 1px dashed var(--border);
+}
+.pg-preview-body {
+  font-family: inherit;
+  font-size: 13.5px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--text);
+  margin: 0;
+}
+
 .md-list { display: flex; flex-direction: column; gap: 10px; }
 .md-item {
   display: flex;
