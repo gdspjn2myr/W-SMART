@@ -11,6 +11,8 @@
 
 let pemakaianInitialized = false;
 let pmLokasi = '';
+let pmStockHintTimer = null;
+let pmStockHintSeq = 0; // dipakai buang jawaban getStockHint yang basi (kalau user ngetik cepat & respons datang gak berurutan)
 
 function initPemakaianPage() {
   loadMasterData(); // pastikan datalist #listMasterBarang & masterBarangCache terisi
@@ -19,8 +21,11 @@ function initPemakaianPage() {
   if (!pemakaianInitialized) {
     pemakaianInitialized = true;
 
-    document.getElementById('pmKode').addEventListener('input', handlePmKodeInput);
+    document.getElementById('pmKode').addEventListener('input', (e) => { handlePmKodeInput(e); scheduleStockHint(); });
+    document.getElementById('pmPlant').addEventListener('change', scheduleStockHint);
+    document.getElementById('pmSLoc').addEventListener('input', scheduleStockHint);
     document.getElementById('formPemakaian').addEventListener('submit', handlePmSubmit);
+    wireUppercaseInput('pmSLoc'); // S.Loc ikut mengikat stock di backend, selalu huruf besar (lihat normalizeSloc_ di Code.gs)
 
     document.getElementById('btnScanPmLokasi').addEventListener('click', () => {
       openQrScanner(
@@ -75,6 +80,53 @@ function handlePmKodeInput(e) {
   }
 }
 
+// ---------------------------------------------------------------------------
+// "Sisa stock" — dipanggil tiap kali Kode/Plant/S.Loc berubah (lihat wiring di
+// initPemakaianPage), biar user tau berapa sisa stock SEBELUM klik Simpan,
+// bukan baru tau pas ditolak (lihat keluhan user: "saya gatau sisa stock
+// barang yg sudah dipilih"). Didebounce 350ms & pakai nomor urut (pmStockHint-
+// Seq) buat buang jawaban server yang keburu basi kalau user ngetik cepat.
+// ---------------------------------------------------------------------------
+function scheduleStockHint() {
+  clearTimeout(pmStockHintTimer);
+  pmStockHintTimer = setTimeout(updateStockHint, 350);
+}
+
+async function updateStockHint() {
+  const hintEl = document.getElementById('pmStockHint');
+  const kode = document.getElementById('pmKode').value.trim();
+  const plant = document.getElementById('pmPlant').value.trim();
+  const sloc = document.getElementById('pmSLoc').value.trim().toUpperCase();
+
+  if (!kode || !plant) {
+    hintEl.hidden = true;
+    return;
+  }
+
+  const mySeq = ++pmStockHintSeq;
+  try {
+    const res = await Api.getStockHint({ kode, plant, sloc });
+    if (mySeq !== pmStockHintSeq) return; // ada request lebih baru nyusul duluan, buang yang ini
+
+    if (res.needsPlantSelection) {
+      hintEl.textContent = 'Kode ini ada di beberapa Plant — pilih Plant yang sesuai dulu buat lihat sisa stock.';
+      hintEl.hidden = false;
+    } else if (res.notFound) {
+      hintEl.textContent = `Belum ada stock tercatat untuk kode ini di Plant ${plant}.`;
+      hintEl.hidden = false;
+    } else if (sloc) {
+      hintEl.textContent = `Sisa stock di Plant ${plant} · S.Loc ${sloc}: ${Math.max(0, res.onHandPlantSloc)} ${res.satuan || ''} (total Plant ${plant} semua S.Loc: ${res.onHandPlant})`;
+      hintEl.hidden = false;
+    } else {
+      hintEl.textContent = `Stock di Plant ${plant} (semua S.Loc): ${res.onHandPlant} ${res.satuan || ''} — isi S.Loc buat lihat sisa spesifik di lokasi itu.`;
+      hintEl.hidden = false;
+    }
+  } catch (err) {
+    if (mySeq !== pmStockHintSeq) return;
+    hintEl.hidden = true; // gagal ambil hint bukan hal fatal, biarin aja sunyi — validasi beneran tetap di server pas Simpan
+  }
+}
+
 async function handlePmSubmit(e) {
   e.preventDefault();
 
@@ -100,6 +152,14 @@ async function handlePmSubmit(e) {
     showToast('Plant wajib dipilih — transaksi ini akan dicocokkan ke stock yang benar2 ada di Plant tsb.', 'error');
     return;
   }
+  // S.Loc SEKARANG IKUT MENGIKAT stock bareng Plant (bukan cuma catatan) —
+  // walau Plant sama, S.Loc beda tetap ditolak servernya, jadi wajib diisi.
+  const sloc = document.getElementById('pmSLoc').value.trim().toUpperCase();
+  if (!sloc) {
+    showToast('S.Loc wajib diisi — dipakai bareng Plant buat mencocokkan stock yang benar2 ada di lokasi itu.', 'error');
+    document.getElementById('pmSLoc').focus();
+    return;
+  }
 
   const match = masterBarangCache.find((b) => b.kodeBarang === kode);
 
@@ -112,7 +172,7 @@ async function handlePmSubmit(e) {
     keterangan: document.getElementById('pmKeterangan').value.trim(),
     lokasi: pmLokasi,
     plant,
-    sloc: document.getElementById('pmSLoc').value.trim()
+    sloc
   };
 
   const submitBtn = e.target.querySelector('button[type="submit"]');
@@ -136,5 +196,6 @@ function resetPmForm() {
   document.getElementById('formPemakaian').reset();
   setPmTanggalDisplay();
   document.getElementById('pmNamaHint').hidden = true;
+  document.getElementById('pmStockHint').hidden = true;
   setPmLokasi('');
 }
