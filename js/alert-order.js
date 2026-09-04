@@ -32,6 +32,9 @@ const AO_EXPORT_COLUMNS = [
   { header: 'Nama Barang', get: (it) => it.namaBarang },
   { header: 'Satuan', get: (it) => it.satuan },
   { header: 'Kategori', get: (it) => it.kategori },
+  { header: 'Jenis', get: (it) => it.jenis || '' },
+  { header: 'Plant', get: (it) => it.plant || '' },
+  { header: 'S.Loc', get: (it) => (it.slocBreakdown || []).map((s) => s.sloc + ' ' + s.onHand).join(', ') },
   { header: 'Status', get: (it) => STATUS_LABEL[it.status] || it.status },
   { header: 'Stock Saat Ini', get: (it) => it.onHand, numeric: true },
   { header: 'Min Stock', get: (it) => it.minStock, numeric: true },
@@ -89,6 +92,7 @@ function renderAlertOrderList() {
               ${escapeHtml(it.kode)} — ${escapeHtml(it.namaBarang || '-')}
             </div>
             <div class="ao-item-sub">Stock ${it.onHand} · Min ${it.minStock} · ROP ${it.rop} · MAX ${it.max} · Order Qty <strong>${it.orderQty}</strong></div>
+            ${itemMetaLine(it) ? `<div class="item-meta-line">${itemMetaLine(it)}</div>` : ''}
           </div>
           <div class="ao-item-side">
             ${it.prTerbuka
