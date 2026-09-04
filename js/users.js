@@ -9,6 +9,14 @@ let usersInitialized = false;
 let usersCache = [];
 let editingUsername = null; // null = mode tambah baru
 
+// Validasi format ringan — bukan RFC-lengkap, cukup buat nangkep salah ketik
+// (kosong tanda @, tanpa domain, dst.) sebelum dikirim ke server. Dipakai
+// juga di js/auth.js (form Daftar Akun), fungsi ini dimuat lebih dulu lewat
+// urutan <script> di index.html jadi tersedia global.
+function isValidEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
 function initUsersPage() {
   if (!usersInitialized) {
     usersInitialized = true;
@@ -92,6 +100,7 @@ function renderUsersList() {
               ${escapeHtml(u.nama)}
             </div>
             <div class="md-item-sub">@${escapeHtml(u.username)} · Daftar sendiri, belum punya Role</div>
+            <div class="md-item-sub">${escapeHtml(u.email || '-')} · NIK ${escapeHtml(u.nik || '-')}</div>
           </div>
           <div class="md-item-actions">
             <button type="button" class="btn btn-small" data-action="reject-user" data-username="${escapeHtml(u.username)}">Tolak</button>
@@ -137,6 +146,19 @@ function openUserModal(user) {
   document.getElementById('userNama').value = user ? user.nama : '';
   document.getElementById('userUsername').value = user ? user.username : '';
   document.getElementById('userUsername').disabled = isEdit; // username = kunci, tidak diubah setelah dibuat
+  document.getElementById('userEmail').value = user ? (user.email || '') : '';
+  document.getElementById('userNIK').value = user ? (user.nik || '') : '';
+  // Email & NIK WAJIB buat user BARU (termasuk approve pendaftar-sendiri —
+  // dia sudah ngisi ini pas daftar, lihat js/auth.js) — dipakai nanti buat
+  // fitur auto-email waktu barang pesanan seorang user datang. Tapi buat
+  // EDIT user yang sudah ada duluan (sebelum fitur ini) & belum ada data
+  // ini, jangan diblok cuma gara2 mau ganti hal lain (mis. Role) — biarkan
+  // dilengkapi belakangan.
+  const emailNikRequired = !isEdit || isApproving;
+  document.getElementById('userEmail').required = emailNikRequired;
+  document.getElementById('userNIK').required = emailNikRequired;
+  document.getElementById('userEmailLabel').textContent = emailNikRequired ? 'Email *' : 'Email';
+  document.getElementById('userNIKLabel').textContent = emailNikRequired ? 'NIK *' : 'NIK';
   document.getElementById('userPin').value = '';
   document.getElementById('userPin').placeholder = isApproving
     ? 'Kosongkan supaya Password yang dia daftarkan tetap dipakai'
@@ -162,6 +184,8 @@ async function submitUserForm(e) {
   e.preventDefault();
   const nama = document.getElementById('userNama').value.trim();
   const username = document.getElementById('userUsername').value.trim();
+  const email = document.getElementById('userEmail').value.trim();
+  const nik = document.getElementById('userNIK').value.trim();
   const pin = document.getElementById('userPin').value.trim();
   const role = document.getElementById('userRole').value;
   const errEl = document.getElementById('userFormError');
@@ -169,6 +193,27 @@ async function submitUserForm(e) {
 
   if (!nama || !username) {
     errEl.textContent = 'Nama & Username wajib diisi.';
+    errEl.hidden = false;
+    return;
+  }
+
+  const wasApproving = !!(editingUsername && usersCache.find((it) => it.username === editingUsername && it.status === STATUS_PENDING));
+  // Email & NIK wajib buat user baru / approve pendaftar (lihat catatan di
+  // openUserModal) — kalau isinya sudah ada (mis. approve, sudah keisi dari
+  // pendaftaran) tetap divalidasi formatnya kalau diubah.
+  const emailNikRequired = !editingUsername || wasApproving;
+  if (emailNikRequired && (!email || !nik)) {
+    errEl.textContent = 'Email & NIK wajib diisi.';
+    errEl.hidden = false;
+    return;
+  }
+  if (email && !isValidEmail(email)) {
+    errEl.textContent = 'Format Email tidak valid.';
+    errEl.hidden = false;
+    return;
+  }
+  if (nik && !/^\d{16}$/.test(nik)) {
+    errEl.textContent = 'NIK harus 16 digit angka.';
     errEl.hidden = false;
     return;
   }
@@ -183,12 +228,10 @@ async function submitUserForm(e) {
     return;
   }
 
-  const wasApproving = !!(editingUsername && usersCache.find((it) => it.username === editingUsername && it.status === STATUS_PENDING));
-
   const btnSubmit = document.getElementById('btnSaveUser');
   btnSubmit.disabled = true;
   try {
-    await Api.saveUser({ originalUsername: editingUsername || '', nama, username, pin, role });
+    await Api.saveUser({ originalUsername: editingUsername || '', nama, username, email, nik, pin, role });
     showToast(wasApproving ? 'User disetujui & diaktifkan.' : (editingUsername ? 'User diperbarui.' : 'User baru ditambahkan.'), 'success');
     closeUserModal();
     loadUsers();
