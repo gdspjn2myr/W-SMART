@@ -402,8 +402,8 @@
           <input type="text" id="fPlant" placeholder="Contoh: 1111">
         </div>
         <div class="form-row">
-          <label>S. Loc</label>
-          <input type="text" id="fSLoc" placeholder="Contoh: GDSP">
+          <label>S. Loc *</label>
+          <input type="text" id="fSLoc" class="input-uppercase" placeholder="Contoh: GDSP" required>
         </div>
       </div>
 
@@ -525,10 +525,11 @@
           </select>
         </div>
         <div class="form-row">
-          <label>S. Loc</label>
-          <input type="text" id="pmSLoc" placeholder="Contoh: GDSP">
+          <label>S. Loc *</label>
+          <input type="text" id="pmSLoc" class="input-uppercase" placeholder="Contoh: GDSP" required>
         </div>
       </div>
+      <div id="pmStockHint" class="hint-text" hidden></div>
       <div class="form-row">
         <label>Keterangan</label>
         <textarea id="pmKeterangan" rows="2" placeholder="Contoh: Maintenance Line 1 (opsional)"></textarea>
@@ -652,13 +653,13 @@
         <svg class="card-header-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3.5" y="3.5" width="7" height="7" rx="1"/><rect x="13.5" y="3.5" width="7" height="7" rx="1"/><rect x="3.5" y="13.5" width="7" height="7" rx="1"/></svg>
         Pilih Barang untuk Label QR
       </div>
-      <p class="hint-text">QR akan berisi Kode Barang — sama seperti yang dibaca fitur scan di Put Away &amp; Barang Keluar. Tempel di rak/box, pilih beberapa item lalu cetak sekaligus.</p>
-      <div class="md-toolbar">
-        <input type="search" id="qrBarangSearch" class="md-search" placeholder="Cari kode / nama barang...">
-        <button type="button" id="btnQrBarangSelectAll" class="btn btn-small">Pilih Semua</button>
+      <p class="hint-text">QR akan berisi Kode Barang — sama seperti yang dibaca fitur scan di Put Away &amp; Barang Keluar. Ketik buat cari barangnya, klik dari saran yang muncul, ulangi buat nambah beberapa barang sekaligus.</p>
+      <div class="qr-pick-search-wrap">
+        <input type="search" id="qrBarangSearch" class="md-search" placeholder="Ketik kode / nama barang..." autocomplete="off">
+        <div id="qrBarangSuggest" class="qr-pick-suggest" hidden></div>
       </div>
-      <div id="qrBarangList" class="pw-list">
-        <div class="empty-state">Memuat data barang...</div>
+      <div id="qrBarangSelected" class="qr-pick-selected">
+        <div class="qr-pick-selected-empty">Belum ada barang dipilih — cari & klik dari saran di atas.</div>
       </div>
       <button type="button" id="btnGenerateQrBarang" class="btn btn-primary btn-block">Buat Label QR</button>
     </div>
