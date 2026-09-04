@@ -194,15 +194,19 @@ async function handleCariBin() {
 function renderOpBinResult(lokasi, items) {
   document.getElementById('opBinResultLokasi').textContent = lokasi;
   const wrap = document.getElementById('opBinResultList');
-  wrap.innerHTML = items.map((it) => `
+  wrap.innerHTML = items.map((it) => {
+    const meta = itemMetaLine(it);
+    return `
       <button type="button" class="op-bin-item" data-kode="${escapeHtml(it.kode)}" data-plant="${escapeHtml(it.plant || '')}">
         <div>
-          <div class="op-item-title">${escapeHtml(it.kode)} — ${escapeHtml(it.namaBarang || '-')}${it.plant ? ' <span class="sb-plant-tag">Plant ' + escapeHtml(it.plant) + '</span>' : ''}</div>
+          <div class="op-item-title">${escapeHtml(it.kode)} — ${escapeHtml(it.namaBarang || '-')}</div>
           <div class="op-item-sub">Klik untuk lihat detail & catat hasil hitung</div>
+          ${meta ? `<div class="item-meta-line">${meta}</div>` : ''}
         </div>
         <div class="op-bin-item-qty">${it.qtyDiBin}<span> ${escapeHtml(it.satuan || '')}</span></div>
       </button>
-    `).join('');
+    `;
+  }).join('');
   wrap.querySelectorAll('.op-bin-item').forEach((btn) => {
     btn.addEventListener('click', () => {
       opContextLokasi = lokasi;
@@ -240,11 +244,13 @@ function renderOpDetailCard(item, riwayatKedatangan) {
       `).join('')
     : '<div class="empty-state">Belum ada riwayat Penerimaan tercatat untuk item ini.</div>';
 
+  const detailMeta = itemMetaLine({ plant: item.plant, slocBreakdown: item.slocBreakdown, jenis: item.jenis });
   card.innerHTML = `
     <div class="card-header">
       <span class="md-badge ${item.kategori === 'A' ? 'md-badge-a' : item.kategori === 'C' ? 'md-badge-c' : 'md-badge-b'}">${escapeHtml((item.kategori || '-').toUpperCase())}</span>
-      ${escapeHtml(item.kode)} — ${escapeHtml(item.namaBarang || '-')}${item.plant ? ' <span class="sb-plant-tag">Plant ' + escapeHtml(item.plant) + '</span>' : ''}
+      ${escapeHtml(item.kode)} — ${escapeHtml(item.namaBarang || '-')}
     </div>
+    ${detailMeta ? `<div class="item-meta-line">${detailMeta}</div>` : ''}
     ${item.belumAdaMaster ? '<span class="badge-belum-master">⚠ Belum terdaftar di Master Data — data ROP/Min/Max belum ada</span>' : ''}
     <div class="op-detail-stats">
       <div><span>Qty Sistem (Tercatat)</span><strong>${item.onHand} ${escapeHtml(item.satuan || '')}</strong></div>
@@ -267,6 +273,10 @@ function renderOpDetailCard(item, riwayatKedatangan) {
         </div>
       </div>
       <div class="form-row">
+        <label>S. Loc (opsional)</label>
+        <input type="text" id="opDetailSLoc" class="input-uppercase" placeholder="Bin ini termasuk S.Loc mana (kalau tahu)">
+      </div>
+      <div class="form-row">
         <label>Catatan (opsional)</label>
         <input type="text" id="opCatatan" placeholder="Mis. barang rusak, salah taruh bin, dst.">
       </div>
@@ -282,6 +292,7 @@ function renderOpDetailCard(item, riwayatKedatangan) {
   opCurrentItemBins = item.bins || [];
 
   document.getElementById('btnTambahSesiOpname').addEventListener('click', addToSesi);
+  wireUppercaseInput('opDetailSLoc'); // form ini dibangun ulang tiap kali card di-render, jadi di-wire ulang tiap saat
   document.getElementById('opQtyFisik').focus();
 }
 
@@ -301,6 +312,7 @@ function addToSesi() {
   }
 
   const lokasi = document.getElementById('opDetailLokasi').value.trim();
+  const sloc = document.getElementById('opDetailSLoc').value.trim().toUpperCase();
   // Kalau lagi menghitung 1 bin spesifik, baseline selisihnya qty di bin itu
   // saja (bukan onHand total) — biar akurat & konsisten sama logic per-bin di
   // handleSaveKoreksiStock (Code.gs). Kalau Lokasi dikosongkan, tetap pakai
@@ -313,6 +325,7 @@ function addToSesi() {
     satuan: card.dataset.satuan,
     plant: card.dataset.plant || '',
     lokasi,
+    sloc,
     catatan: document.getElementById('opCatatan').value.trim(),
     qtySistem: qtySistem,
     qtyFisik: Number(qtyFisik),
@@ -371,7 +384,7 @@ function renderOpSesiList() {
     const labelLokasi = it.lokasi ? `di lokasi <strong>${escapeHtml(it.lokasi)}</strong>` : 'total <strong>semua lokasi</strong>';
     const formInlineHtml = (it.koreksiExpanded && !it.dikoreksi) ? `
       <div class="op-koreksi-inline">
-        <p class="hint-text">Ini akan LANGSUNG mengubah stock sistem ${labelLokasi} untuk <strong>${escapeHtml(it.kode)}</strong>${it.plant ? ' · Plant ' + escapeHtml(it.plant) : ''}, dari ${it.qtySistem} menjadi ${it.qtyFisik} ${escapeHtml(it.satuan || '')} (selisih ${selisihText}) — bukan cuma catatan opname.</p>
+        <p class="hint-text">Ini akan LANGSUNG mengubah stock sistem ${labelLokasi} untuk <strong>${escapeHtml(it.kode)}</strong>${it.plant ? ' · Plant ' + escapeHtml(it.plant) : ''}${it.sloc ? ' · S.Loc ' + escapeHtml(it.sloc) : ''}, dari ${it.qtySistem} menjadi ${it.qtyFisik} ${escapeHtml(it.satuan || '')} (selisih ${selisihText}) — bukan cuma catatan opname.</p>
         <div class="form-row">
           <label>Alasan Koreksi *</label>
           <input type="text" id="opKsAlasan-${safeId}" placeholder="Mis. hasil hitung ulang, ketemu di bin lain, dst." value="${escapeHtml(it.catatan || '')}">
@@ -383,12 +396,14 @@ function renderOpSesiList() {
       </div>
     ` : '';
 
+    const sesiMeta = itemMetaLine(it);
     return `
       <div class="op-item-wrap">
         <div class="op-item">
           <div>
-            <div class="op-item-title">${escapeHtml(it.kode)} — ${escapeHtml(it.namaBarang || '-')}${it.plant ? ' <span class="sb-plant-tag">Plant ' + escapeHtml(it.plant) + '</span>' : ''}</div>
+            <div class="op-item-title">${escapeHtml(it.kode)} — ${escapeHtml(it.namaBarang || '-')}</div>
             <div class="op-item-sub">Sistem ${it.qtySistem} → Fisik ${it.qtyFisik} ${escapeHtml(it.satuan || '')}${it.lokasi ? ' · ' + escapeHtml(it.lokasi) : ''}</div>
+            ${sesiMeta ? `<div class="item-meta-line">${sesiMeta}</div>` : ''}
           </div>
           <div class="op-item-side">
             <span class="op-selisih-badge ${selisihClass}">Selisih ${selisihText}</span>
@@ -457,6 +472,7 @@ async function handleKoreksiLangsungConfirm(kode, plant) {
       satuan: it.satuan,
       qtyBaru: it.qtyFisik,
       lokasi: it.lokasi,
+      sloc: it.sloc || '',
       plant: it.plant,
       alasan,
       user,
