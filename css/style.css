@@ -1495,9 +1495,32 @@ body {
   }
   #page-dashboard .card { margin-bottom: 0; }
 
+  /* Barang Masuk (Penerimaan) — sebelumnya dipaksa max-width 640px & SEMUA
+     field ditumpuk 1 kolom (jadi kepanjangan ke bawah di layar desktop yang
+     lebar, banyak ruang kosong di kanan-kirinya — keluhan user). Sekarang
+     lebih lebar & field-field pendeknya (tanggal/No.PO/Vendor/Penerima/
+     Pemesan/Nama-NIK Pemesan) disusun 2 kolom pakai CSS Grid, sementara yang
+     memang harus selebar penuh (header, Plant+S.Loc yang sudah berpasangan
+     sendiri, daftar barang, Email Pemesan, Keterangan, tombol Simpan) tetap
+     dipaksa span 2 kolom lewat class .form-row-full / selector spesifik di
+     bawah — supaya nggak keliatan aneh cuma setengah lebar. */
   #page-penerimaan {
-    max-width: 640px;
+    max-width: 900px;
     margin: 0 auto;
+  }
+  #formPenerimaan {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 16px;
+    align-items: start;
+  }
+  #formPenerimaan > .card-header,
+  #formPenerimaan > .form-row-pair,
+  #formPenerimaan > .form-row-full,
+  #formPenerimaan > .items-header,
+  #formPenerimaan > #itemsContainer,
+  #formPenerimaan > button[type="submit"] {
+    grid-column: 1 / -1;
   }
 }
 
