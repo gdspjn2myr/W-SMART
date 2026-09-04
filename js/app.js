@@ -457,6 +457,17 @@ document.addEventListener('DOMContentLoaded', () => {
     if (chip) selectDashPlantFilter(chip.dataset.plant);
   });
 
+  // Tombol "Daftarkan" di tiap baris kartu "Belum Terdaftar di Master Data"
+  // (lihat dashStockItemHtml di dashboard.js) — delegated karena isi list-nya
+  // dibangun ulang tiap kali popup dibuka. Pindah ke halaman Master Data &
+  // langsung buka form Tambah Item yang sudah keisi kode/nama/satuan/Plant-nya
+  // (lihat gotoRegisterMasterData di dashboard.js), biar user nggak perlu
+  // nyari & ngetik ulang manual.
+  document.getElementById('dashListModalBody').addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-goto-master]');
+    if (btn) gotoRegisterMasterData(btn.dataset);
+  });
+
   // Popup Riwayat Transaksi 1 SKU (klik baris di halaman Stock Balance / Mutasi
   // Stock — lihat openSbRiwayatModal di stock-balance.js).
   document.getElementById('btnCloseSbRiwayatModal').addEventListener('click', closeSbRiwayatModal);
