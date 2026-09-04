@@ -194,6 +194,13 @@
   <!-- ============================= DASHBOARD ============================= -->
   <section id="page-dashboard" class="page">
 
+    <div class="dash-toolbar">
+      <button type="button" id="btnRefreshDashboard" class="btn btn-small" title="Refresh" aria-label="Refresh">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 4v6h-6"/></svg>
+        Refresh
+      </button>
+    </div>
+
     <div class="stat-card stat-card-hero stat-card-clickable" role="button" tabindex="0" data-dash-filter="semua">
       <div class="stat-icon stat-icon-stock">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8 12 3 3 8v8l9 5 9-5Z"/><path d="M3 8l9 5 9-5"/><path d="M12 13v8"/></svg>
@@ -265,6 +272,15 @@
         <span class="count-badge" id="reorderAlertCount">0 Item</span>
       </div>
       <div class="ra-card-hint" id="reorderAlertHint">Semua stock dalam kondisi normal.</div>
+    </div>
+
+    <div class="card card-clickable" id="belumTerdaftarCard" role="button" tabindex="0" data-dash-filter="belum-terdaftar" aria-haspopup="dialog">
+      <div class="card-header">
+        <svg viewBox="0 0 24 24" class="card-header-icon" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M8 3v3M16 3v3M8 13h5M8 17h8"/></svg>
+        Belum Terdaftar di Master Data
+        <span class="count-badge" id="belumTerdaftarCount">0 Item</span>
+      </div>
+      <div class="ra-card-hint" id="belumTerdaftarHint">Semua barang sudah terdaftar di Master Data.</div>
     </div>
 
     <div class="stat-grid">
@@ -622,7 +638,12 @@
 
     <div class="sb-summary">
       <span id="sbCount">0 SKU</span>
-      <span id="sbUpdatedAt"></span>
+      <span class="sb-summary-right">
+        <span id="sbUpdatedAt"></span>
+        <button type="button" id="btnRefreshStockBalance" class="btn btn-small" title="Refresh" aria-label="Refresh">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 4v6h-6"/></svg>
+        </button>
+      </span>
     </div>
 
     <div class="sb-kategori-legend">
