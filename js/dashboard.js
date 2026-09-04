@@ -13,6 +13,7 @@ async function loadDashboard() {
     const res = await Api.getDashboard();
     renderStockStats(res);
     renderReorderAlert(res.reorderAlert || []);
+    renderBelumTerdaftar(res.belumTerdaftarCount || 0);
     renderStats(res);
     renderChart(res.chart7Hari || []);
     renderTopPemakaian(res.topPemakaianBulanIni || []);
@@ -94,6 +95,25 @@ function renderReorderAlert(list) {
   }).join('');
 }
 
+// Kartu "Belum Terdaftar di Master Data" — jumlah barang yang PUNYA stock
+// (belumTerdaftarCount, dari hitungStockHealth_ di Code.gs) tapi belum
+// terdaftar resmi (baik barang baru yang belum pernah didaftarkan SAMA
+// SEKALI, maupun kasus kode multi-Plant yang transaksinya nyasar ke Plant
+// yang belum ada baris Master Data-nya). Beda dari kartu2 statistik lain
+// (Normal/Near ROP/dst) yang cuma hitung barang TERDAFTAR — kartu ini justru
+// nyorot barang yang TERLEWAT dari Master Data, biar ketauan & bisa
+// dilengkapi (kasih ROP/Min/Max) alih-alih diam-diam nyangkut di stock tanpa
+// pengawasan. Klik kartu ini pakai mekanisme umum data-dash-filter yang sama
+// dengan kartu Stock Saat Ini/Total SKU dst (lihat DASH_CARD_FILTERS &
+// openDashStatModal di bawah) — bukan modal terpisah kayak Reorder Alert.
+function renderBelumTerdaftar(count) {
+  document.getElementById('belumTerdaftarCount').textContent = count + ' Item';
+  const hint = document.getElementById('belumTerdaftarHint');
+  hint.textContent = count
+    ? `${count} barang punya stock tapi belum terdaftar di Master Data — ketuk buat lihat & daftarkan`
+    : 'Semua barang sudah terdaftar di Master Data.';
+}
+
 function openReorderAlertModal() {
   document.getElementById('reorderAlertModalBackdrop').hidden = false;
   document.getElementById('reorderAlertModal').hidden = false;
@@ -154,6 +174,13 @@ const DASH_CARD_FILTERS = {
     hint: 'Barang terdaftar yang stock-nya sudah 0 — paling butuh perhatian & prioritas order.',
     filter: (b) => !b.belumAdaMaster && b.status === 'Stock Out',
     sort: (a, b) => (a.namaBarang || '').localeCompare(b.namaBarang || '')
+  },
+  'belum-terdaftar': {
+    mode: 'stock',
+    title: 'Belum Terdaftar di Master Data',
+    hint: 'Barang yang PUNYA stock (dari Barang Masuk/Koreksi) tapi belum terdaftar resmi di Master Data — termasuk barang baru yang belum pernah didaftarkan, dan kode yang sudah terdaftar di Plant lain tapi ada transaksi ke Plant yang belum ada baris Master Data-nya. Belum punya ROP/Min/Max sampai didaftarkan.',
+    filter: (b) => b.belumAdaMaster && b.onHand > 0,
+    sort: (a, b) => b.onHand - a.onHand
   },
   'terima-hari-ini': {
     mode: 'receiving',
