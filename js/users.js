@@ -27,6 +27,7 @@ function initUsersPage() {
       const toggleBtn = e.target.closest('[data-action="toggle-user-status"]');
       const approveBtn = e.target.closest('[data-action="approve-user"]');
       const rejectBtn = e.target.closest('[data-action="reject-user"]');
+      const deleteBtn = e.target.closest('[data-action="delete-user"]');
       if (editBtn) {
         const u = usersCache.find((it) => it.username === editBtn.dataset.username);
         if (u) openUserModal(u);
@@ -35,6 +36,8 @@ function initUsersPage() {
         if (u) openUserModal(u);
       } else if (rejectBtn) {
         rejectUser(rejectBtn.dataset.username);
+      } else if (deleteBtn && !deleteBtn.disabled) {
+        deleteUser(deleteBtn.dataset.username);
       } else if (toggleBtn && !toggleBtn.disabled) {
         toggleUserStatus(toggleBtn.dataset.username, toggleBtn.dataset.nextStatus);
       }
@@ -115,6 +118,11 @@ function renderUsersList() {
             ${isSelf && isAktif ? 'disabled title="Tidak bisa nonaktifkan akun sendiri"' : ''}>${isAktif ? 'Aktif' : 'Nonaktif'}</button>
           <button type="button" class="btn-icon" data-action="edit-user" data-username="${escapeHtml(u.username)}" title="Edit user" aria-label="Edit user">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+          </button>
+          <button type="button" class="btn-icon btn-icon-danger" data-action="delete-user" data-username="${escapeHtml(u.username)}"
+            title="${isSelf ? 'Tidak bisa hapus akun sendiri' : 'Hapus user permanen'}" aria-label="Hapus user"
+            ${isSelf ? 'disabled' : ''}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-.9 14a2 2 0 0 1-2 1.9H7.9a2 2 0 0 1-2-1.9L5 6"/><path d="M10 11v6M14 11v6"/></svg>
           </button>
         </div>
       </div>`;
@@ -197,6 +205,17 @@ async function rejectUser(username) {
   try {
     await Api.rejectUser({ username });
     showToast('Pendaftaran ditolak.', 'success');
+    loadUsers();
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
+async function deleteUser(username) {
+  if (!confirm('Hapus user "' + username + '" secara PERMANEN? Aksi ini tidak bisa dibatalkan — kalau cuma mau nonaktifkan sementara, pakai tombol Aktif/Nonaktif saja.')) return;
+  try {
+    await Api.deleteUser({ username });
+    showToast('User dihapus.', 'success');
     loadUsers();
   } catch (err) {
     showToast(err.message, 'error');
