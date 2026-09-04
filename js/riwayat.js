@@ -82,7 +82,9 @@ function renderRiwayatList() {
     wrap.innerHTML = '<div class="empty-state">Belum ada transaksi yang cocok dengan filter ini.</div>';
     return;
   }
-  wrap.innerHTML = rwData.map((it) => `
+  wrap.innerHTML = rwData.map((it) => {
+    const meta = itemMetaLine(it);
+    return `
       <div class="rw-item">
         <div class="rw-item-main">
           <div class="rw-item-title">
@@ -92,10 +94,12 @@ function renderRiwayatList() {
           <div class="rw-item-sub">
             ${escapeHtml(it.waktu || '-')} · ${escapeHtml(it.user || '-')}${it.lokasi ? ' · ' + escapeHtml(it.lokasi) : ''}${it.keterangan ? ' · ' + escapeHtml(it.keterangan) : ''}
           </div>
+          ${meta ? `<div class="item-meta-line">${meta}</div>` : ''}
         </div>
         <div class="rw-item-side">
           <div class="rw-qty">${RW_JENIS_SIGN[it.jenis] || ''}${it.qty}<span>${escapeHtml(it.satuan || '')}</span></div>
         </div>
       </div>
-    `).join('');
+    `;
+  }).join('');
 }
