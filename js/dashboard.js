@@ -5,17 +5,19 @@
 let dashboardLoadedOnce = false;
 let dashFullBalances = null; // cache Stock Balance LENGKAP (semua SKU + belum terdaftar), dipakai buat isi popup kartu2 statistik Dashboard — di-reset tiap loadDashboard() supaya nggak nampilin data basi
 let dashReceivingDetail = null; // cache itemized Penerimaan (Api.getReceivingDetail), dipakai popup 4 kartu bawah (Diterima Hari Ini/Bulan Ini, Transaksi Bulan Ini, SKU Bulan Ini) — sama-sama di-reset tiap loadDashboard()
+let dashPemakaianDetail = null; // pasangan dashReceivingDetail, tapi buat Pemakaian (Api.getPemakaianDetail) — dipakai popup kartu Dikeluarkan Hari Ini/Bulan Ini, sama-sama di-reset tiap loadDashboard()
 
 async function loadDashboard() {
   dashFullBalances = null;
   dashReceivingDetail = null;
+  dashPemakaianDetail = null;
   try {
     const res = await Api.getDashboard();
     renderStockStats(res);
     renderReorderAlert(res.reorderAlert || []);
     renderBelumTerdaftar(res.belumTerdaftarCount || 0);
     renderStats(res);
-    renderChart(res.chart7Hari || []);
+    renderChart(mergeMasukKeluarChart_(res.chart7Hari || [], res.chart7HariKeluar || []));
     renderTopPemakaian(res.topPemakaianBulanIni || []);
     renderKategoriChart(res.kategoriDist || { A: 0, B: 0, C: 0 });
     renderRiwayat(res.riwayatTerbaru || []);
@@ -23,6 +25,20 @@ async function loadDashboard() {
   } catch (err) {
     showToast(err.message, 'error');
   }
+}
+
+// Gabungin chart7Hari (Penerimaan/Masuk) & chart7HariKeluar (Pemakaian/Keluar)
+// dari server jadi 1 array {tanggal, qtyMasuk, qtyKeluar} buat digambar
+// bareng-bareng sebagai grouped bar chart (lihat renderChart) — keluhan user:
+// "kenapa cuman ada data diterima, gaada barang keluar" di Dashboard. Kedua
+// array dari server SELALU rentang 7 hari yang SAMA (lihat hitungReceivingStats_
+// & hitungPemakaianStats_ di Code.gs, dua-duanya generate dari `new Date()`
+// yang sama persis), jadi aman di-map by tanggal tanpa perlu isi tanggal yang
+// hilang di salah satu sisi.
+function mergeMasukKeluarChart_(masuk, keluar) {
+  const keluarMap = {};
+  (keluar || []).forEach((d) => { keluarMap[d.tanggal] = d.qty; });
+  return (masuk || []).map((d) => ({ tanggal: d.tanggal, qtyMasuk: d.qty, qtyKeluar: keluarMap[d.tanggal] || 0 }));
 }
 
 // Stock Balance / Reorder Alert — dihitung realtime di server dari Penerimaan -
@@ -213,6 +229,20 @@ const DASH_CARD_FILTERS = {
     title: 'SKU Bulan Ini',
     hint: 'Jenis barang (SKU) berbeda yang diterima bulan berjalan, diurutkan alfabetis.',
     emptyText: 'Belum ada barang yang diterima bulan ini.'
+  },
+  'keluar-hari-ini': {
+    mode: 'pemakaian',
+    dataKey: 'hariIni',
+    title: 'Dikeluarkan Hari Ini',
+    hint: 'Semua baris Barang Keluar (Pemakaian) hari ini, diurutkan dari qty terbanyak.',
+    emptyText: 'Belum ada barang yang dikeluarkan hari ini.'
+  },
+  'keluar-bulan-ini': {
+    mode: 'pemakaian',
+    dataKey: 'bulanIni',
+    title: 'Dikeluarkan Bulan Ini',
+    hint: 'Total qty dikeluarkan bulan berjalan, dijumlahkan per Kode Barang (bisa dari beberapa kali Pemakaian) — diurutkan dari qty terbanyak.',
+    emptyText: 'Belum ada barang yang dikeluarkan bulan ini.'
   }
 };
 
@@ -236,6 +266,15 @@ async function openDashStatModal(filterKey) {
       const items = dashReceivingDetail[cfg.dataKey] || [];
       if (cfg.view === 'transaksi') renderDashTransaksiModalBody(items, cfg.emptyText);
       else renderDashReceivingModalBody(items, cfg.emptyText);
+      return;
+    }
+
+    if (cfg.mode === 'pemakaian') {
+      if (!dashPemakaianDetail) {
+        dashPemakaianDetail = await Api.getPemakaianDetail();
+      }
+      const items = dashPemakaianDetail[cfg.dataKey] || [];
+      renderDashPemakaianModalBody(items, cfg.emptyText);
       return;
     }
 
@@ -406,6 +445,33 @@ function renderDashReceivingModalBody(items, emptyText) {
   }).join('');
 }
 
+// Popup "Dikeluarkan Hari Ini" / "Dikeluarkan Bulan Ini" — pasangan
+// renderDashReceivingModalBody di atas, tapi dari Api.getPemakaianDetail
+// (lihat handleGetPemakaianDetail di Code.gs). Bedanya cuma di baris kedua:
+// Penerimaan nunjukin PO/Vendor, Pemakaian nunjukin Teknisi/Keterangan.
+function renderDashPemakaianModalBody(items, emptyText) {
+  const body = document.getElementById('dashListModalBody');
+  if (!items.length) {
+    body.innerHTML = `<div class="empty-state">${escapeHtml(emptyText || 'Tidak ada data.')}</div>`;
+    return;
+  }
+  body.innerHTML = items.map((it) => {
+    const teknisiKetText = (it.teknisi || it.keterangan)
+      ? ` · ${escapeHtml(it.teknisi || '-')}${it.keterangan ? ' · ' + escapeHtml(it.keterangan) : ''}`
+      : '';
+    const meta = itemMetaLine(it);
+    return `
+      <div class="ra-item">
+        <div class="ra-item-main">
+          <div class="ra-item-title">${escapeHtml(it.kode)} — ${escapeHtml(it.namaBarang || '-')}</div>
+          <div class="ra-item-sub">Qty ${it.qty} ${escapeHtml(it.satuan || '')}${teknisiKetText}</div>
+          ${meta ? `<div class="item-meta-line">${meta}</div>` : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
 function renderDashTransaksiModalBody(items, emptyText) {
   const body = document.getElementById('dashListModalBody');
   if (!items.length) {
@@ -452,7 +518,9 @@ function renderTopPemakaian(list) {
 
 function renderStats(res) {
   animateStatValue('statHariIni', res.totalHariIni || 0);
+  animateStatValue('statKeluarHariIni', res.totalKeluarHariIni || 0);
   animateStatValue('statBulanIni', res.totalBulanIni || 0);
+  animateStatValue('statKeluarBulanIni', res.totalKeluarBulanIni || 0);
   animateStatValue('statTransaksi', res.transaksiBulanIni || 0);
   animateStatValue('statSku', res.skuBulanIni || 0);
 }
@@ -528,36 +596,57 @@ function renderChart(data) {
     return;
   }
 
+  // data sekarang {tanggal, qtyMasuk, qtyKeluar} per hari (lihat
+  // mergeMasukKeluarChart_) — digambar sebagai 2 bar berdampingan per hari
+  // (grouped bar chart) biar Masuk & Keluar langsung kebandingin tiap hari,
+  // bukan cuma 1 bar Penerimaan doang kayak sebelumnya.
   function draw(progress) {
     ctx.clearRect(0, 0, cssWidth, cssHeight);
-    const max = Math.max(1, ...data.map((d) => d.qty));
+    const max = Math.max(1, ...data.map((d) => Math.max(d.qtyMasuk, d.qtyKeluar)));
     const padBottom = 22;
-    const padTop = 10;
+    const padTop = 14;
     const chartH = cssHeight - padBottom - padTop;
     const barGap = 10;
-    const barWidth = (cssWidth - barGap * (data.length + 1)) / data.length;
+    const groupWidth = (cssWidth - barGap * (data.length + 1)) / data.length;
+    const innerGap = 4;
+    const barWidth = (groupWidth - innerGap) / 2;
 
     data.forEach((d, i) => {
-      const fullH = (d.qty / max) * chartH;
-      const barH = fullH * progress;
-      const x = barGap + i * (barWidth + barGap);
-      const y = padTop + (chartH - barH);
+      const groupX = barGap + i * (groupWidth + barGap);
 
+      const fullHMasuk = (d.qtyMasuk / max) * chartH;
+      const barHMasuk = fullHMasuk * progress;
+      const xMasuk = groupX;
+      const yMasuk = padTop + (chartH - barHMasuk);
       ctx.fillStyle = '#0f2a5c';
-      roundRectPath(ctx, x, y, barWidth, Math.max(barH, d.qty > 0 ? 2 : 0), 4);
+      roundRectPath(ctx, xMasuk, yMasuk, barWidth, Math.max(barHMasuk, d.qtyMasuk > 0 ? 2 : 0), 3);
+      ctx.fill();
+
+      const fullHKeluar = (d.qtyKeluar / max) * chartH;
+      const barHKeluar = fullHKeluar * progress;
+      const xKeluar = groupX + barWidth + innerGap;
+      const yKeluar = padTop + (chartH - barHKeluar);
+      ctx.fillStyle = '#d64545';
+      roundRectPath(ctx, xKeluar, yKeluar, barWidth, Math.max(barHKeluar, d.qtyKeluar > 0 ? 2 : 0), 3);
       ctx.fill();
 
       ctx.fillStyle = '#6b7488';
       ctx.font = '10px -apple-system, sans-serif';
       ctx.textAlign = 'center';
       const label = (d.tanggal || '').slice(5); // MM-DD
-      ctx.fillText(label, x + barWidth / 2, cssHeight - 6);
+      ctx.fillText(label, groupX + groupWidth / 2, cssHeight - 6);
 
-      if (d.qty > 0 && progress > 0.85) {
-        ctx.fillStyle = '#0f2a5c';
-        ctx.font = 'bold 10px -apple-system, sans-serif';
+      if (progress > 0.85) {
         ctx.globalAlpha = (progress - 0.85) / 0.15;
-        ctx.fillText(String(d.qty), x + barWidth / 2, y - 4);
+        ctx.font = 'bold 9px -apple-system, sans-serif';
+        if (d.qtyMasuk > 0) {
+          ctx.fillStyle = '#0f2a5c';
+          ctx.fillText(String(d.qtyMasuk), xMasuk + barWidth / 2, yMasuk - 4);
+        }
+        if (d.qtyKeluar > 0) {
+          ctx.fillStyle = '#d64545';
+          ctx.fillText(String(d.qtyKeluar), xKeluar + barWidth / 2, yKeluar - 4);
+        }
         ctx.globalAlpha = 1;
       }
     });
