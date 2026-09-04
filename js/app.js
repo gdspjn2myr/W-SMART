@@ -61,6 +61,26 @@ function initSidebar() {
 }
 
 // ---------------------------------------------------------------------------
+// SHOW/HIDE PASSWORD (ikon mata) — dipasang di field Password mana pun yang
+// dibungkus .password-field (login, daftar akun, & modal Kelola User).
+// Pakai event delegation di document supaya field yang muncul belakangan
+// (mis. field di dalam modal) otomatis ikut kepakai tanpa wiring ulang.
+// ---------------------------------------------------------------------------
+function wirePasswordToggles() {
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('.toggle-password');
+    if (!btn) return;
+    const input = document.getElementById(btn.dataset.target);
+    if (!input) return;
+    const showing = input.type === 'text';
+    input.type = showing ? 'password' : 'text';
+    btn.querySelector('.icon-eye').hidden = !showing;
+    btn.querySelector('.icon-eye-off').hidden = showing;
+    btn.setAttribute('aria-label', showing ? 'Tampilkan Password' : 'Sembunyikan Password');
+  });
+}
+
+// ---------------------------------------------------------------------------
 // GRUP NAVIGASI (Transaksi / Stock Control) — accordion tap-to-expand.
 // Di device dengan mouse (hover:hover & pointer:fine), submenu-nya justru
 // tampil sebagai flyout melayang pas di-hover (murni CSS, lihat style.css) —
@@ -255,6 +275,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   initSidebar();
   initNavGroups();
+  wirePasswordToggles();
 
   const btnCloseQrScan = document.getElementById('btnCloseQrScan');
   if (btnCloseQrScan) btnCloseQrScan.addEventListener('click', closeQrScanner);
