@@ -26,7 +26,8 @@ const PAGE_ROLES = {
   riwayat: ['Admin', 'Staff', 'Viewer'],
   opname: ['Admin', 'Staff'],
   'alert-order': ['Admin', 'Staff', 'Viewer'],
-  users: ['Admin']
+  users: ['Admin'],
+  pengaturan: ['Admin']
 };
 
 let currentSession = null; // { token, nama, username, role }
@@ -266,16 +267,18 @@ function wireRegisterForm() {
       errEl.hidden = false;
       return;
     }
-    // Email & NIK wajib & formatnya divalidasi dari awal daftar — rencananya
-    // dipakai buat fitur notifikasi email otomatis ke user (belum
-    // diimplementasi, ini baru nyiapin datanya).
+    // Email & NIK wajib & formatnya divalidasi dari awal daftar — dipakai buat
+    // fitur notifikasi email otomatis ke user pas barang pesanannya datang
+    // (lihat js/penerimaan.js & handleSavePenerimaan di Code.gs). NIK di sini
+    // = Nomor Induk Karyawan (bukan NIK KTP), jadi cukup "harus angka",
+    // panjangnya bebas (lihat isValidNik di js/users.js).
     if (!isValidEmail(email)) {
       errEl.textContent = 'Format Email tidak valid.';
       errEl.hidden = false;
       return;
     }
-    if (!/^\d{16}$/.test(nik)) {
-      errEl.textContent = 'NIK harus 16 digit angka.';
+    if (!isValidNik(nik)) {
+      errEl.textContent = 'NIK harus berupa angka.';
       errEl.hidden = false;
       return;
     }
