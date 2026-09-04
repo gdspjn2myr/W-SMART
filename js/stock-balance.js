@@ -32,7 +32,7 @@ function initStockBalancePage() {
     // tetap dikasih (konsisten sama pola di Riwayat Transaksi/Alert Order) buat
     // narik ulang data TERBARU tanpa perlu pindah halaman/reload, mis. abis
     // nambah Barang Masuk baru di tab lain sementara halaman ini masih kebuka.
-    document.getElementById('btnRefreshStockBalance').addEventListener('click', applySbFilter);
+    wireRefreshButton('btnRefreshStockBalance', applySbFilter);
     document.getElementById('sbDetailToggle').addEventListener('change', (e) => {
       document.getElementById('sbTableWrap').classList.toggle('detail-off', !e.target.checked);
     });
