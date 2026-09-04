@@ -55,7 +55,7 @@
       </div>
       <div class="form-row">
         <label>NIK</label>
-        <input type="text" id="registerNIK" inputmode="numeric" maxlength="16" placeholder="16 digit NIK KTP" required>
+        <input type="text" id="registerNIK" inputmode="numeric" maxlength="20" placeholder="Nomor Induk Karyawan" required>
       </div>
       <div class="form-row">
         <label>Password</label>
@@ -170,6 +170,10 @@
     <a href="#/users" class="nav-item" data-nav="users">
       <svg viewBox="0 0 24 24" class="nav-icon"><path d="M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3.5 20c0-3.6 2.5-6 5.5-6s5.5 2.4 5.5 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M16 5.5c1.5.4 2.5 1.7 2.5 3.2S17.5 11.5 16 12M19 20c0-2.8-1.6-4.9-3.8-5.7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       <span>Kelola User</span>
+    </a>
+    <a href="#/pengaturan" class="nav-item" data-nav="pengaturan">
+      <svg viewBox="0 0 24 24" class="nav-icon"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1.08-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9.6a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span>Pengaturan</span>
     </a>
   </nav>
   <div id="sidebarUserBox" class="sidebar-user-box">
@@ -415,7 +419,18 @@
       </div>
       <div class="form-row" id="fPemesanNamaWrap" hidden>
         <label>Nama Pemesan *</label>
-        <input type="text" id="fPemesanNama" placeholder="Nama yang order barang ini (bukan penerima)">
+        <input type="text" id="fPemesanNama" list="listPemesanNama" placeholder="Nama yang order barang ini (bukan penerima)" autocomplete="off">
+        <datalist id="listPemesanNama"></datalist>
+      </div>
+      <div class="form-row" id="fPemesanNikWrap" hidden>
+        <label>NIK Pemesan</label>
+        <input type="text" id="fPemesanNik" list="listPemesanNik" inputmode="numeric" placeholder="Bisa cari lewat Nomor Induk Karyawan (opsional)" autocomplete="off">
+        <datalist id="listPemesanNik"></datalist>
+      </div>
+      <div class="form-row" id="fPemesanEmailWrap" hidden>
+        <label id="fPemesanEmailLabel">Email Pemesan *</label>
+        <input type="email" id="fPemesanEmail" placeholder="Email aktif pemesan (buat kirim notif otomatis barang datang)" autocomplete="off">
+        <div id="fPemesanStatusHint" class="hint-text" hidden></div>
       </div>
       <div class="form-row-pair">
         <div class="form-row">
@@ -879,6 +894,42 @@
 
   </section>
 
+  <!-- ============================= PENGATURAN ============================= -->
+  <section id="page-pengaturan" class="page" hidden>
+
+    <div class="card md-hint">
+      Template email ini dikirim <strong>otomatis</strong> ke Pemesan (Pemesan bertipe USER di form Barang Masuk) begitu transaksinya disimpan.
+      Placeholder di bawah diganti otomatis pas email dikirim — boleh dipakai berkali-kali atau dihapus kalau tidak perlu.
+    </div>
+
+    <form id="formPengaturanEmail" class="card">
+      <div class="form-row">
+        <label>Subjek Email *</label>
+        <input type="text" id="pgEmailSubject" required>
+      </div>
+      <div class="form-row">
+        <label>Isi Email *</label>
+        <textarea id="pgEmailBody" rows="12" required></textarea>
+      </div>
+      <div class="hint-text">
+        Placeholder yang bisa dipakai: <code>{{nama}}</code> nama Pemesan ·
+        <code>{{daftarBarang}}</code> daftar barang yang diterima ·
+        <code>{{noPO}}</code> No. Dokumen/PO ·
+        <code>{{tanggal}}</code> tanggal barang diterima ·
+        <code>{{plant}}</code> Plant · <code>{{sloc}}</code> S.Loc ·
+        <code>{{keterangan}}</code> catatan tambahan (kosong kalau tidak diisi).
+      </div>
+      <button type="submit" class="btn btn-primary btn-block" id="btnSavePengaturanEmail">Simpan Template</button>
+    </form>
+
+    <div class="card">
+      <label class="pg-preview-label">Pratinjau (pakai contoh data)</label>
+      <div id="pgPreviewSubject" class="pg-preview-subject"></div>
+      <pre id="pgPreviewBody" class="pg-preview-body"></pre>
+    </div>
+
+  </section>
+
 </main>
 
 </div><!-- /#appShell -->
@@ -1003,7 +1054,7 @@
       </div>
       <div class="form-row">
         <label id="userNIKLabel">NIK *</label>
-        <input type="text" id="userNIK" inputmode="numeric" maxlength="16" placeholder="16 digit NIK KTP">
+        <input type="text" id="userNIK" inputmode="numeric" maxlength="20" placeholder="Nomor Induk Karyawan">
       </div>
       <div class="form-row">
         <label>Password</label>
@@ -1169,6 +1220,7 @@
 <script src="js/opname.js"></script>
 <script src="js/alert-order.js"></script>
 <script src="js/users.js"></script>
+<script src="js/pengaturan.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>
