@@ -29,6 +29,29 @@ function showToast(msg, type) {
 }
 
 // ---------------------------------------------------------------------------
+// UPPERCASE-ON-INPUT — dipakai buat field S.Loc (Barang Masuk & Barang
+// Keluar, lihat js/penerimaan.js & js/pemakaian.js) yang sekarang ikut
+// mengikat stock bareng Plant di backend (selalu dicocokkan huruf besar
+// semua di sana, lihat normalizeSloc_ di Code.gs) — field-nya dibikin ikut
+// huruf besar juga secara live pas diketik, biar kelihatan konsisten dari
+// awal & user nggak kaget kalau isiannya "berubah sendiri" pas disimpan.
+// Reassign value (bukan cuma CSS text-transform) supaya isian yang benar2
+// dikirim ke server juga sudah uppercase, termasuk kalau di-paste.
+// ---------------------------------------------------------------------------
+function wireUppercaseInput(elementId) {
+  const el = document.getElementById(elementId);
+  if (!el) return;
+  el.addEventListener('input', () => {
+    const start = el.selectionStart, end = el.selectionEnd;
+    el.value = el.value.toUpperCase();
+    // Uppercase-in-place tidak mengubah panjang string, jadi posisi kursor
+    // aman dikembalikan persis seperti semula (kalau browser dukung setSelectionRange
+    // buat tipe input ini — 'text' selalu dukung).
+    if (start !== null && end !== null) el.setSelectionRange(start, end);
+  });
+}
+
+// ---------------------------------------------------------------------------
 // SIDEBAR (drawer navigasi via tombol hamburger)
 // ---------------------------------------------------------------------------
 function initSidebar() {
