@@ -224,7 +224,21 @@ function initNavGroups() {
     const toggle = group.querySelector('.nav-group-toggle');
     if (!toggle) return;
     toggle.addEventListener('click', (e) => {
-      if (e.pointerType === 'mouse') return; // biarkan hover-flyout yang nangani, lihat catatan di atas
+      // Skip toggle JS-nya HANYA kalau CSS hover-flyout-nya beneran aktif
+      // (media query hover:hover & pointer:fine match) — bukan cuma ngecek
+      // pointerType 'mouse' doang. Soalnya di laptop 2-in-1 yang lagi di
+      // Windows "Tablet Mode", OS bisa lapor ke browser bahwa device ini
+      // touch-primary (hover:hover & pointer:fine jadi FALSE) WALAU klik yang
+      // masuk aslinya dari mouse fisik (USB/Bluetooth) — pointerType klik itu
+      // tetap 'mouse'. Kalau JS di sini masih ngandelin pointerType doang buat
+      // skip, submenu jadi GAK BISA DIBUKA SAMA SEKALI di kondisi itu: CSS
+      // hover-flyout-nya udah nggak aktif (media query gak match), tapi JS
+      // accordion-nya juga ikut di-skip (padahal harusnya dia yang nangani).
+      // Keluhan user: "pake mouse di mode tablet gak muncul, pake tangan
+      // muncul". Makanya kondisinya harus SAMA PERSIS kaya media query di
+      // CSS, biar JS & CSS selalu sinkron soal mode mana yang lagi aktif.
+      const hoverFlyoutActive = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+      if (e.pointerType === 'mouse' && hoverFlyoutActive) return;
       const willExpand = !group.classList.contains('expanded');
       groups.forEach((g) => {
         g.classList.remove('expanded');
