@@ -201,7 +201,13 @@ async function submitUserForm(e) {
 }
 
 async function rejectUser(username) {
-  if (!confirm('Tolak pendaftaran "' + username + '"? Data pendaftarannya akan dihapus permanen.')) return;
+  const ok = await showConfirmModal({
+    title: 'Tolak Pendaftaran',
+    message: 'Tolak pendaftaran "' + username + '"? Data pendaftarannya akan dihapus permanen.',
+    confirmText: 'Tolak',
+    danger: true
+  });
+  if (!ok) return;
   try {
     await Api.rejectUser({ username });
     showToast('Pendaftaran ditolak.', 'success');
@@ -212,7 +218,13 @@ async function rejectUser(username) {
 }
 
 async function deleteUser(username) {
-  if (!confirm('Hapus user "' + username + '" secara PERMANEN? Aksi ini tidak bisa dibatalkan — kalau cuma mau nonaktifkan sementara, pakai tombol Aktif/Nonaktif saja.')) return;
+  const ok = await showConfirmModal({
+    title: 'Hapus User',
+    message: 'Hapus user "' + username + '" secara PERMANEN? Aksi ini tidak bisa dibatalkan — kalau cuma mau nonaktifkan sementara, pakai tombol Aktif/Nonaktif saja.',
+    confirmText: 'Hapus Permanen',
+    danger: true
+  });
+  if (!ok) return;
   try {
     await Api.deleteUser({ username });
     showToast('User dihapus.', 'success');
@@ -223,7 +235,14 @@ async function deleteUser(username) {
 }
 
 async function toggleUserStatus(username, nextStatus) {
-  if (!confirm((nextStatus === 'Nonaktif' ? 'Nonaktifkan' : 'Aktifkan') + ' user "' + username + '"?')) return;
+  const aksi = nextStatus === 'Nonaktif' ? 'Nonaktifkan' : 'Aktifkan';
+  const ok = await showConfirmModal({
+    title: aksi + ' User',
+    message: aksi + ' user "' + username + '"?',
+    confirmText: aksi,
+    danger: nextStatus === 'Nonaktif'
+  });
+  if (!ok) return;
   try {
     await Api.toggleUserStatus({ username, status: nextStatus });
     showToast('Status user diperbarui.', 'success');
