@@ -52,6 +52,34 @@ function wireUppercaseInput(elementId) {
 }
 
 // ---------------------------------------------------------------------------
+// TOMBOL REFRESH — kasih feedback visual pas diklik (ikon muter + tombol
+// nonaktif sesaat) biar kelihatan jelas klik-nya "kena", bukan cuma diem
+// nunggu data baru muncul tanpa tanda apa-apa (keluhan user). 1 helper di
+// sini dipakai bareng buat 4 tombol Refresh yang sepola (Dashboard, Stock
+// Balance, Riwayat Transaksi, Alert Order — lihat pemanggilannya di
+// dashboard.js/stock-balance.js/riwayat.js/alert-order.js), bukan didobelin
+// nulis logic yang sama 4x. loadFn boleh function biasa maupun async — kalau
+// dia nolak/reject pun animasinya tetap berhenti dengan benar (finally),
+// walau ke-4 fungsi yang dipakai sekarang selalu nangkep error-nya sendiri
+// jadi gak pernah reject.
+// ---------------------------------------------------------------------------
+function wireRefreshButton(buttonId, loadFn) {
+  const btn = document.getElementById(buttonId);
+  if (!btn) return;
+  btn.addEventListener('click', async () => {
+    if (btn.classList.contains('is-refreshing')) return; // cegah dobel-klik numpuk request
+    btn.classList.add('is-refreshing');
+    btn.disabled = true;
+    try {
+      await loadFn();
+    } finally {
+      btn.classList.remove('is-refreshing');
+      btn.disabled = false;
+    }
+  });
+}
+
+// ---------------------------------------------------------------------------
 // SIDEBAR (drawer navigasi via tombol hamburger)
 // ---------------------------------------------------------------------------
 
@@ -497,7 +525,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // di dashboard.js) — pindah halaman terus balik lagi TIDAK menarik ulang.
   // Tombol Refresh ini satu-satunya cara narik data terbaru tanpa reload
   // seluruh app (mis. abis nambah Barang Masuk di tab/perangkat lain).
-  document.getElementById('btnRefreshDashboard').addEventListener('click', loadDashboard);
+  wireRefreshButton('btnRefreshDashboard', loadDashboard);
   Router.register('penerimaan', () => {
     initPenerimaanPage();
   });
