@@ -4,7 +4,7 @@
 // DAN supaya user dapat notif "Versi baru tersedia" di aplikasi.
 // ============================================================================
 
-const APP_VERSION = '2.0.7';
+const APP_VERSION = '2.27.3';
 const CACHE_NAME = 'wsmart-shell-v' + APP_VERSION;
 const APP_SHELL = [
   './',
@@ -29,6 +29,7 @@ const APP_SHELL = [
   './js/opname.js',
   './js/alert-order.js',
   './js/users.js',
+  './js/pengaturan.js',
   './js/app.js',
   './icons/icon-192.png',
   './icons/icon-512.png'
