@@ -300,11 +300,17 @@ async function handleSubmit(e) {
   // ngeblok proses input barang cuma gara-gara belum sempat catat nama.
   const userVal = document.getElementById('fUser').value.trim();
 
-  // Pemesan juga opsional (boleh gak dipilih sama sekali) — TAPI begitu
-  // dipilih "USER", nama pemesannya wajib diisi (itu inti fiturnya: catat
-  // siapa yang ORDER barang ini, beda dari fUser di atas yang nyatet siapa
-  // yang NERIMA/nginput transaksinya).
+  // Pemesan WAJIB dipilih (salah satu dari OBS/FAST MOVING/USER, gak boleh
+  // dikosongkan) — dan khusus "USER" masih ada syarat TAMBAHAN: nama
+  // pemesannya juga wajib diisi (itu inti fiturnya: catat siapa yang ORDER
+  // barang ini, beda dari fUser di atas yang nyatet siapa yang NERIMA/
+  // nginput transaksinya).
   const pemesanTipe = document.getElementById('fPemesanTipe').value;
+  if (!pemesanTipe) {
+    showToast('Pemesan wajib dipilih (OBS/FAST MOVING/USER).', 'error');
+    document.getElementById('fPemesanTipe').focus();
+    return;
+  }
   const pemesanNama = document.getElementById('fPemesanNama').value.trim();
   if (pemesanTipe === 'USER' && !pemesanNama) {
     showToast('Nama Pemesan wajib diisi kalau Pemesan-nya USER.', 'error');
