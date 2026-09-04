@@ -181,11 +181,13 @@ function renderSbRiwayatModalBody(riwayat) {
   body.innerHTML = riwayat.map((r) => {
     const qtyText = r.qty > 0 ? `+${r.qty}` : String(r.qty);
     const qtyClass = r.qty > 0 ? 'sb-num-in' : (r.qty < 0 ? 'sb-num-out' : '');
+    const meta = itemMetaLine(r);
     return `
       <div class="ra-item">
         <div class="ra-item-main">
           <div class="ra-item-title">${escapeHtml(r.tanggal)} <span class="${qtyClass}">${escapeHtml(qtyText)}</span></div>
           <div class="ra-item-sub">${escapeHtml(r.keterangan || '-')}${r.user ? ' · ' + escapeHtml(r.user) : ''}</div>
+          ${meta ? `<div class="item-meta-line">${meta}</div>` : ''}
         </div>
         <span class="ra-badge ${SB_RIWAYAT_JENIS_CLASS[r.jenis] || ''}">${escapeHtml(r.jenis)}</span>
       </div>
