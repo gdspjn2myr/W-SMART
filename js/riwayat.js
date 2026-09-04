@@ -45,7 +45,7 @@ function initRiwayatPage() {
     document.getElementById('rwJenis').addEventListener('change', loadRiwayat);
     document.getElementById('btnRwFilter').addEventListener('click', loadRiwayat);
     document.getElementById('btnRwReset').addEventListener('click', resetRwFilter);
-    document.getElementById('btnRefreshRiwayat').addEventListener('click', loadRiwayat);
+    wireRefreshButton('btnRefreshRiwayat', loadRiwayat);
   }
   loadRiwayat();
 }
