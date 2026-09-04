@@ -17,6 +17,13 @@ function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
+// NIK di sini = Nomor Induk KARYAWAN (bukan NIK KTP) — jadi cukup validasi
+// "harus angka semua", TANPA batas panjang tepat 16 digit (panjangnya bisa
+// beda-beda antar karyawan). Dipakai juga di js/auth.js (form Daftar Akun).
+function isValidNik(nik) {
+  return /^\d+$/.test(nik);
+}
+
 function initUsersPage() {
   if (!usersInitialized) {
     usersInitialized = true;
@@ -212,8 +219,8 @@ async function submitUserForm(e) {
     errEl.hidden = false;
     return;
   }
-  if (nik && !/^\d{16}$/.test(nik)) {
-    errEl.textContent = 'NIK harus 16 digit angka.';
+  if (nik && !isValidNik(nik)) {
+    errEl.textContent = 'NIK harus berupa angka.';
     errEl.hidden = false;
     return;
   }
