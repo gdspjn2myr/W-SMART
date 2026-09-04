@@ -906,6 +906,29 @@ body {
 .ra-badge-reorder { background: #fdeaea; color: var(--red); }
 .ra-badge-near { background: #fff3d6; color: #a06a00; }
 
+/* Sisi kanan .ra-item KADANG isinya lebih dari cuma badge (mis. tombol
+   "Daftarkan" buat barang belumAdaMaster di popup Belum Terdaftar/Stock Saat
+   Ini) — dibungkus kolom biar badge & tombol numpuk rapi, bukan sebaris. */
+.ra-item-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.btn-goto-master {
+  background: #e6edfb;
+  color: var(--navy);
+  border: none;
+  padding: 5px 10px;
+  border-radius: 8px;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn-goto-master:hover { background: #d7e2fa; }
+
 /* Filter chip Plant di popup "Total SKU Terdaftar" (lihat renderDashPlantFilterChips
    & selectDashPlantFilter di dashboard.js) — dipakai supaya user bisa langsung
    loncat ke 1 Plant tertentu, tanpa harus scroll ngelewatin Plant lain. */
@@ -1506,6 +1529,10 @@ body {
     grid-column: auto;
   }
   #page-dashboard #reorderAlertCard {
+    grid-column: 1 / -1;
+  }
+  #page-dashboard .dash-toolbar,
+  #page-dashboard #belumTerdaftarCard {
     grid-column: 1 / -1;
   }
   #page-dashboard .card { margin-bottom: 0; }
