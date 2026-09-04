@@ -54,6 +54,27 @@ function wireUppercaseInput(elementId) {
 // ---------------------------------------------------------------------------
 // SIDEBAR (drawer navigasi via tombol hamburger)
 // ---------------------------------------------------------------------------
+
+// Deteksi apakah SATU interaksi klik ini beneran pakai mouse — dipakai buat
+// bedain desktop vs HP/sentuh di initSidebar & initNavGroups di bawah.
+// SEBELUMNYA pakai matchMedia('(hover: hover) and (pointer: fine)') doang,
+// tapi itu ngecek KEMAMPUAN device (device-nya PUNYA layar sentuh atau
+// nggak), BUKAN input yang beneran dipakai saat itu — di laptop/PC layar
+// SENTUH yang dipakai pakai MOUSE, matchMedia itu tetap bilang "nggak ada
+// hover presisi" (dianggap kayak HP) walau usernya jelas-jelas nge-klik pakai
+// mouse. Makanya sidebar ikut nutup sendiri & grup navigasi ikut meluas ke
+// bawah padahal harusnya nggak (keluhan user, device: desktop layar sentuh +
+// mouse). e.pointerType ('mouse'/'touch'/'pen') di event click browser
+// modern jauh lebih akurat karena based on INPUT YANG BENERAN DIPAKAI saat
+// event itu terjadi — kalau kosong (klik dipicu keyboard Enter/Space, bukan
+// pointer device sama sekali), baru balik pakai matchMedia sebagai fallback.
+function isMouseClickEvent(e) {
+  if (e && typeof e.pointerType === 'string' && e.pointerType) {
+    return e.pointerType === 'mouse';
+  }
+  return window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+}
+
 function initSidebar() {
   const sidebar = document.getElementById('sidebar');
   const backdrop = document.getElementById('sidebarBackdrop');
@@ -88,8 +109,8 @@ function initSidebar() {
   // Dicek pas klik (bukan sekali di awal) biar tetap benar kalau device-nya
   // hybrid (laptop layar sentuh, dst).
   sidebar.querySelectorAll('.nav-item').forEach((el) => {
-    el.addEventListener('click', () => {
-      const isDesktopPointer = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+    el.addEventListener('click', (e) => {
+      const isDesktopPointer = isMouseClickEvent(e);
       if (!isDesktopPointer) { closeSidebar(); return; }
 
       // Desktop: sidebar KESELURUHAN tetap terbuka (lihat catatan di atas) —
@@ -184,10 +205,15 @@ function wireConfirmModal() {
 // ---------------------------------------------------------------------------
 // GRUP NAVIGASI (Transaksi / Stock Control) — accordion tap-to-expand.
 // Di device dengan mouse (hover:hover & pointer:fine), submenu-nya justru
-// tampil sebagai flyout melayang pas di-hover (murni CSS, lihat style.css) —
-// klik di sini tetap jalan juga di situ tapi gak kepakai karena hover udah
-// nutupin. Di HP/tablet (gak ada hover presisi) INI yang jadi cara utama:
-// tap togglenya -> submenu meluas ke bawah di tempat, tap lagi -> nutup.
+// tampil sebagai flyout melayang pas di-hover (murni CSS, lihat style.css).
+// Di HP/tablet/pen (gak ada hover presisi) INI yang jadi cara utama: tap
+// togglenya -> submenu meluas ke bawah di tempat, tap lagi -> nutup.
+// Klik pakai MOUSE (termasuk di laptop/PC layar SENTUH yang dipakai pakai
+// mouse, lihat catatan di isMouseClickEvent) SENGAJA di-skip di sini —
+// biarkan hover-flyout yang nangani, soalnya kalau accordion ini ikut
+// kepicu, judul grup lain ikut ketutup & seluruh sidebar meluas ke bawah
+// (keluhan user: "masih kebawah" walau di desktop, gara-gara ke-klik pakai
+// mouse padahal maksudnya cuma mau lihat submenu-nya).
 // Buka salah satu grup otomatis nutup grup lain biar sidebar gak kepanjangan.
 // ---------------------------------------------------------------------------
 function initNavGroups() {
@@ -197,7 +223,8 @@ function initNavGroups() {
   groups.forEach((group) => {
     const toggle = group.querySelector('.nav-group-toggle');
     if (!toggle) return;
-    toggle.addEventListener('click', () => {
+    toggle.addEventListener('click', (e) => {
+      if (e.pointerType === 'mouse') return; // biarkan hover-flyout yang nangani, lihat catatan di atas
       const willExpand = !group.classList.contains('expanded');
       groups.forEach((g) => {
         g.classList.remove('expanded');
@@ -441,6 +468,11 @@ document.addEventListener('DOMContentLoaded', () => {
   Router.register('dashboard', () => {
     if (!dashboardLoadedOnce) loadDashboard();
   });
+  // Dashboard cuma narik data server SEKALI per sesi (lihat dashboardLoadedOnce
+  // di dashboard.js) — pindah halaman terus balik lagi TIDAK menarik ulang.
+  // Tombol Refresh ini satu-satunya cara narik data terbaru tanpa reload
+  // seluruh app (mis. abis nambah Barang Masuk di tab/perangkat lain).
+  document.getElementById('btnRefreshDashboard').addEventListener('click', loadDashboard);
   Router.register('penerimaan', () => {
     initPenerimaanPage();
   });
