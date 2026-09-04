@@ -45,6 +45,10 @@ function initPenerimaanPage() {
 
   document.getElementById('formPenerimaan').addEventListener('submit', handleSubmit);
 
+  // S.Loc selalu huruf besar semua begitu diketik (bukan cuma pas submit) —
+  // biar kelihatan langsung & konsisten sama yang bakal disimpan/dicocokkan.
+  wireUppercaseInput('fSLoc');
+
   document.getElementById('btnPnPutawayLater').addEventListener('click', () => closePutawayPrompt('later'));
   document.getElementById('btnPnPutawayNow').addEventListener('click', () => closePutawayPrompt('putaway'));
   document.getElementById('btnPnPrintQr').addEventListener('click', () => closePutawayPrompt('print'));
@@ -267,6 +271,16 @@ async function handleSubmit(e) {
     return;
   }
 
+  // S.Loc WAJIB — ini yang menentukan pool Plant+S.Loc yang nanti divalidasi
+  // ketat pas Barang Keluar (lihat js/pemakaian.js & resolveOnHandPlantSloc_
+  // di Code.gs). Selalu disimpan huruf besar semua.
+  const slocVal = document.getElementById('fSLoc').value.trim().toUpperCase();
+  if (!slocVal) {
+    showToast('S.Loc wajib diisi.', 'error');
+    document.getElementById('fSLoc').focus();
+    return;
+  }
+
   // User (penerima) SENGAJA opsional — boleh dikosongkan & diisi belakangan
   // (mis. langsung di spreadsheet, kolom D sheet PENERIMAAN), nggak boleh
   // ngeblok proses input barang cuma gara-gara belum sempat catat nama.
@@ -278,7 +292,7 @@ async function handleSubmit(e) {
     vendor: document.getElementById('fVendor').value.trim(),
     user: userVal,
     plant: document.getElementById('fPlant').value.trim(),
-    sloc: document.getElementById('fSLoc').value.trim(),
+    sloc: slocVal,
     keterangan: document.getElementById('fKeterangan').value.trim(),
     items
   };
