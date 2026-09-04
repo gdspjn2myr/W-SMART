@@ -294,6 +294,16 @@
           <div class="stat-unit">pcs</div>
         </div>
       </div>
+      <div class="stat-card stat-card-clickable" role="button" tabindex="0" data-dash-filter="keluar-hari-ini">
+        <div class="stat-icon stat-icon-e">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M3 9h18"/><path d="M12 13v6M9 16l3 3 3-3"/></svg>
+        </div>
+        <div class="stat-body">
+          <div class="stat-label">Dikeluarkan Hari Ini</div>
+          <div class="stat-value" id="statKeluarHariIni">0</div>
+          <div class="stat-unit">pcs</div>
+        </div>
+      </div>
       <div class="stat-card stat-card-clickable" role="button" tabindex="0" data-dash-filter="terima-bulan-ini">
         <div class="stat-icon stat-icon-b">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8 12 3 3 8v8l9 5 9-5Z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg>
@@ -301,6 +311,16 @@
         <div class="stat-body">
           <div class="stat-label">Diterima Bulan Ini</div>
           <div class="stat-value" id="statBulanIni">0</div>
+          <div class="stat-unit">pcs</div>
+        </div>
+      </div>
+      <div class="stat-card stat-card-clickable" role="button" tabindex="0" data-dash-filter="keluar-bulan-ini">
+        <div class="stat-icon stat-icon-f">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8 12 3 3 8v8l9 5 9-5Z"/><path d="M3 8l9 5 9-5"/><path d="M12 13v6M9 16l3 3 3-3"/></svg>
+        </div>
+        <div class="stat-body">
+          <div class="stat-label">Dikeluarkan Bulan Ini</div>
+          <div class="stat-value" id="statKeluarBulanIni">0</div>
           <div class="stat-unit">pcs</div>
         </div>
       </div>
@@ -329,7 +349,11 @@
     <div class="card">
       <div class="card-header">
         <svg viewBox="0 0 24 24" class="card-header-icon" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/></svg>
-        Penerimaan 7 Hari Terakhir
+        Penerimaan vs Pemakaian 7 Hari Terakhir
+        <span class="chart-legend">
+          <span class="chart-legend-item"><span class="chart-legend-dot chart-legend-dot-masuk"></span>Masuk</span>
+          <span class="chart-legend-item"><span class="chart-legend-dot chart-legend-dot-keluar"></span>Keluar</span>
+        </span>
       </div>
       <canvas id="chartMingguan" height="160"></canvas>
     </div>
