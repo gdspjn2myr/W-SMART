@@ -1026,6 +1026,23 @@
   </div>
 </div>
 
+<!-- Modal Konfirmasi umum — pengganti confirm() bawaan browser, dipakai lewat
+     showConfirmModal() di js/app.js (logout, hapus/nonaktif/tolak user, dst) -->
+<div id="confirmModalBackdrop" class="modal-backdrop" hidden></div>
+<div id="confirmModal" class="modal" hidden role="alertdialog" aria-modal="true" aria-labelledby="confirmModalTitle" aria-describedby="confirmModalMessage">
+  <div class="modal-card card confirm-modal-card">
+    <div class="modal-header">
+      <span id="confirmModalTitle">Konfirmasi</span>
+      <button type="button" id="btnCloseConfirmModal" class="modal-close" aria-label="Tutup">×</button>
+    </div>
+    <p class="hint-text" id="confirmModalMessage"></p>
+    <div class="confirm-modal-actions">
+      <button type="button" id="btnConfirmModalOk" class="btn btn-primary btn-block">OK</button>
+      <button type="button" id="btnConfirmModalCancel" class="btn-link">Batal</button>
+    </div>
+  </div>
+</div>
+
 <div id="dashListModalBackdrop" class="modal-backdrop" hidden></div>
 <div id="dashListModal" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="dashListModalTitle">
   <div class="modal-card card">
