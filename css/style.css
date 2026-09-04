@@ -456,6 +456,8 @@ body {
   border-color: var(--navy);
   background: #fff;
 }
+.input-uppercase { text-transform: uppercase; }
+.input-uppercase::placeholder { text-transform: none; }
 .form-row input:disabled {
   background: #eef1f8;
   color: var(--text-muted);
@@ -1153,6 +1155,10 @@ body {
   transition: background .15s ease;
 }
 .btn-icon svg { width: 15px; height: 15px; }
+.btn-icon-danger { color: var(--red); }
+.btn-icon-danger:hover { background: linear-gradient(135deg, #fdeeee, #fad9d9); }
+.btn-icon:disabled { cursor: default; opacity: .4; background: #eef1f8; color: var(--text-muted); }
+.btn-icon:disabled:hover { background: #eef1f8; }
 .btn-icon:hover { background: linear-gradient(135deg, #e6edfb, #d7e2f7); }
 
 .md-formula-grid {
@@ -1435,14 +1441,105 @@ body {
 }
 
 /* ---------- QR Labels (generate & cetak) ---------- */
-.qr-pick-item { align-items: flex-start; }
-.qr-pick-checkbox {
-  width: 18px;
-  height: 18px;
-  flex-shrink: 0;
-  margin-top: 1px;
-  accent-color: var(--navy);
+
+/* Search "suggest" (bukan daftar semua barang) buat pilih barang QR — lihat
+   js/qr-labels.js renderQrBarangSuggest(). Dropdown numpang absolute di
+   bawah search box, cuma muncul begitu ada teks pencarian. */
+.qr-pick-search-wrap { position: relative; margin-bottom: 12px; }
+.qr-pick-suggest {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-card-hover);
+  padding: 6px;
+  z-index: 20;
+  max-height: 320px;
+  overflow-y: auto;
 }
+.qr-pick-suggest-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 9px 10px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  font-family: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  color: var(--text);
+}
+.qr-pick-suggest-item:hover { background: #eef1f8; }
+.qr-pick-suggest-kode { font-weight: 700; color: var(--navy); flex-shrink: 0; }
+.qr-pick-suggest-nama { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-muted); }
+.qr-pick-suggest-satuan { font-size: 11px; color: var(--text-muted); flex-shrink: 0; }
+.qr-pick-suggest-empty { padding: 12px 10px; font-size: 12.5px; color: var(--text-muted); }
+.qr-pick-suggest-more { padding: 6px 10px 2px; font-size: 11.5px; color: var(--text-muted); }
+.qr-pick-suggest-addall {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  padding: 9px 10px;
+  border: none;
+  border-top: 1px solid var(--border);
+  border-radius: 0 0 8px 8px;
+  background: none;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--navy-light);
+  text-align: left;
+  cursor: pointer;
+}
+.qr-pick-suggest-addall:hover { background: #eef1f8; }
+
+/* Chip list barang yang sudah dipilih — ini yang beneran dipakai buat
+   generate label, kepisah dari hasil pencarian di atas. */
+.qr-pick-selected {
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 14px;
+  min-height: 46px;
+}
+.qr-pick-selected-empty { font-size: 12.5px; color: var(--text-muted); }
+.qr-pick-selected-count { font-size: 11.5px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .3px; margin-bottom: 8px; }
+.qr-pick-chip-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.qr-pick-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 6px 6px 6px 12px;
+  background: #eef1f8;
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--navy);
+}
+.qr-pick-chip-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 260px; }
+.qr-pick-chip-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(15,42,92,0.12);
+  color: var(--navy);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+}
+.qr-pick-chip-remove:hover { background: var(--red); color: #fff; }
 .qr-label-result-header {
   display: flex;
   justify-content: space-between;
