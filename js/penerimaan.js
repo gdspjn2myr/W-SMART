@@ -49,9 +49,9 @@ function initPenerimaanPage() {
   // biar kelihatan langsung & konsisten sama yang bakal disimpan/dicocokkan.
   wireUppercaseInput('fSLoc');
 
-  // Pemesan: field TERPISAH dari User (Penerima) di atas — User (Penerima)
-  // tetap identitas akun yang login (dipakai buat Riwayat Transaksi/audit,
-  // jangan diutak-atik), sedangkan Pemesan ini nyatet SUMBER pemesanan barang
+  // Pemesan: field TERPISAH dari Penerima (fUser) di atas — Penerima tetap
+  // identitas akun yang login (dipakai buat Riwayat Transaksi/audit, jangan
+  // diutak-atik), sedangkan Pemesan ini nyatet SUMBER pemesanan barang
   // ini (OBS/Fast Moving = replenishment rutin per kategori barang, USER =
   // ada orang yang minta langsung -> namanya WAJIB diisi di situ, karena itu
   // beda orang dari yang nerima barangnya).
