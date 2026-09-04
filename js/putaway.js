@@ -34,6 +34,7 @@ function initPutawayPage() {
 
     document.getElementById('pwKode').addEventListener('input', handlePwKodeInput);
     document.getElementById('formPutaway').addEventListener('submit', handlePwSubmit);
+    wireUppercaseInput('pwSLoc'); // S.Loc dicatat huruf besar semua, sama seperti Penerimaan/Pemakaian
   }
   loadBelumTerMapping();
 }
@@ -57,11 +58,14 @@ function renderPwBelumMappingList() {
     wrap.innerHTML = '<div class="empty-state">Semua barang yang diterima sudah di-put away ke bin.</div>';
     return;
   }
-  wrap.innerHTML = pwBelumMapping.map((it) => `
+  wrap.innerHTML = pwBelumMapping.map((it) => {
+    const meta = itemMetaLine(it);
+    return `
       <div class="pw-item" data-action="pick" data-kode="${escapeHtml(it.kode)}" data-plant="${escapeHtml(it.plant || '')}">
         <div class="pw-item-main">
           <div class="pw-item-title">${escapeHtml(it.kode)} — ${escapeHtml(it.namaBarang || '-')}</div>
-          <div class="pw-item-sub">${escapeHtml(it.satuan || '-')}${it.plant ? ' · <span class="sb-plant-tag">Plant ' + escapeHtml(it.plant) + '</span>' : ''}${it.belumAdaMaster ? '<span class="badge-belum-master">⚠ Belum terdaftar di Master Data</span>' : ''}</div>
+          <div class="pw-item-sub">${escapeHtml(it.satuan || '-')}${it.belumAdaMaster ? ' · <span class="badge-belum-master">⚠ Belum terdaftar di Master Data</span>' : ''}</div>
+          ${meta ? `<div class="item-meta-line">${meta}</div>` : ''}
         </div>
         <div class="pw-item-side">
           <button type="button" class="pw-print-btn" data-action="print" data-kode="${escapeHtml(it.kode)}" title="Cetak Label QR" aria-label="Cetak Label QR untuk ${escapeHtml(it.kode)}">
@@ -70,7 +74,8 @@ function renderPwBelumMappingList() {
           <div class="pw-item-qty">${it.belumTerMapping}<span>${escapeHtml(it.satuan || '')}</span></div>
         </div>
       </div>
-    `).join('');
+    `;
+  }).join('');
   wrap.querySelectorAll('[data-action="pick"]').forEach((el) => {
     el.addEventListener('click', () => pickPwItem(el.dataset.kode, el.dataset.plant));
   });
@@ -167,6 +172,7 @@ async function handlePwSubmit(e) {
   const kode = document.getElementById('pwKode').value.trim();
   const qty = Number(document.getElementById('pwQty').value) || 0;
   const lokasi = document.getElementById('pwLokasi').value.trim();
+  const sloc = document.getElementById('pwSLoc').value.trim().toUpperCase();
   const user = document.getElementById('pwUser').value.trim();
   const matches = findPwItemMatches(kode);
   const item = findPwItem(kode, pwSelectedPlant);
@@ -181,6 +187,10 @@ async function handlePwSubmit(e) {
   }
   if (!lokasi) {
     showToast('Lokasi/Bin wajib diisi (scan QR atau ketik manual).', 'error');
+    return;
+  }
+  if (!sloc) {
+    showToast('S.Loc wajib diisi.', 'error');
     return;
   }
   if (qty <= 0) {
@@ -203,6 +213,7 @@ async function handlePwSubmit(e) {
       satuan: item.satuan,
       qty,
       lokasi,
+      sloc,
       user,
       plant: item.plant || ''
     });
@@ -224,6 +235,7 @@ function resetPwItemFields() {
   document.getElementById('pwSatuan').value = '';
   document.getElementById('pwNamaHint').hidden = true;
   pwSelectedPlant = '';
-  // Lokasi & User SENGAJA tidak direset — biasanya scan sekali lokasi, lalu
-  // taruh beberapa item berbeda ke bin yang sama secara berurutan.
+  // Lokasi, S.Loc & User SENGAJA tidak direset — biasanya scan sekali lokasi
+  // (S.Loc-nya biasanya juga sama), lalu taruh beberapa item berbeda ke bin
+  // yang sama secara berurutan.
 }
