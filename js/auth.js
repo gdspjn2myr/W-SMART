@@ -296,7 +296,8 @@ function wireLogoutButton() {
   const btn = document.getElementById('btnLogout');
   if (!btn) return;
   btn.addEventListener('click', async () => {
-    if (!confirm('Keluar dari W-SMART?')) return;
+    const ok = await showConfirmModal({ title: 'Keluar', message: 'Keluar dari W-SMART?', confirmText: 'Keluar' });
+    if (!ok) return;
     try { await Api.logout(); } catch (e) { /* tetap logout lokal walau panggilan gagal (mis. offline) */ }
     Auth.logout();
     showLoginScreen();
