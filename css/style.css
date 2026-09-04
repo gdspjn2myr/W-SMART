@@ -461,6 +461,28 @@ body {
   color: var(--text-muted);
 }
 
+/* ---------- Show/hide password (ikon mata) ---------- */
+.password-field { position: relative; }
+.password-field input { padding-right: 42px; }
+.toggle-password {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  transform: translateY(-50%);
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  border-radius: 8px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.toggle-password:hover { background: #eef1f8; color: var(--navy); }
+.toggle-password svg { width: 19px; height: 19px; }
+
 .items-header {
   display: flex;
   justify-content: space-between;
