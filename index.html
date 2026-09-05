@@ -651,6 +651,15 @@
           <label>Storage Location</label>
           <input type="text" id="sbStorage" placeholder="Contoh: GDSP (opsional)">
         </div>
+        <div class="form-row">
+          <label>Sumber</label>
+          <select id="sbSumber">
+            <option value="">Semua Sumber</option>
+            <option value="OBS">OBS</option>
+            <option value="FAST MOVING">Fast Moving</option>
+            <option value="USER">User</option>
+          </select>
+        </div>
         <div class="form-row sb-filter-material">
           <label>Material (Kode / Nama Barang)</label>
           <input type="text" id="sbMaterial" placeholder="Kosongkan untuk tampilkan semua">
@@ -1217,6 +1226,7 @@
       <button type="button" id="btnCloseReorderAlertModal" class="modal-close" aria-label="Tutup">×</button>
     </div>
     <p class="md-preview-hint">Gabungan barang berstatus Stock Out, Need Reorder, & Near ROP (paling kritis duluan) — beda dari kartu status di atas yang menghitung tiap status TERPISAH. Maksimal 50 item teratas ditampilkan.</p>
+    <div id="reorderAlertModalSumberFilter" class="dm-plant-filter" hidden></div>
     <div id="reorderAlertList" class="ra-list">
       <div class="empty-state">Belum ada item yang perlu di-reorder.</div>
     </div>
@@ -1249,6 +1259,7 @@
     </div>
     <p class="md-preview-hint" id="dashListModalHint"></p>
     <div id="dashListModalPlantFilter" class="dm-plant-filter" hidden></div>
+    <div id="dashListModalSumberFilter" class="dm-plant-filter" hidden></div>
     <div id="dashListModalBody" class="ra-list">
       <div class="empty-state">Memuat...</div>
     </div>
