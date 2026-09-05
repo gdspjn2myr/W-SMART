@@ -824,11 +824,12 @@
 
     <div class="card">
       <div class="card-header">Stock Opname — Cari / Scan Barang atau Bin</div>
-      <p class="md-preview-hint">Scan atau cari Kode Barang buat lihat data lengkapnya (qty tercatat sistem + riwayat kedatangan: kapan, dari vendor mana, No PO). Atau scan/cari Kode Lokasi/Bin buat lihat semua barang yang ada di situ. Scan di sini cuma buat lihat data referensi — hasil hitung fisik tetap diisi manual di bawah.</p>
+      <p class="md-preview-hint" id="opScanHint">Scan atau cari Kode Barang buat lihat data lengkapnya (qty tercatat sistem + riwayat kedatangan: kapan, dari vendor mana, No PO). Atau scan/cari Kode Lokasi/Bin buat lihat semua barang yang ada di situ. Scan di sini cuma buat lihat data referensi — hasil hitung fisik tetap diisi manual di bawah.</p>
 
       <div class="mode-switch">
         <button type="button" class="mode-btn active" id="btnOpModeBarang">Cari Barang</button>
         <button type="button" class="mode-btn" id="btnOpModeBin">Cari Lokasi/Bin</button>
+        <button type="button" class="mode-btn" id="btnOpModeManual">Opname Manual</button>
       </div>
 
       <div id="opPanelBarang">
@@ -867,7 +868,7 @@
 
     <div id="opDetailCard" class="card" hidden></div>
 
-    <div class="card">
+    <div class="card" id="opSesiCard">
       <div class="card-header">
         Sesi Opname Ini
         <span class="count-badge" id="opSesiCount">0 Item</span>
@@ -881,6 +882,68 @@
         <input type="text" id="opUser" placeholder="Otomatis terisi dari akun yang login" readonly>
       </div>
       <button type="button" id="btnSimpanOpname" class="btn btn-primary btn-block" disabled>Simpan Hasil Opname</button>
+    </div>
+
+    <!-- OPNAME MANUAL — gaya form kertas fisik yang biasa dipakai buat opname
+         (No/Kode/Nama/Satuan/SAP/Fisik/Selisih Awal/Pending/Selisih Akhir/Ket),
+         beda dari alur Cari Barang/Cari Lokasi di atas (yang 1 kartu review per
+         item) — di sini semua baris diisi langsung di 1 tabel, baru disimpan
+         SEKALIGUS lewat tombol "Simpan" di pojok kanan atas. Lihat js/opname.js
+         (initOpManualPanel dst) — SAP & Selisih Awal/Akhir dihitung ulang di
+         server juga waktu disimpan (Api.saveStockOpname yang sama dipakai alur
+         Cari Barang, cuma field pendingQty/pendingKeterangan-nya tambahan). -->
+    <div class="card" id="opManualPanel" hidden>
+      <div class="card-header ao-header">
+        <span>Opname Manual</span>
+        <div class="ao-header-actions">
+          <button type="button" id="btnSimpanOpnameManual" class="btn btn-primary btn-small">Simpan</button>
+        </div>
+      </div>
+      <p class="md-preview-hint">Isi tabel di bawah kayak form opname kertas biasa. SAP &amp; Selisih dikosongin dulu (bukan otomatis) — Selisih Awal = Fisik − SAP, Selisih Akhir = Selisih Awal + Pending (kalau kekurangannya emang lagi di-Bon/MO orang, isi Pending biar Selisih Akhir-nya jadi jelas beneran hilang atau nggak).</p>
+
+      <div class="form-row-pair">
+        <div class="form-row">
+          <label>Plant *</label>
+          <select id="opManualPlant" required>
+            <option value="" disabled selected>Pilih Plant</option>
+            <option value="1111">1111</option>
+            <option value="1112">1112</option>
+            <option value="1113">1113</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label>S. Loc</label>
+          <input type="text" id="opManualSLoc" class="input-uppercase" placeholder="Contoh: GDSP">
+        </div>
+      </div>
+
+      <div class="sb-table-wrap op-manual-table-wrap">
+        <table class="sb-table op-manual-table">
+          <thead>
+            <tr>
+              <th>No</th>
+              <th>Kode Barang</th>
+              <th>Nama Barang</th>
+              <th>Satuan</th>
+              <th class="sb-num">SAP</th>
+              <th class="sb-num">Fisik</th>
+              <th class="sb-num">Selisih Awal</th>
+              <th class="sb-num">Pending</th>
+              <th>Ket. Pending</th>
+              <th class="sb-num">Selisih Akhir</th>
+              <th>Ket</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="opManualTbody"></tbody>
+        </table>
+      </div>
+      <button type="button" id="btnTambahBarisOpnameManual" class="btn btn-small">+ Tambah Baris</button>
+
+      <div class="form-row op-manual-user-row">
+        <label>Nama User (yang opname)</label>
+        <input type="text" id="opManualUser" placeholder="Otomatis terisi dari akun yang login" readonly>
+      </div>
     </div>
 
   </section>
