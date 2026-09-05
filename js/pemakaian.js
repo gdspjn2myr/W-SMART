@@ -13,6 +13,7 @@ let pemakaianInitialized = false;
 let pmLokasi = '';
 let pmStockHintTimer = null;
 let pmStockHintSeq = 0; // dipakai buang jawaban getStockHint yang basi (kalau user ngetik cepat & respons datang gak berurutan)
+let pmSumberOptions = []; // opsi Sumber (OBS/Fast Moving/User+nama) terakhir dari server buat Kode+Plant yang lagi dipilih — lihat renderPmSumberField
 
 function initPemakaianPage() {
   loadMasterData(); // pastikan datalist #listMasterBarang & masterBarangCache terisi
@@ -68,11 +69,13 @@ function handlePmKodeInput(e) {
 
   if (matches.length) {
     document.getElementById('pmSatuan').value = matches[0].satuan || '';
+    const meta = itemMetaLine({ kategori: matches[0].kategori, itemJenis: matches[0].jenis });
+    const metaHtml = meta ? ` <span class="item-meta-line">· ${meta}</span>` : '';
     if (matches.length > 1) {
       const plants = matches.map((m) => m.plant).filter(Boolean).join(', ');
-      hint.textContent = '→ ' + matches[0].namaBarang + ' — kode ini ada di beberapa Plant (' + plants + '). Pastikan Plant di bawah sesuai tempat barang fisiknya, transaksi akan ditolak kalau stock-nya kosong di Plant yang dipilih.';
+      hint.innerHTML = '→ ' + escapeHtml(matches[0].namaBarang) + ' — kode ini ada di beberapa Plant (' + escapeHtml(plants) + '). Pastikan Plant di bawah sesuai tempat barang fisiknya, transaksi akan ditolak kalau stock-nya kosong di Plant yang dipilih.' + metaHtml;
     } else {
-      hint.textContent = '→ ' + matches[0].namaBarang;
+      hint.innerHTML = '→ ' + escapeHtml(matches[0].namaBarang) + metaHtml;
     }
     hint.hidden = false;
   } else {
@@ -100,6 +103,7 @@ async function updateStockHint() {
 
   if (!kode || !plant) {
     hintEl.hidden = true;
+    renderPmSumberField([]);
     return;
   }
 
@@ -111,19 +115,82 @@ async function updateStockHint() {
     if (res.needsPlantSelection) {
       hintEl.textContent = 'Kode ini ada di beberapa Plant — pilih Plant yang sesuai dulu buat lihat sisa stock.';
       hintEl.hidden = false;
+      renderPmSumberField([]);
     } else if (res.notFound) {
       hintEl.textContent = `Belum ada stock tercatat untuk kode ini di Plant ${plant}.`;
       hintEl.hidden = false;
+      renderPmSumberField([]);
     } else if (sloc) {
       hintEl.textContent = `Sisa stock di Plant ${plant} · S.Loc ${sloc}: ${Math.max(0, res.onHandPlantSloc)} ${res.satuan || ''} (total Plant ${plant} semua S.Loc: ${res.onHandPlant})`;
       hintEl.hidden = false;
+      renderPmSumberField(res.sumberOptions || []);
     } else {
       hintEl.textContent = `Stock di Plant ${plant} (semua S.Loc): ${res.onHandPlant} ${res.satuan || ''} — isi S.Loc buat lihat sisa spesifik di lokasi itu.`;
       hintEl.hidden = false;
+      renderPmSumberField(res.sumberOptions || []);
     }
   } catch (err) {
     if (mySeq !== pmStockHintSeq) return;
     hintEl.hidden = true; // gagal ambil hint bukan hal fatal, biarin aja sunyi — validasi beneran tetap di server pas Simpan
+    renderPmSumberField([]);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// SUMBER BARANG (OBS/Fast Moving/User+nama) — "kantong" stock yang mau
+// diambil, dicocokkan ke Pemesan yang dicatat pas Barang Masuk (lihat
+// hitungSumberBarangKeluar_ di Code.gs). Permintaan user: dalam 1 Kode+Plant
+// bisa ada lebih dari 1 kantong (misal sisa Fast Moving DAN sisa milik orang
+// tertentu) — kalau cuma 1 yang masih ada sisanya, auto-default TANPA perlu
+// milih; kalau lebih dari 1, WAJIB pilih salah satu dari yang beneran masih
+// ada stock-nya (bukan 3 pilihan tetap yang belum tentu semuanya ada
+// barangnya). options = [{ tipe, nama, sisa }, ...] dari server, sudah
+// diurutkan & sudah difilter cuma yang sisa > 0.
+// ---------------------------------------------------------------------------
+function sumberOptionValue(o) {
+  return o.tipe + '|' + (o.nama || '');
+}
+function sumberOptionLabel(o) {
+  if (o.tipe === 'USER') return (o.nama || '-') + ' (User)';
+  if (o.tipe === 'OBS') return 'OBS';
+  return 'Fast Moving';
+}
+
+function renderPmSumberField(options) {
+  pmSumberOptions = options;
+  const wrap = document.getElementById('pmSumberWrap');
+  const select = document.getElementById('pmSumber');
+  const hint = document.getElementById('pmSumberHint');
+
+  if (!options.length) {
+    // Nggak ada data Pemesan sama sekali buat Kode+Plant ini (mis. Kode/Plant
+    // belum lengkap, atau stock-nya dari Koreksi Stock bukan Penerimaan) —
+    // diam-diam default ke Fast Moving (paling umum/aman), sembunyikan field-nya
+    // biar user nggak perlu mikirin apa-apa.
+    select.innerHTML = '<option value="FAST MOVING|">Fast Moving</option>';
+    select.value = 'FAST MOVING|';
+    select.disabled = true;
+    wrap.hidden = true;
+    hint.hidden = true;
+    return;
+  }
+
+  select.innerHTML = options.map((o) =>
+    `<option value="${escapeHtml(sumberOptionValue(o))}">${escapeHtml(sumberOptionLabel(o))} (sisa ${o.sisa})</option>`
+  ).join('');
+  wrap.hidden = false;
+
+  if (options.length === 1) {
+    select.value = sumberOptionValue(options[0]);
+    select.disabled = true;
+    hint.textContent = `Otomatis: ${sumberOptionLabel(options[0])} — cuma 1 sumber yang masih ada stock-nya buat Kode+Plant ini.`;
+    hint.hidden = false;
+  } else {
+    select.disabled = false;
+    select.insertAdjacentHTML('afterbegin', '<option value="" disabled selected>Pilih sumber...</option>');
+    select.value = '';
+    hint.textContent = `Kode ini punya stock dari ${options.length} sumber berbeda — pilih yang mau diambil.`;
+    hint.hidden = false;
   }
 }
 
@@ -160,6 +227,16 @@ async function handlePmSubmit(e) {
     document.getElementById('pmSLoc').focus();
     return;
   }
+  // Sumber (OBS/Fast Moving/User) — auto-keisi kalau cuma 1 opsi (lihat
+  // renderPmSumberField), tapi WAJIB dipilih manual kalau lebih dari 1 opsi
+  // (select-nya sengaja dikasih placeholder kosong buat kasus itu).
+  const sumberRaw = document.getElementById('pmSumber').value;
+  if (!sumberRaw) {
+    showToast('Sumber barang (OBS/Fast Moving/User) wajib dipilih.', 'error');
+    document.getElementById('pmSumber').focus();
+    return;
+  }
+  const [sumberTipe, sumberNama] = sumberRaw.split('|');
 
   const match = masterBarangCache.find((b) => b.kodeBarang === kode);
 
@@ -172,7 +249,9 @@ async function handlePmSubmit(e) {
     keterangan: document.getElementById('pmKeterangan').value.trim(),
     lokasi: pmLokasi,
     plant,
-    sloc
+    sloc,
+    sumberTipe,
+    sumberNama
   };
 
   const submitBtn = e.target.querySelector('button[type="submit"]');
@@ -197,5 +276,6 @@ function resetPmForm() {
   setPmTanggalDisplay();
   document.getElementById('pmNamaHint').hidden = true;
   document.getElementById('pmStockHint').hidden = true;
+  renderPmSumberField([]);
   setPmLokasi('');
 }
