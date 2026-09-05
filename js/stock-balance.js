@@ -196,9 +196,17 @@ function renderSbSumberBreakdown(sumberBreakdown) {
     wrap.hidden = true;
     return;
   }
-  const chips = sumberBreakdown.map((s) =>
-    `<span class="sb-sumber-chip">${escapeHtml(sumberOptionLabel(s))} <span class="sb-sumber-chip-qty">${s.sisa}</span></span>`
-  ).join('');
+  // Chip MINUS (sisa < 0, dari hitungSumberBreakdownTampilan_ di Code.gs) —
+  // artinya ada Pemakaian/Koreksi Stock yang tercatat lebih besar dari
+  // Penerimaan yang pernah masuk ke kantong itu (biasanya baris lama dari
+  // SEBELUM fitur Sumber ada, atau memang penyesuaian Koreksi Stock) —
+  // dikasih style beda (amber, lihat .sb-sumber-chip-deficit di style.css)
+  // biar keliatan itu BUKAN sisa stock yang bisa diambil, tapi bagian dari
+  // kenapa totalnya nggak cuma jumlah kantong yang "sehat".
+  const chips = sumberBreakdown.map((s) => {
+    const deficitClass = s.sisa < 0 ? ' sb-sumber-chip-deficit' : '';
+    return `<span class="sb-sumber-chip${deficitClass}">${escapeHtml(sumberOptionLabel(s))} <span class="sb-sumber-chip-qty">${s.sisa}</span></span>`;
+  }).join('');
   wrap.innerHTML = `<span class="sb-sumber-breakdown-label">Sisa saat ini per Sumber:</span>${chips}`;
   wrap.hidden = false;
 }
