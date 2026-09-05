@@ -467,6 +467,7 @@ function renderDashPemakaianModalBody(items, emptyText) {
           <div class="ra-item-sub">Qty ${it.qty} ${escapeHtml(it.satuan || '')}${teknisiKetText}</div>
           ${meta ? `<div class="item-meta-line">${meta}</div>` : ''}
         </div>
+        ${it.sumberLabel ? `<span class="ra-badge badge-manual">${escapeHtml(it.sumberLabel)}</span>` : ''}
       </div>
     `;
   }).join('');
