@@ -157,6 +157,7 @@ async function openSbRiwayatModal(kode, plant, namaBarang) {
     ? `Riwayat transaksi periode ${sbCurrentPeriod.tanggalMulai} s/d ${sbCurrentPeriod.tanggalAkhir}${plant ? ' · Plant ' + plant : ''}`
     : '';
   bodyEl.innerHTML = '<div class="empty-state">Memuat...</div>';
+  renderSbSumberBreakdown([]); // reset dulu tiap buka popup, biar nggak nyisa data SKU sebelumnya sebelum respons baru datang
   document.getElementById('sbRiwayatModalBackdrop').hidden = false;
   document.getElementById('sbRiwayatModal').hidden = false;
 
@@ -173,9 +174,33 @@ async function openSbRiwayatModal(kode, plant, namaBarang) {
       tanggalAkhir: sbCurrentPeriod.tanggalAkhir
     });
     renderSbRiwayatModalBody(res.riwayat || []);
+    renderSbSumberBreakdown(res.sumberBreakdown || []);
   } catch (err) {
     bodyEl.innerHTML = `<div class="empty-state">Gagal memuat: ${escapeHtml(err.message)}</div>`;
   }
+}
+
+// ---------------------------------------------------------------------------
+// "Sisa saat ini per Sumber" — ringkasan SAAT INI (bukan per-periode kayak
+// daftar riwayat di bawahnya) dipecah per Sumber (OBS/Fast Moving/User+nama),
+// muncul di ATAS daftar riwayat transaksi popup ini (permintaan user: sumber
+// dibedain juga di Stock Balance, tapi cuma di tampilan detail-nya — nggak
+// nambahin kolom baru di tabel utama). Reuse sumberOptionLabel dari
+// js/pemakaian.js (fungsi label yang sama dipakai form Barang Keluar) biar
+// labelnya konsisten di semua tempat.
+// ---------------------------------------------------------------------------
+function renderSbSumberBreakdown(sumberBreakdown) {
+  const wrap = document.getElementById('sbRiwayatModalSumberBreakdown');
+  if (!sumberBreakdown || !sumberBreakdown.length) {
+    wrap.innerHTML = '';
+    wrap.hidden = true;
+    return;
+  }
+  const chips = sumberBreakdown.map((s) =>
+    `<span class="sb-sumber-chip">${escapeHtml(sumberOptionLabel(s))} <span class="sb-sumber-chip-qty">${s.sisa}</span></span>`
+  ).join('');
+  wrap.innerHTML = `<span class="sb-sumber-breakdown-label">Sisa saat ini per Sumber:</span>${chips}`;
+  wrap.hidden = false;
 }
 
 function renderSbRiwayatModalBody(riwayat) {
