@@ -1359,6 +1359,14 @@ body {
   white-space: nowrap;
 }
 .sb-sumber-chip-qty { font-weight: 700; }
+/* Chip minus/defisit (sisa < 0, dari hitungSumberBreakdownTampilan_) — bukan
+   sisa stock yang bisa diambil, cuma bagian dari rekonsiliasi angka (baris
+   Pemakaian lama tanpa Penerimaan yang cocok, atau Koreksi Stock). Dikasih
+   warna beda (amber) biar keliatan beda dari kantong yang sehat. */
+.sb-sumber-chip-deficit {
+  background: #fff3d6;
+  color: #a06a00;
+}
 
 /* ---------- Modal ---------- */
 .modal-backdrop {
