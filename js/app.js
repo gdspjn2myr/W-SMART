@@ -491,12 +491,19 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.key === 'Escape' && !document.getElementById('dashListModal').hidden) closeDashListModal();
   });
 
-  // Chip filter Plant di popup "Total SKU Terdaftar" (lihat renderDashPlantFilterChips
-  // & selectDashPlantFilter di dashboard.js) — delegated karena isi chip-nya
-  // dibangun ulang tiap kali popup dibuka/plant dipilih.
+  // Chip filter Plant — dulu cuma di popup "Total SKU Terdaftar", sekarang
+  // muncul di SEMUA popup kartu statistik Dashboard (opsinya dinamis, lihat
+  // renderDashPlantFilterChipsFor/selectDashPlantFilter di dashboard.js) DAN
+  // di popup Reorder Alert (selectReorderAlertPlantFilter) — permintaan user:
+  // "per plant juga". Delegated karena isi chip-nya dibangun ulang tiap kali
+  // popup dibuka/plant dipilih.
   document.getElementById('dashListModalPlantFilter').addEventListener('click', (e) => {
     const chip = e.target.closest('[data-plant]');
     if (chip) selectDashPlantFilter(chip.dataset.plant);
+  });
+  document.getElementById('reorderAlertModalPlantFilter').addEventListener('click', (e) => {
+    const chip = e.target.closest('[data-plant]');
+    if (chip) selectReorderAlertPlantFilter(chip.dataset.plant);
   });
 
   // Chip filter Sumber (OBS/Fast Moving/User) — muncul di SEMUA popup kartu
@@ -511,6 +518,30 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('reorderAlertModalSumberFilter').addEventListener('click', (e) => {
     const chip = e.target.closest('[data-sumber]');
     if (chip) selectReorderAlertSumberFilter(chip.dataset.sumber);
+  });
+
+  // Chip filter Kategori (A/B/C) — pasangan Sumber di atas, permintaan user:
+  // "per KATEGORI juga yg A B C itu" (lihat renderKategoriFilterChipsInto/
+  // selectDashKategoriFilter & selectReorderAlertKategoriFilter di dashboard.js).
+  document.getElementById('dashListModalKategoriFilter').addEventListener('click', (e) => {
+    const chip = e.target.closest('[data-kategori]');
+    if (chip) selectDashKategoriFilter(chip.dataset.kategori);
+  });
+  document.getElementById('reorderAlertModalKategoriFilter').addEventListener('click', (e) => {
+    const chip = e.target.closest('[data-kategori]');
+    if (chip) selectReorderAlertKategoriFilter(chip.dataset.kategori);
+  });
+
+  // Chip filter S.Loc — sama pola dengan Sumber (value-substitution, saling
+  // kunci dgn Sumber, lihat applyDashValueSubstitution_ di dashboard.js),
+  // permintaan user: "per Sloc juga".
+  document.getElementById('dashListModalSlocFilter').addEventListener('click', (e) => {
+    const chip = e.target.closest('[data-sloc]');
+    if (chip) selectDashSlocFilter(chip.dataset.sloc);
+  });
+  document.getElementById('reorderAlertModalSlocFilter').addEventListener('click', (e) => {
+    const chip = e.target.closest('[data-sloc]');
+    if (chip) selectReorderAlertSlocFilter(chip.dataset.sloc);
   });
 
   // Tombol "Daftarkan" di tiap baris kartu "Belum Terdaftar di Master Data"
