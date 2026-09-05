@@ -21,6 +21,42 @@ function sumberFilterLabel(value) {
   return opt ? opt.label : value;
 }
 
+// Filter "Kategori" (A/B/C, dari Master Data) — nyusul filter Sumber di atas,
+// permintaan user: "per KATEGORI juga yg A B C itu". Beda dari Sumber: ini
+// filter EQUALITY biasa (barang punya 1 Kategori pasti, nggak kesebar kayak
+// Sumber), jadi TIDAK butuh ganti angka Stock atau fetch ulang ke server buat
+// mode 'receiving'/'pemakaian' — cukup filter array yang sudah ada di memori.
+const KATEGORI_FILTER_OPTIONS = [
+  { value: '', label: 'Semua Kategori' },
+  { value: 'A', label: 'Kategori A' },
+  { value: 'B', label: 'Kategori B' },
+  { value: 'C', label: 'Kategori C' }
+];
+function filterItemsByKategori(items, kategori) {
+  if (!kategori) return items;
+  return (items || []).filter((it) => {
+    const k = String(it.kategori || it.itemKategori || '').toUpperCase();
+    return k === kategori;
+  });
+}
+
+// Chip filter generik (Sumber & Kategori sama-sama numpang di sini — bentuk
+// chip-nya identik, cuma beda opsi & atribut data-* yang dipasang).
+function renderChipFilterInto(containerId, options, selected, datasetKey) {
+  const wrap = document.getElementById(containerId);
+  if (!wrap) return;
+  wrap.hidden = false;
+  wrap.innerHTML = options.map((o) => `
+      <button type="button" class="dm-plant-chip${selected === o.value ? ' active' : ''}" data-${datasetKey}="${escapeHtml(o.value)}">${escapeHtml(o.label)}</button>
+    `).join('');
+}
+function renderSumberFilterChipsInto(containerId, selected) {
+  renderChipFilterInto(containerId, SUMBER_FILTER_OPTIONS, selected, 'sumber');
+}
+function renderKategoriFilterChipsInto(containerId, selected) {
+  renderChipFilterInto(containerId, KATEGORI_FILTER_OPTIONS, selected, 'kategori');
+}
+
 let dashboardLoadedOnce = false;
 let dashFullBalances = null; // cache Stock Balance LENGKAP (semua SKU + belum terdaftar), dipakai buat isi popup kartu2 statistik Dashboard — di-reset tiap loadDashboard() supaya nggak nampilin data basi
 // dashReceivingDetailBySumber/dashPemakaianDetailBySumber: cache Api.getReceivingDetail/
@@ -130,24 +166,111 @@ function filterItemsBySumber(items, tipe) {
   return out;
 }
 
-// Chip filter Sumber generik (dipakai bareng di dashListModal & reorderAlertModal
-// — beda container/state, tapi bentuk chip-nya sama, numpang class .dm-plant-chip
-// yang sebenarnya cuma styling chip generik, bukan spesifik Plant).
-function renderSumberFilterChipsInto(containerId, selected) {
+// Sentinel buat item yang Plant-nya belum diisi — dipakai bareng filter
+// Plant (chip) di SEMUA popup Dashboard (dulu cuma dipakai khusus kartu
+// "Total SKU Terdaftar", sekarang jadi filter umum, permintaan user: "per
+// plant juga").
+const DASH_PLANT_NONE = '__none__';
+
+// Filter Plant — EQUALITY biasa (1 baris Stock Balance = 1 Plant pasti,
+// lihat MB_COL_PLANT/hitungBalances_ di Code.gs), jadi beda dari Sumber/
+// S.Loc: TIDAK perlu ganti angka onHand, cukup buang item yang Plant-nya
+// beda dari yang dipilih.
+function filterItemsByPlant(items, plant) {
+  if (!plant) return items;
+  return (items || []).filter((it) => (it.plant || DASH_PLANT_NONE) === plant);
+}
+
+// Filter S.Loc — sama pola dengan Sumber (VALUE-SUBSTITUTION: 1 item bisa
+// nyebar stock-nya di lebih dari 1 S.Loc, lihat `slocBreakdown` yang sudah
+// dihitung bulk di hitungBalances_/Code.gs), jadi milih S.Loc tertentu bikin
+// angka Stock yang ditampilkan IKUT GANTI jadi sisa khusus S.Loc itu —
+// permintaan user: "per Sloc juga" (konsisten dgn perilaku Sumber: "Angka
+// ikut ganti jadi sisa khusus Sumber itu").
+function filterItemsBySloc(items, sloc) {
+  if (!sloc) return items;
+  const out = [];
+  (items || []).forEach((it) => {
+    const entries = Array.isArray(it.slocBreakdown) ? it.slocBreakdown.filter((s) => s.sloc === sloc) : [];
+    const onHand = entries.reduce((sum, s) => sum + s.onHand, 0);
+    if (onHand > 0) out.push(Object.assign({}, it, { onHand: onHand }));
+  });
+  return out;
+}
+
+// Sumber & S.Loc SAMA-SAMA filter value-substitution, tapi breakdown-nya
+// dihitung TERPISAH di server (sumberBreakdown vs slocBreakdown) — tidak ada
+// angka gabungan "sisa dari Sumber X yang ada di S.Loc Y". Supaya nggak
+// nampilin angka yang salah/ambigu, cuma SATU dari keduanya yang aktif tiap
+// saat: begitu salah satu dipilih, yang lain otomatis balik ke "Semua" (lihat
+// selectDashSumberFilter/selectDashSlocFilter & pasangan Reorder Alert-nya).
+// Plant & Kategori bebas digabung dengan yang mana pun (sifatnya EQUALITY).
+function applyDashValueSubstitution_(items, sumberTipe, sloc) {
+  if (sloc) return filterItemsBySloc(items, sloc);
+  return filterItemsBySumber(items, sumberTipe);
+}
+
+// Chip Plant/S.Loc opsinya DINAMIS (tergantung isi data yang lagi dilihat —
+// beda dari Sumber/Kategori yang opsinya TETAP), makanya dihitung dari
+// `items` (list dasar SEBELUM difilter chip apa pun, biar opsi yang muncul
+// selalu lengkap) tiap kali mau ditampilkan, bukan konstanta seperti
+// SUMBER_FILTER_OPTIONS/KATEGORI_FILTER_OPTIONS.
+function renderDashPlantFilterChipsFor(containerId, items, selected) {
   const wrap = document.getElementById(containerId);
   if (!wrap) return;
-  wrap.hidden = false;
-  wrap.innerHTML = SUMBER_FILTER_OPTIONS.map((o) => `
-      <button type="button" class="dm-plant-chip${selected === o.value ? ' active' : ''}" data-sumber="${escapeHtml(o.value)}">${escapeHtml(o.label)}</button>
-    `).join('');
+  const plants = Array.from(new Set((items || []).map((it) => it.plant || DASH_PLANT_NONE)))
+    .sort((a, b) => {
+      if (a === DASH_PLANT_NONE) return 1;
+      if (b === DASH_PLANT_NONE) return -1;
+      return a.localeCompare(b);
+    });
+  // Kalau semua item cuma dari 1 Plant (atau nggak ada Plant sama sekali),
+  // filter-nya nggak berguna — sembunyikan biar popup nggak keliatan aneh.
+  if (plants.length <= 1) { wrap.hidden = true; wrap.innerHTML = ''; return; }
+  const options = [{ value: '', label: 'Semua Plant' }]
+    .concat(plants.map((p) => ({ value: p, label: p === DASH_PLANT_NONE ? 'Belum Ditentukan' : 'Plant ' + p })));
+  renderChipFilterInto(containerId, options, selected, 'plant');
 }
+
+function renderDashSlocFilterChipsFor(containerId, items, selected) {
+  const wrap = document.getElementById(containerId);
+  if (!wrap) return;
+  const slocs = Array.from(new Set(
+    (items || []).reduce((acc, it) => {
+      if (Array.isArray(it.slocBreakdown)) it.slocBreakdown.forEach((s) => acc.push(s.sloc));
+      return acc;
+    }, [])
+  )).sort();
+  if (slocs.length <= 1) { wrap.hidden = true; wrap.innerHTML = ''; return; }
+  const options = [{ value: '', label: 'Semua S.Loc' }].concat(slocs.map((s) => ({ value: s, label: s })));
+  renderChipFilterInto(containerId, options, selected, 'sloc');
+}
+
+// Sama seperti renderDashPlantFilterChipsFor/renderDashSlocFilterChipsFor,
+// tapi buat mode 'receiving'/'pemakaian' — opsinya sudah dikirim LANGSUNG
+// dari server sebagai array of string (lihat plantOptions/slocOptions di
+// handleGetReceivingDetail/handleGetPemakaianDetail, Code.gs), bukan dihitung
+// dari item yang lagi ditampilkan di frontend (mustahil, karena baris yang
+// TIDAK cocok filter Plant/S.Loc yang lagi aktif sudah di-skip duluan di
+// server, jadi opsi lain nggak akan kelihatan lagi kalau dihitung dari situ).
+function renderDynamicChipOptionsFor_(containerId, values, selected, datasetKey, allLabel, labelFn) {
+  const wrap = document.getElementById(containerId);
+  if (!wrap) return;
+  if (!values || values.length <= 1) { wrap.hidden = true; wrap.innerHTML = ''; return; }
+  const options = [{ value: '', label: allLabel }].concat(values.map((v) => ({ value: v, label: labelFn(v) })));
+  renderChipFilterInto(containerId, options, selected, datasetKey);
+}
+
 
 // Kartu di Dashboard cuma nunjukin RINGKASAN (jumlah + hint) — daftar lengkapnya
 // sengaja dipindah ke popup/modal (buka pas kartu diklik, lihat openReorderAlertModal
 // di app.js) biar Dashboard nggak kepanjangan discroll cuma gara-gara banyak
 // barang yang perlu diorder.
-let reorderAlertBaseList = []; // list ASLI (belum difilter Sumber) — di-refresh tiap loadDashboard()/renderReorderAlert
+let reorderAlertBaseList = []; // list ASLI (belum difilter Sumber/Kategori/Plant/S.Loc) — di-refresh tiap loadDashboard()/renderReorderAlert
 let dashReorderSumberSelected = ''; // di-reset tiap kali modal Reorder Alert dibuka (lihat openReorderAlertModal)
+let dashReorderKategoriSelected = ''; // pasangan dashReorderSumberSelected, buat filter Kategori (A/B/C)
+let dashReorderPlantSelected = ''; // pasangan dashReorderSumberSelected, buat filter Plant (equality)
+let dashReorderSlocSelected = ''; // pasangan dashReorderSumberSelected, buat filter S.Loc (value-substitution, saling kunci dgn Sumber — lihat applyDashValueSubstitution_)
 
 function renderReorderAlert(list) {
   document.getElementById('reorderAlertCount').textContent = list.length + ' Item';
@@ -162,9 +285,18 @@ function renderReorderAlert(list) {
 
 function renderReorderAlertBodyFiltered() {
   const wrap = document.getElementById('reorderAlertList');
-  const items = filterItemsBySumber(reorderAlertBaseList, dashReorderSumberSelected);
+  // Chip Plant/S.Loc opsinya dihitung dari list DASAR (belum difilter apa
+  // pun) tiap kali di-render, biar opsi yang muncul selalu lengkap — lihat
+  // komentar di renderDashPlantFilterChipsFor.
+  renderDashPlantFilterChipsFor('reorderAlertModalPlantFilter', reorderAlertBaseList, dashReorderPlantSelected);
+  renderDashSlocFilterChipsFor('reorderAlertModalSlocFilter', reorderAlertBaseList, dashReorderSlocSelected);
+
+  let items = filterItemsByPlant(reorderAlertBaseList, dashReorderPlantSelected);
+  items = filterItemsByKategori(items, dashReorderKategoriSelected);
+  items = applyDashValueSubstitution_(items, dashReorderSumberSelected, dashReorderSlocSelected);
+  const adaFilterAktif = dashReorderSumberSelected || dashReorderKategoriSelected || dashReorderPlantSelected || dashReorderSlocSelected;
   if (!items.length) {
-    wrap.innerHTML = `<div class="empty-state">${dashReorderSumberSelected ? 'Tidak ada barang reorder dari Sumber ini.' : 'Belum ada item yang perlu di-reorder.'}</div>`;
+    wrap.innerHTML = `<div class="empty-state">${adaFilterAktif ? 'Tidak ada barang reorder dari filter ini.' : 'Belum ada item yang perlu di-reorder.'}</div>`;
     return;
   }
   wrap.innerHTML = items.map((it) => {
@@ -184,6 +316,25 @@ function renderReorderAlertBodyFiltered() {
 
 function selectReorderAlertSumberFilter(value) {
   dashReorderSumberSelected = value;
+  if (value) dashReorderSlocSelected = ''; // Sumber & S.Loc saling kunci — lihat applyDashValueSubstitution_
+  renderSumberFilterChipsInto('reorderAlertModalSumberFilter', dashReorderSumberSelected);
+  renderReorderAlertBodyFiltered(); // ini juga yang re-render chip S.Loc (balik ke "Semua" kalau ke-reset)
+}
+
+function selectReorderAlertKategoriFilter(value) {
+  dashReorderKategoriSelected = value;
+  renderKategoriFilterChipsInto('reorderAlertModalKategoriFilter', dashReorderKategoriSelected);
+  renderReorderAlertBodyFiltered();
+}
+
+function selectReorderAlertPlantFilter(value) {
+  dashReorderPlantSelected = value;
+  renderReorderAlertBodyFiltered(); // chip Plant-nya di-render ulang di dalam sini juga
+}
+
+function selectReorderAlertSlocFilter(value) {
+  dashReorderSlocSelected = value;
+  if (value) dashReorderSumberSelected = ''; // Sumber & S.Loc saling kunci — lihat applyDashValueSubstitution_
   renderSumberFilterChipsInto('reorderAlertModalSumberFilter', dashReorderSumberSelected);
   renderReorderAlertBodyFiltered();
 }
@@ -208,9 +359,14 @@ function renderBelumTerdaftar(count) {
 }
 
 function openReorderAlertModal() {
-  dashReorderSumberSelected = ''; // reset tiap kali modal dibuka, biar filter Sumber selalu mulai dari "Semua Sumber"
+  // reset semua filter tiap kali modal dibuka, biar selalu mulai dari "Semua"
+  dashReorderSumberSelected = '';
+  dashReorderKategoriSelected = '';
+  dashReorderPlantSelected = '';
+  dashReorderSlocSelected = '';
   renderSumberFilterChipsInto('reorderAlertModalSumberFilter', dashReorderSumberSelected);
-  renderReorderAlertBodyFiltered();
+  renderKategoriFilterChipsInto('reorderAlertModalKategoriFilter', dashReorderKategoriSelected);
+  renderReorderAlertBodyFiltered(); // ini juga yang render chip Plant/S.Loc (lihat renderDashPlantFilterChipsFor/renderDashSlocFilterChipsFor)
   document.getElementById('reorderAlertModalBackdrop').hidden = false;
   document.getElementById('reorderAlertModal').hidden = false;
 }
@@ -237,9 +393,9 @@ const DASH_CARD_FILTERS = {
     sort: (a, b) => b.onHand - a.onHand
   },
   total: {
-    mode: 'stock-by-plant',
+    mode: 'stock',
     title: 'Total SKU Terdaftar',
-    hint: 'Semua barang yang sudah terdaftar & berstatus Aktif di Master Data, dikelompokkan per Plant — kode yang sama bisa muncul di lebih dari 1 Plant (baris Master Data yang beda-beda).',
+    hint: 'Semua barang yang sudah terdaftar & berstatus Aktif di Master Data — kode yang sama bisa muncul di lebih dari 1 Plant (baris Master Data yang beda-beda); pakai chip Plant di bawah buat loncat ke Plant tertentu.',
     filter: (b) => !b.belumAdaMaster,
     sort: (a, b) => (a.namaBarang || '').localeCompare(b.namaBarang || '')
   },
@@ -326,15 +482,21 @@ const DASH_CARD_FILTERS = {
   }
 };
 
-// dashStatModalCfg + dashSumberSelected: cfg & filter Sumber yang LAGI AKTIF di
-// dashListModal — dipakai selectDashSumberFilter (dipanggil pas chip Sumber
-// diklik) buat tau harus re-render/re-fetch dengan cara apa (beda mode beda
-// caranya, lihat renderDashStatModalBody_ di bawah). dashStockModalItems:
-// base items (SUDAH kena cfg.filter/sort, SEBELUM difilter Sumber) — dipakai
-// mode 'stock' biasa (BUKAN 'stock-by-plant', itu pakai dashTotalPlantItems
-// sendiri) supaya ganti Sumber nggak perlu filter ulang dashFullBalances.
+// dashStatModalCfg + filter state (Sumber/Kategori/Plant/S.Loc) yang LAGI
+// AKTIF di dashListModal — dipakai tiap kali salah satu chip filter diklik
+// (lihat selectDash*Filter di bawah) buat tau harus re-render/re-fetch dengan
+// cara apa (beda mode beda caranya, lihat renderDashStatModalBody_ di bawah).
+// dashStockModalItems: base items (SUDAH kena cfg.filter/sort, SEBELUM
+// difilter chip apa pun) — dipakai utk SEMUA popup mode 'stock', TERMASUK
+// "Total SKU Terdaftar" (yang DULU punya mekanisme Plant sendiri/terpisah,
+// dashTotalPlantItems/dashTotalPlantSelected — sekarang digabung ke sini
+// karena Plant sekarang jadi filter umum di SEMUA popup, bukan cuma kartu
+// itu, permintaan user: "per plant juga").
 let dashStatModalCfg = null;
 let dashSumberSelected = '';
+let dashKategoriSelected = '';
+let dashPlantSelected = '';
+let dashSlocSelected = '';
 let dashStockModalItems = [];
 
 async function openDashStatModal(filterKey) {
@@ -342,16 +504,28 @@ async function openDashStatModal(filterKey) {
   if (!cfg) return;
 
   dashStatModalCfg = cfg;
-  dashSumberSelected = ''; // reset tiap kali popup dibuka, biar filter Sumber selalu mulai dari "Semua Sumber"
+  // reset semua filter tiap kali popup dibuka, biar selalu mulai dari "Semua"
+  dashSumberSelected = '';
+  dashKategoriSelected = '';
+  dashPlantSelected = '';
+  dashSlocSelected = '';
 
   document.getElementById('dashListModalTitle').textContent = cfg.title;
   document.getElementById('dashListModalHint').textContent = cfg.hint;
   document.getElementById('dashListModalBody').innerHTML = '<div class="empty-state">Memuat...</div>';
+  // Chip Plant/S.Loc opsinya DINAMIS (tergantung isi data) — disembunyikan
+  // dulu di sini, baru di-render begitu datanya siap (lihat
+  // renderDashStatModalBody_, mode 'stock' vs 'receiving'/'pemakaian' beda
+  // cara nentuin opsinya).
   document.getElementById('dashListModalPlantFilter').hidden = true;
   document.getElementById('dashListModalPlantFilter').innerHTML = '';
-  // Filter Sumber ditampilin di SEMUA mode popup (stock & transaksi) — permintaan
-  // user: "di dashboard juga disemua popup ... harus ada filter per sumbernya".
+  document.getElementById('dashListModalSlocFilter').hidden = true;
+  document.getElementById('dashListModalSlocFilter').innerHTML = '';
+  // Filter Sumber & Kategori ditampilin di SEMUA mode popup (stock &
+  // transaksi) — permintaan user: "di dashboard juga disemua popup ... harus
+  // ada filter per sumbernya" (Kategori nyusul pola yang sama).
   renderSumberFilterChipsInto('dashListModalSumberFilter', dashSumberSelected);
+  renderKategoriFilterChipsInto('dashListModalKategoriFilter', dashKategoriSelected);
   document.getElementById('dashListModalBackdrop').hidden = false;
   document.getElementById('dashListModal').hidden = false;
 
@@ -363,31 +537,38 @@ async function openDashStatModal(filterKey) {
   }
 }
 
-// Isi body dashListModal sesuai cfg.mode & dashSumberSelected yang LAGI AKTIF.
-// Dipanggil dari openDashStatModal (pertama buka) MAUPUN selectDashSumberFilter
-// (ganti Sumber) — mode 'receiving'/'pemakaian' fetch ulang ke server (qty-nya
-// hasil agregasi server, lihat komentar dashReceivingDetailBySumber di atas),
-// mode 'stock'/'stock-by-plant' cukup filter ulang data yang sudah ada di
-// memori (sumberBreakdown sudah dihitung bulk di hitungBalances_/Code.gs).
+// Isi body dashListModal sesuai cfg.mode & filter yang LAGI AKTIF. Dipanggil
+// dari openDashStatModal (pertama buka) MAUPUN reapplyDashStatModalFilter_
+// (tiap kali chip diklik) — mode 'receiving'/'pemakaian' fetch ulang ke
+// server (qty-nya hasil agregasi server, lihat komentar
+// dashReceivingDetailBySumber di atas; Plant/S.Loc di mode ini JUGA row-skip
+// di server, pola sama persis dgn Sumber — lihat handleGetReceivingDetail/
+// handleGetPemakaianDetail di Code.gs), mode 'stock' cukup filter ulang data
+// yang sudah ada di memori (sumberBreakdown/slocBreakdown sudah dihitung
+// bulk di hitungBalances_/Code.gs, Plant & Kategori sudah ada langsung per
+// item, tidak perlu recompute apa pun).
 async function renderDashStatModalBody_(cfg) {
-  if (cfg.mode === 'receiving') {
-    const cacheKey = dashSumberSelected;
-    if (!dashReceivingDetailBySumber[cacheKey]) {
-      dashReceivingDetailBySumber[cacheKey] = await Api.getReceivingDetail({ sumberTipe: dashSumberSelected });
+  if (cfg.mode === 'receiving' || cfg.mode === 'pemakaian') {
+    const cacheMap = cfg.mode === 'receiving' ? dashReceivingDetailBySumber : dashPemakaianDetailBySumber;
+    const fetcher = cfg.mode === 'receiving' ? Api.getReceivingDetail : Api.getPemakaianDetail;
+    const cacheKey = [dashSumberSelected, dashPlantSelected, dashSlocSelected].join('|');
+    if (!cacheMap[cacheKey]) {
+      cacheMap[cacheKey] = await fetcher({ sumberTipe: dashSumberSelected, plant: dashPlantSelected, sloc: dashSlocSelected });
     }
-    const items = dashReceivingDetailBySumber[cacheKey][cfg.dataKey] || [];
+    const res = cacheMap[cacheKey];
+    let items = res[cfg.dataKey] || [];
+    // Kategori: field Master Data yang sudah ada langsung di tiap item,
+    // kecuali view 'transaksi' — 1 transaksi bisa berisi beberapa SKU beda
+    // Kategori sekaligus, jadi filter Kategori nggak relevan buat view ini.
+    if (cfg.view !== 'transaksi') items = filterItemsByKategori(items, dashKategoriSelected);
+    // Opsi chip Plant/S.Loc dikirim server dari SEMUA baris bulan berjalan
+    // (SEBELUM filter Plant/S.Loc diterapkan di server) — lihat
+    // plantOptions/slocOptions di handleGetReceivingDetail/handleGetPemakaianDetail.
+    renderDynamicChipOptionsFor_('dashListModalPlantFilter', res.plantOptions, dashPlantSelected, 'plant', 'Semua Plant', (v) => 'Plant ' + v);
+    renderDynamicChipOptionsFor_('dashListModalSlocFilter', res.slocOptions, dashSlocSelected, 'sloc', 'Semua S.Loc', (v) => v);
     if (cfg.view === 'transaksi') renderDashTransaksiModalBody(items, cfg.emptyText);
-    else renderDashReceivingModalBody(items, cfg.emptyText);
-    return;
-  }
-
-  if (cfg.mode === 'pemakaian') {
-    const cacheKey = dashSumberSelected;
-    if (!dashPemakaianDetailBySumber[cacheKey]) {
-      dashPemakaianDetailBySumber[cacheKey] = await Api.getPemakaianDetail({ sumberTipe: dashSumberSelected });
-    }
-    const items = dashPemakaianDetailBySumber[cacheKey][cfg.dataKey] || [];
-    renderDashPemakaianModalBody(items, cfg.emptyText);
+    else if (cfg.mode === 'receiving') renderDashReceivingModalBody(items, cfg.emptyText);
+    else renderDashPemakaianModalBody(items, cfg.emptyText);
     return;
   }
 
@@ -395,34 +576,52 @@ async function renderDashStatModalBody_(cfg) {
     const res = await Api.getStockBalance({});
     dashFullBalances = res.data || [];
   }
-  const items = dashFullBalances.filter(cfg.filter).sort(cfg.sort);
+  dashStockModalItems = dashFullBalances.filter(cfg.filter).sort(cfg.sort);
+  renderDashPlantFilterChipsFor('dashListModalPlantFilter', dashStockModalItems, dashPlantSelected);
+  renderDashSlocFilterChipsFor('dashListModalSlocFilter', dashStockModalItems, dashSlocSelected);
+  renderDashListModalBody(applyDashStockFilters_(dashStockModalItems));
+}
 
-  if (cfg.mode === 'stock-by-plant') {
-    // "Total SKU Terdaftar" — 1 Kode Barang bisa muncul di lebih dari 1 Plant
-    // (baris Master Data terpisah per Plant, lihat kodePlantCount di
-    // hitungBalances_/Code.gs). Dulu semua Plant ditumpuk jadi 1 list panjang
-    // (harus discroll jauh buat pindah Plant) — sekarang Plant jadi FILTER
-    // (chip di atas list) supaya bisa langsung loncat ke Plant yang dimau.
-    dashTotalPlantItems = items;
-    dashTotalPlantSelected = '';
-    renderDashPlantFilterChips();
-    renderDashPlantFilteredList();
-  } else {
-    dashStockModalItems = items;
-    renderDashListModalBody(filterItemsBySumber(dashStockModalItems, dashSumberSelected));
-  }
+// Gabungan SEMUA filter dashListModal mode 'stock': Plant+Kategori (EQUALITY,
+// bebas digabung) lalu Sumber/S.Loc (VALUE-SUBSTITUTION, saling kunci — lihat
+// applyDashValueSubstitution_).
+function applyDashStockFilters_(items) {
+  let out = filterItemsByPlant(items, dashPlantSelected);
+  out = filterItemsByKategori(out, dashKategoriSelected);
+  return applyDashValueSubstitution_(out, dashSumberSelected, dashSlocSelected);
 }
 
 // Dipanggil pas chip Sumber di dashListModal diklik (lihat app.js).
 function selectDashSumberFilter(value) {
   dashSumberSelected = value;
+  if (value) dashSlocSelected = ''; // Sumber & S.Loc saling kunci — lihat applyDashValueSubstitution_
   renderSumberFilterChipsInto('dashListModalSumberFilter', dashSumberSelected);
-  if (!dashStatModalCfg) return;
+  reapplyDashStatModalFilter_();
+}
 
-  if (dashStatModalCfg.mode === 'stock-by-plant') {
-    renderDashPlantFilteredList();
-    return;
-  }
+function selectDashKategoriFilter(value) {
+  dashKategoriSelected = value;
+  renderKategoriFilterChipsInto('dashListModalKategoriFilter', dashKategoriSelected);
+  reapplyDashStatModalFilter_();
+}
+
+function selectDashPlantFilter(value) {
+  dashPlantSelected = value;
+  reapplyDashStatModalFilter_();
+}
+
+function selectDashSlocFilter(value) {
+  dashSlocSelected = value;
+  if (value) dashSumberSelected = ''; // Sumber & S.Loc saling kunci — lihat applyDashValueSubstitution_
+  renderSumberFilterChipsInto('dashListModalSumberFilter', dashSumberSelected);
+  reapplyDashStatModalFilter_();
+}
+
+// Dipanggil dari SEMUA selectDash*Filter di atas — mode 'receiving'/
+// 'pemakaian' perlu fetch ulang ke server (qty-nya hasil agregasi server),
+// mode 'stock' cukup filter ulang dashStockModalItems yang sudah ada di memori.
+function reapplyDashStatModalFilter_() {
+  if (!dashStatModalCfg) return;
   if (dashStatModalCfg.mode === 'receiving' || dashStatModalCfg.mode === 'pemakaian') {
     document.getElementById('dashListModalBody').innerHTML = '<div class="empty-state">Memuat...</div>';
     renderDashStatModalBody_(dashStatModalCfg).catch((err) => {
@@ -431,13 +630,15 @@ function selectDashSumberFilter(value) {
     });
     return;
   }
-  renderDashListModalBody(filterItemsBySumber(dashStockModalItems, dashSumberSelected));
+  renderDashPlantFilterChipsFor('dashListModalPlantFilter', dashStockModalItems, dashPlantSelected);
+  renderDashSlocFilterChipsFor('dashListModalSlocFilter', dashStockModalItems, dashSlocSelected);
+  renderDashListModalBody(applyDashStockFilters_(dashStockModalItems));
 }
 
 function renderDashListModalBody(items) {
   const body = document.getElementById('dashListModalBody');
   if (!items.length) {
-    body.innerHTML = '<div class="empty-state">Tidak ada barang di kategori/Sumber ini.</div>';
+    body.innerHTML = '<div class="empty-state">Tidak ada barang yang cocok dengan filter ini.</div>';
     return;
   }
   body.innerHTML = items.map((it) => dashStockItemHtml(it)).join('');
@@ -496,58 +697,6 @@ function gotoRegisterMasterData(data) {
       max: 0
     }, { forceAddMode: true, title: 'Daftarkan Item' });
   }, 60);
-}
-
-// ---------------------------------------------------------------------------
-// Filter Plant (chip) di popup "Total SKU Terdaftar" — state-nya di-reset tiap
-// popup ini dibuka (lihat openDashStatModal), datanya sudah ada di memori
-// (dashTotalPlantItems, dari dashFullBalances yang sudah di-fetch), jadi
-// ganti-ganti Plant TIDAK perlu fetch ulang ke server, cuma re-render.
-// ---------------------------------------------------------------------------
-let dashTotalPlantItems = [];
-let dashTotalPlantSelected = ''; // '' = Semua Plant
-const DASH_PLANT_NONE = '__none__'; // sentinel buat item yang Plant-nya belum diisi
-
-function renderDashPlantFilterChips() {
-  const wrap = document.getElementById('dashListModalPlantFilter');
-  const plants = Array.from(new Set(dashTotalPlantItems.map((it) => it.plant || DASH_PLANT_NONE)))
-    .sort((a, b) => {
-      if (a === DASH_PLANT_NONE) return 1;
-      if (b === DASH_PLANT_NONE) return -1;
-      return a.localeCompare(b);
-    });
-
-  // Kalau semua item cuma dari 1 Plant (atau nggak ada Plant sama sekali),
-  // filter-nya nggak berguna — sembunyikan biar popup nggak keliatan aneh.
-  if (plants.length <= 1) { wrap.hidden = true; wrap.innerHTML = ''; return; }
-
-  const chips = [{ value: '', label: 'Semua Plant' }]
-    .concat(plants.map((p) => ({ value: p, label: p === DASH_PLANT_NONE ? 'Belum Ditentukan' : 'Plant ' + p })));
-
-  wrap.hidden = false;
-  wrap.innerHTML = chips.map((c) => `
-      <button type="button" class="dm-plant-chip${dashTotalPlantSelected === c.value ? ' active' : ''}" data-plant="${escapeHtml(c.value)}">${escapeHtml(c.label)}</button>
-    `).join('');
-}
-
-function renderDashPlantFilteredList() {
-  let items = dashTotalPlantSelected
-    ? dashTotalPlantItems.filter((it) => (it.plant || DASH_PLANT_NONE) === dashTotalPlantSelected)
-    : dashTotalPlantItems;
-  items = filterItemsBySumber(items, dashSumberSelected); // gabungan filter Plant (chip lama) + Sumber (chip baru)
-
-  const body = document.getElementById('dashListModalBody');
-  if (!items.length) {
-    body.innerHTML = '<div class="empty-state">Tidak ada barang terdaftar di Plant/Sumber ini.</div>';
-    return;
-  }
-  body.innerHTML = items.map((it) => dashStockItemHtml(it)).join('');
-}
-
-function selectDashPlantFilter(value) {
-  dashTotalPlantSelected = value;
-  renderDashPlantFilterChips();
-  renderDashPlantFilteredList();
 }
 
 // Popup "Diterima Hari Ini" / "Diterima Bulan Ini" / "SKU Bulan Ini" — dari
