@@ -22,10 +22,11 @@
 // ============================================================================
 
 let opInitialized = false;
-let opMode = 'barang'; // 'barang' | 'bin'
+let opMode = 'barang'; // 'barang' | 'bin' | 'manual'
 let opContextLokasi = ''; // keisi kalau item dibuka dari hasil scan Bin (prefill Lokasi di form hitung)
 let opCurrentItemBins = []; // breakdown per-bin item yang lagi dibuka (buat baseline selisih per-bin)
 let opSesiItems = [];
+let opManualRowSeq = 0; // id unik tiap baris tabel Opname Manual (buat data-row-id, bukan index array — biar aman walau baris ditambah/dihapus)
 
 // Bikin id DOM yang aman dari Kode Barang + Plant (buat input Alasan per-item
 // di Sesi Opname, karena bisa lebih dari satu item expanded form koreksinya —
@@ -61,12 +62,14 @@ const OP_STATUS_CLASS = {
 function initOpnamePage() {
   loadMasterData(); // supaya datalist #listMasterBarang keisi (dipakai bareng Penerimaan/Pemakaian/Put Away)
   Auth.prefillUserField('opUser'); // identitas selalu dari akun yang login (lihat js/auth.js)
+  Auth.prefillUserField('opManualUser'); // sama, buat panel Opname Manual (field User terpisah dari opUser di atas)
 
   if (opInitialized) return;
   opInitialized = true;
 
   document.getElementById('btnOpModeBarang').addEventListener('click', () => setOpMode('barang'));
   document.getElementById('btnOpModeBin').addEventListener('click', () => setOpMode('bin'));
+  document.getElementById('btnOpModeManual').addEventListener('click', () => setOpMode('manual'));
 
   document.getElementById('btnOpCariBarang').addEventListener('click', handleCariBarang);
   document.getElementById('opKodeBarang').addEventListener('keydown', (e) => {
@@ -101,6 +104,7 @@ function initOpnamePage() {
 
   document.getElementById('btnSimpanOpname').addEventListener('click', handleSimpanOpname);
 
+  initOpManualPanel();
   renderOpSesiList();
 }
 
@@ -108,8 +112,24 @@ function setOpMode(mode) {
   opMode = mode;
   document.getElementById('btnOpModeBarang').classList.toggle('active', mode === 'barang');
   document.getElementById('btnOpModeBin').classList.toggle('active', mode === 'bin');
+  document.getElementById('btnOpModeManual').classList.toggle('active', mode === 'manual');
   document.getElementById('opPanelBarang').hidden = mode !== 'barang';
   document.getElementById('opPanelBin').hidden = mode !== 'bin';
+  document.getElementById('opScanHint').hidden = mode === 'manual';
+  // "Sesi Opname Ini" (di bawah, punya alur staging-lalu-simpan sendiri) cuma
+  // relevan buat mode Cari Barang/Cari Lokasi — panel Opname Manual sengaja
+  // berdiri sendiri (tabelnya sendiri SUDAH jadi tempat review, makanya
+  // tombol Simpan-nya langsung di pojok kanan atas panel itu, bukan numpang
+  // ke Sesi Opname Ini di bawah).
+  document.getElementById('opSesiCard').hidden = mode === 'manual';
+  document.getElementById('opManualPanel').hidden = mode !== 'manual';
+  if (mode === 'manual') {
+    // Hasil scan/cari dari mode sebelumnya (kalau ada) disembunyikan biar
+    // nggak nyampur bingung sama tabel manual — perilaku toggle 'barang' <->
+    // 'bin' yang SUDAH ADA (di atas) sengaja TIDAK diubah/disentuh.
+    document.getElementById('opBinResultCard').hidden = true;
+    document.getElementById('opDetailCard').hidden = true;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -514,5 +534,198 @@ async function handleSimpanOpname() {
   } finally {
     btn.disabled = false;
     btn.textContent = 'Simpan Hasil Opname';
+  }
+}
+
+// ---------------------------------------------------------------------------
+// OPNAME MANUAL — tabel gaya form kertas fisik yang biasa dipakai (No/Kode/
+// Nama/Satuan/SAP/Fisik/Selisih Awal/Pending/Ket. Pending/Selisih Akhir/Ket),
+// beda alur dari Cari Barang/Cari Lokasi di atas (1 kartu review per item lalu
+// numpuk ke "Sesi Opname Ini") — di sini semua baris diisi LANGSUNG di 1
+// tabel (mulai dari 1 baris kosong, bisa "+ Tambah Baris" sebanyak perlu),
+// baru disimpan SEKALIGUS lewat tombol "Simpan" di pojok kanan atas panel.
+// Plant & S.Loc satu nilai buat SEMUA baris (sama seperti form kertas aslinya
+// yang nulis Plant/Loc sekali di kop, bukan per baris) — dikirim ke tiap item
+// pas Simpan. Reuse Api.saveStockOpname yang SAMA dipakai alur Cari Barang di
+// atas (lihat handleSaveStockOpname di Code.gs) — cuma nambah field
+// pendingQty/pendingKeterangan yang emang opsional di situ, jadi baris dari
+// 2 alur ini nyampur aman di 1 sheet StockOpname yang sama.
+//
+// Rumus (dikonfirmasi user, SAMA kayak konvensi yang sudah dipakai fitur
+// Opname/Koreksi Stock yang lain):
+//   Selisih Awal  = Qty Fisik − SAP
+//   Selisih Akhir = Selisih Awal + Pending Qty
+// (minus = fisik KURANG dari SAP, sesuai contoh form kertas yang dikirim user)
+//
+// SAP SENGAJA dikosongkan/tidak di-auto-fill dari qty sistem (beda dari alur
+// Cari Barang yang nampilin "Qty Sistem" otomatis) — permintaan eksplisit
+// user ("untuk SAP kosongkan dulu"), diisi manual kalau memang mau.
+// ---------------------------------------------------------------------------
+
+function opManualRowTemplate(rowId) {
+  return `
+    <tr class="op-manual-row" data-row-id="${rowId}">
+      <td class="op-manual-no">1</td>
+      <td><input type="text" class="op-manual-kode" list="listMasterBarang" placeholder="Kode Barang" autocomplete="off"></td>
+      <td><input type="text" class="op-manual-nama" placeholder="Otomatis" readonly></td>
+      <td><input type="text" class="op-manual-satuan" readonly></td>
+      <td><input type="number" class="op-manual-sap" min="0" step="1" placeholder="-"></td>
+      <td><input type="number" class="op-manual-fisik" min="0" step="1" placeholder="-"></td>
+      <td class="op-manual-computed op-manual-selisih-awal">-</td>
+      <td><input type="number" class="op-manual-pending" min="0" step="1" placeholder="0"></td>
+      <td><input type="text" class="op-manual-pending-ket" placeholder="Mis. MO: 123456"></td>
+      <td class="op-manual-computed op-manual-selisih-akhir">-</td>
+      <td><input type="text" class="op-manual-ket" placeholder="Opsional"></td>
+      <td><button type="button" class="op-item-remove op-manual-remove" title="Hapus baris" aria-label="Hapus baris">×</button></td>
+    </tr>
+  `;
+}
+
+function initOpManualPanel() {
+  document.getElementById('btnTambahBarisOpnameManual').addEventListener('click', () => addOpManualRow());
+  document.getElementById('btnSimpanOpnameManual').addEventListener('click', handleSimpanOpnameManual);
+  wireUppercaseInput('opManualSLoc');
+
+  // Delegated ke tbody (bukan per-baris) — tabelnya di-render ulang isinya
+  // (baris ditambah/dihapus) tapi elemen tbody-nya sendiri TETAP ada, jadi
+  // 1x wiring di sini cukup buat semua baris, termasuk yang ditambah belakangan.
+  const tbody = document.getElementById('opManualTbody');
+  tbody.addEventListener('input', (e) => {
+    const tr = e.target.closest('tr');
+    if (!tr) return;
+    if (e.target.classList.contains('op-manual-kode')) {
+      opManualHandleKodeInput(tr, e.target.value.trim());
+    }
+    if (e.target.classList.contains('op-manual-sap') || e.target.classList.contains('op-manual-fisik') || e.target.classList.contains('op-manual-pending')) {
+      opManualRecalcRow(tr);
+    }
+  });
+  tbody.addEventListener('click', (e) => {
+    const btn = e.target.closest('.op-manual-remove');
+    if (!btn) return;
+    const tr = btn.closest('tr');
+    if (tr) { tr.remove(); opManualRenumberRows(); }
+  });
+
+  addOpManualRow(); // mulai dengan 1 baris kosong biar langsung bisa diisi
+}
+
+function addOpManualRow() {
+  opManualRowSeq++;
+  document.getElementById('opManualTbody').insertAdjacentHTML('beforeend', opManualRowTemplate(opManualRowSeq));
+  opManualRenumberRows();
+}
+
+function opManualRenumberRows() {
+  document.getElementById('opManualTbody').querySelectorAll('tr').forEach((tr, idx) => {
+    tr.querySelector('.op-manual-no').textContent = idx + 1;
+  });
+  // Tabel nggak boleh kosong sama sekali — kalau baris terakhir dihapus,
+  // langsung munculin 1 baris kosong baru biar user tetap bisa lanjut isi.
+  if (!document.getElementById('opManualTbody').querySelector('tr')) {
+    addOpManualRow();
+  }
+}
+
+// Kode Barang bisa kedaftar di lebih dari 1 Plant di Master Data (lihat
+// masterBarangCache, diisi loadMasterData() di js/penerimaan.js) — buat
+// sekadar auto-isi Nama/Satuan, ambil kecocokan pertama aja (Nama & Satuan
+// harusnya sama persis lintas Plant buat 1 kode yang sama).
+function opManualHandleKodeInput(tr, kode) {
+  const match = masterBarangCache.find((b) => b.kodeBarang === kode);
+  tr.querySelector('.op-manual-nama').value = match ? (match.namaBarang || '') : '';
+  tr.querySelector('.op-manual-satuan').value = match ? (match.satuan || '') : '';
+}
+
+function opManualSetComputedCell(el, value) {
+  el.textContent = value > 0 ? '+' + value : String(value);
+  el.classList.remove('op-manual-computed-zero', 'op-manual-computed-minus', 'op-manual-computed-plus');
+  el.classList.add(value === 0 ? 'op-manual-computed-zero' : value < 0 ? 'op-manual-computed-minus' : 'op-manual-computed-plus');
+}
+
+function opManualRecalcRow(tr) {
+  const sapRaw = tr.querySelector('.op-manual-sap').value;
+  const fisikRaw = tr.querySelector('.op-manual-fisik').value;
+  const pendingRaw = tr.querySelector('.op-manual-pending').value;
+  const awalEl = tr.querySelector('.op-manual-selisih-awal');
+  const akhirEl = tr.querySelector('.op-manual-selisih-akhir');
+
+  // Belum ada SAP maupun Fisik yang diisi sama sekali -> jangan tampilin "0"
+  // (bisa disalahartikan seolah selisihnya beneran 0), biarin "-" placeholder.
+  if (sapRaw === '' && fisikRaw === '') {
+    awalEl.textContent = '-';
+    akhirEl.textContent = '-';
+    awalEl.className = 'op-manual-computed op-manual-selisih-awal';
+    akhirEl.className = 'op-manual-computed op-manual-selisih-akhir';
+    return;
+  }
+
+  const sap = Number(sapRaw) || 0;
+  const fisik = Number(fisikRaw) || 0;
+  const pending = Number(pendingRaw) || 0;
+  const selisihAwal = fisik - sap;
+  const selisihAkhir = selisihAwal + pending;
+  opManualSetComputedCell(awalEl, selisihAwal);
+  opManualSetComputedCell(akhirEl, selisihAkhir);
+  awalEl.classList.add('op-manual-selisih-awal');
+  akhirEl.classList.add('op-manual-selisih-akhir');
+}
+
+async function handleSimpanOpnameManual() {
+  const plant = document.getElementById('opManualPlant').value.trim();
+  if (!plant) {
+    showToast('Plant wajib dipilih.', 'error');
+    return;
+  }
+  const sloc = document.getElementById('opManualSLoc').value.trim().toUpperCase();
+  const user = document.getElementById('opManualUser').value.trim();
+
+  const trs = Array.from(document.querySelectorAll('#opManualTbody tr'));
+  const items = [];
+  for (const tr of trs) {
+    const kode = tr.querySelector('.op-manual-kode').value.trim();
+    if (!kode) continue; // baris kosong (belum diisi) — dilewatin aja, bukan error
+
+    const fisikRaw = tr.querySelector('.op-manual-fisik').value;
+    if (fisikRaw === '') {
+      showToast(`Qty Fisik buat ${kode} belum diisi.`, 'error');
+      tr.querySelector('.op-manual-fisik').focus();
+      return;
+    }
+
+    items.push({
+      kode,
+      namaBarang: tr.querySelector('.op-manual-nama').value.trim(),
+      satuan: tr.querySelector('.op-manual-satuan').value.trim(),
+      lokasi: '', // Opname Manual nggak nge-track per-bin, cuma Plant + S.Loc (sama kayak form kertas aslinya)
+      qtySistem: Number(tr.querySelector('.op-manual-sap').value) || 0,
+      qtyFisik: Number(fisikRaw) || 0,
+      catatan: tr.querySelector('.op-manual-ket').value.trim(),
+      pendingQty: Number(tr.querySelector('.op-manual-pending').value) || 0,
+      pendingKeterangan: tr.querySelector('.op-manual-pending-ket').value.trim(),
+      plant,
+      sloc
+    });
+  }
+
+  if (!items.length) {
+    showToast('Isi minimal 1 baris (Kode Barang & Qty Fisik) dulu.', 'error');
+    return;
+  }
+
+  const btn = document.getElementById('btnSimpanOpnameManual');
+  btn.disabled = true;
+  btn.textContent = 'Menyimpan...';
+  try {
+    const res = await Api.saveStockOpname({ user, items });
+    showToast(`Opname manual tersimpan (${res.jumlahItem} item, total selisih ${res.totalSelisih > 0 ? '+' : ''}${res.totalSelisih}).`, 'success');
+    document.getElementById('opManualTbody').innerHTML = '';
+    addOpManualRow();
+    dashboardLoadedOnce = false; // supaya Dashboard refresh angka onHand terbaru saat dibuka lagi
+  } catch (err) {
+    showToast('Gagal menyimpan: ' + err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Simpan';
   }
 }
