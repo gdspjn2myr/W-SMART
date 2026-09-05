@@ -499,6 +499,20 @@ document.addEventListener('DOMContentLoaded', () => {
     if (chip) selectDashPlantFilter(chip.dataset.plant);
   });
 
+  // Chip filter Sumber (OBS/Fast Moving/User) — muncul di SEMUA popup kartu
+  // statistik Dashboard (lihat renderSumberFilterChipsInto/selectDashSumberFilter
+  // di dashboard.js) DAN di popup Reorder Alert (selectReorderAlertSumberFilter)
+  // — 2 container beda, tapi delegated terpisah karena masing2 punya handler
+  // & state sendiri (popup kartu statistik vs Reorder Alert).
+  document.getElementById('dashListModalSumberFilter').addEventListener('click', (e) => {
+    const chip = e.target.closest('[data-sumber]');
+    if (chip) selectDashSumberFilter(chip.dataset.sumber);
+  });
+  document.getElementById('reorderAlertModalSumberFilter').addEventListener('click', (e) => {
+    const chip = e.target.closest('[data-sumber]');
+    if (chip) selectReorderAlertSumberFilter(chip.dataset.sumber);
+  });
+
   // Tombol "Daftarkan" di tiap baris kartu "Belum Terdaftar di Master Data"
   // (lihat dashStockItemHtml di dashboard.js) — delegated karena isi list-nya
   // dibangun ulang tiap kali popup dibuka. Pindah ke halaman Master Data &
