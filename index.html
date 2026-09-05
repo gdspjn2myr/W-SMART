@@ -1,232 +1,1277 @@
-// ============================================================================
-// STOCK BALANCE — "Mutasi Stock" (gaya laporan SAP): Beginning Balance,
-// Receipt, Issued, Ending Balance per SKU untuk 1 rentang tanggal tertentu,
-// dengan filter Periode (WAJIB), Plant, Storage Location & Material — lihat
-// handleGetStockMutasi() di Code.gs untuk perhitungannya. BEDA dengan versi
-// lama halaman ini yang cuma nunjukin stock REALTIME tanpa periode.
-// ============================================================================
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+<title>W-SMART — Smart Spare Part Inventory</title>
+<meta name="description" content="W-SMART - Sistem Inventory Spare Part: Penerimaan Barang & Dashboard">
+<meta name="theme-color" content="#0f2a5c">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
 
-let sbInitialized = false;
-let sbCurrentPeriod = null; // { tanggalMulai, tanggalAkhir } dari filter yang lagi aktif — dipakai popup Riwayat Transaksi biar rentangnya SAMA dengan yang lagi ditampilkan di tabel
+<!-- ============================= LOGIN ============================= -->
+<div id="loginScreen" class="login-screen">
+  <div class="login-card">
+    <img src="icons/icon-192.png" class="login-logo" alt="Logo W-SMART">
+    <div class="login-title">W-SMART</div>
+    <div class="login-subtitle">Warehouse Spare Part Management &amp; Replenishment Tracking</div>
 
-const SB_KATEGORI_CLASS = { A: 'md-badge-a', B: 'md-badge-b', C: 'md-badge-c' };
-const SB_JENIS_CLASS = { 'OBS': 'md-badge-jenis-obs', 'Fast Moving': 'md-badge-jenis-fm' };
-const SB_RIWAYAT_JENIS_CLASS = { 'Penerimaan': 'ra-badge-normal', 'Pemakaian': 'ra-badge-out', 'Koreksi Stock': 'ra-badge-near' };
-
-function initStockBalancePage() {
-  if (!sbInitialized) {
-    sbInitialized = true;
-
-    // Default periode: 1 bulan berjalan (dari tanggal 1 sampai hari ini) —
-    // supaya halaman langsung ada isinya waktu pertama dibuka, user tinggal
-    // ganti kalau mau periode lain. Tanggal tetap WAJIB diisi (lihat validasi
-    // di applySbFilter), cuma sudah diisiin default yang masuk akal.
-    const today = new Date();
-    const firstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-    document.getElementById('sbTglMulai').valueAsDate = firstOfMonth;
-    document.getElementById('sbTglAkhir').valueAsDate = today;
-
-    document.getElementById('btnApplySbFilter').addEventListener('click', applySbFilter);
-    // Halaman ini sebenarnya SUDAH narik data ulang tiap kali dikunjungi (lihat
-    // applySbFilter() di bawah initStockBalancePage), tapi tombol Refresh ini
-    // tetap dikasih (konsisten sama pola di Riwayat Transaksi/Alert Order) buat
-    // narik ulang data TERBARU tanpa perlu pindah halaman/reload, mis. abis
-    // nambah Barang Masuk baru di tab lain sementara halaman ini masih kebuka.
-    wireRefreshButton('btnRefreshStockBalance', applySbFilter);
-    document.getElementById('sbDetailToggle').addEventListener('change', (e) => {
-      document.getElementById('sbTableWrap').classList.toggle('detail-off', !e.target.checked);
-    });
-    // Enter di salah satu field filter langsung apply, biar nggak wajib klik tombol.
-    ['sbTglMulai', 'sbTglAkhir', 'sbPlant', 'sbStorage', 'sbMaterial'].forEach((id) => {
-      document.getElementById(id).addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') { e.preventDefault(); applySbFilter(); }
-      });
-    });
-
-    document.getElementById('sbTableWrap').classList.add('detail-off'); // default OFF
-
-    // Klik 1 baris SKU -> popup Riwayat Transaksi (lihat openSbRiwayatModal),
-    // delegated ke tbody karena isinya di-render ulang tiap kali filter diganti.
-    const sbTableBody = document.getElementById('sbTableBody');
-    sbTableBody.addEventListener('click', (e) => {
-      const row = e.target.closest('tr[data-kode]');
-      if (row) openSbRiwayatModal(row.dataset.kode, row.dataset.plant || '', row.dataset.nama || '');
-    });
-    sbTableBody.addEventListener('keydown', (e) => {
-      if (e.key !== 'Enter' && e.key !== ' ') return;
-      const row = e.target.closest('tr[data-kode]');
-      if (row) { e.preventDefault(); openSbRiwayatModal(row.dataset.kode, row.dataset.plant || '', row.dataset.nama || ''); }
-    });
-  }
-
-  applySbFilter();
-}
-
-async function applySbFilter() {
-  const tglMulai = document.getElementById('sbTglMulai').value;
-  const tglAkhir = document.getElementById('sbTglAkhir').value;
-  const body = document.getElementById('sbTableBody');
-
-  if (!tglMulai || !tglAkhir) {
-    showToast('Periode (tanggal dari & sampai) wajib diisi.', 'error');
-    body.innerHTML = '<tr><td colspan="14" class="empty-state">Periode wajib diisi.</td></tr>';
-    document.getElementById('sbCount').textContent = '0 SKU';
-    document.getElementById('sbUpdatedAt').textContent = '';
-    return;
-  }
-  if (tglMulai > tglAkhir) {
-    showToast('Tanggal "Dari" tidak boleh lebih besar dari tanggal "Sampai".', 'error');
-    return;
-  }
-
-  body.innerHTML = '<tr><td colspan="14" class="empty-state">Memuat...</td></tr>';
-
-  const payload = {
-    tanggalMulai: tglMulai,
-    tanggalAkhir: tglAkhir,
-    plant: document.getElementById('sbPlant').value.trim(),
-    storage: document.getElementById('sbStorage').value.trim(),
-    material: document.getElementById('sbMaterial').value.trim()
-  };
-
-  try {
-    const res = await Api.getStockMutasi(payload);
-    sbCurrentPeriod = { tanggalMulai: res.tanggalMulai, tanggalAkhir: res.tanggalAkhir };
-    renderSbTable(res.items || []);
-    document.getElementById('sbCount').textContent = (res.items || []).length + ' SKU';
-    document.getElementById('sbUpdatedAt').textContent =
-      `Periode ${escapeHtml(res.tanggalMulai)} s/d ${escapeHtml(res.tanggalAkhir)}`;
-  } catch (err) {
-    body.innerHTML = `<tr><td colspan="14" class="empty-state">Gagal memuat: ${escapeHtml(err.message)}</td></tr>`;
-    document.getElementById('sbCount').textContent = '0 SKU';
-    document.getElementById('sbUpdatedAt').textContent = '';
-  }
-}
-
-function renderSbTable(items) {
-  const body = document.getElementById('sbTableBody');
-  if (!items.length) {
-    body.innerHTML = '<tr><td colspan="14" class="empty-state">Tidak ada SKU yang cocok dengan filter ini.</td></tr>';
-    return;
-  }
-  body.innerHTML = items.map((it) => {
-    const kat = (it.kategori || 'B').toUpperCase();
-    const katClass = SB_KATEGORI_CLASS[kat] || 'md-badge-b';
-    const jenisHtml = it.jenis
-      ? `<span class="md-badge-jenis ${SB_JENIS_CLASS[it.jenis] || ''}">${escapeHtml(it.jenis)}</span>`
-      : '<span class="sb-jenis-kosong">-</span>';
-    const plantTag = it.plant ? `<div class="sb-plant-tag">Plant ${escapeHtml(it.plant)}</div>` : '';
-
-    return `
-      <tr class="sb-row-clickable" data-kode="${escapeHtml(it.kode)}" data-plant="${escapeHtml(it.plant || '')}" data-nama="${escapeHtml(it.namaBarang || '')}" tabindex="0">
-        <td>
-          <div class="sb-kode-cell">${escapeHtml(it.kode)}</div>
-          ${plantTag}
-        </td>
-        <td>${escapeHtml(it.namaBarang || '-')}</td>
-        <td>${escapeHtml(it.satuan || '-')}</td>
-        <td><span class="md-badge ${katClass}">${escapeHtml(kat)}</span></td>
-        <td>${jenisHtml}</td>
-        <td class="sb-num">${it.beginningBalance}</td>
-        <td class="sb-num sb-num-in">${it.receipt > 0 ? '+' + it.receipt : it.receipt}</td>
-        <td class="sb-num sb-num-out">${it.issued > 0 ? '-' + it.issued : it.issued}</td>
-        <td class="sb-num sb-num-ending">${it.endingBalance}</td>
-        <td class="sb-col-detail sb-num">${it.minStock}</td>
-        <td class="sb-col-detail sb-num">${it.max}</td>
-        <td class="sb-col-detail sb-num">${it.leadTime}</td>
-        <td class="sb-col-detail sb-num">${it.rop}</td>
-        <td class="sb-col-detail sb-num">${it.avgUsage}</td>
-      </tr>
-    `;
-  }).join('');
-}
-
-// ---------------------------------------------------------------------------
-// Popup Riwayat Transaksi 1 SKU — muncul waktu 1 baris di tabel Mutasi Stock
-// diklik, isinya gabungan Penerimaan + Pemakaian + Koreksi Stock kode itu,
-// dibatasi ke rentang tanggal yang LAGI DIPAKAI di filter tabel (sbCurrentPeriod)
-// — lihat handleGetItemMutasiRiwayat di Code.gs.
-// ---------------------------------------------------------------------------
-async function openSbRiwayatModal(kode, plant, namaBarang) {
-  const titleEl = document.getElementById('sbRiwayatModalTitle');
-  const hintEl = document.getElementById('sbRiwayatModalHint');
-  const bodyEl = document.getElementById('sbRiwayatModalBody');
-
-  titleEl.textContent = namaBarang ? `${kode} — ${namaBarang}` : kode;
-  hintEl.textContent = sbCurrentPeriod
-    ? `Riwayat transaksi periode ${sbCurrentPeriod.tanggalMulai} s/d ${sbCurrentPeriod.tanggalAkhir}${plant ? ' · Plant ' + plant : ''}`
-    : '';
-  bodyEl.innerHTML = '<div class="empty-state">Memuat...</div>';
-  renderSbSumberBreakdown([]); // reset dulu tiap buka popup, biar nggak nyisa data SKU sebelumnya sebelum respons baru datang
-  document.getElementById('sbRiwayatModalBackdrop').hidden = false;
-  document.getElementById('sbRiwayatModal').hidden = false;
-
-  if (!sbCurrentPeriod) {
-    bodyEl.innerHTML = '<div class="empty-state">Periode belum dipilih.</div>';
-    return;
-  }
-
-  try {
-    const res = await Api.getItemMutasiRiwayat({
-      kode,
-      plant,
-      tanggalMulai: sbCurrentPeriod.tanggalMulai,
-      tanggalAkhir: sbCurrentPeriod.tanggalAkhir
-    });
-    renderSbRiwayatModalBody(res.riwayat || []);
-    renderSbSumberBreakdown(res.sumberBreakdown || []);
-  } catch (err) {
-    bodyEl.innerHTML = `<div class="empty-state">Gagal memuat: ${escapeHtml(err.message)}</div>`;
-  }
-}
-
-// ---------------------------------------------------------------------------
-// "Sisa saat ini per Sumber" — ringkasan SAAT INI (bukan per-periode kayak
-// daftar riwayat di bawahnya) dipecah per Sumber (OBS/Fast Moving/User+nama),
-// muncul di ATAS daftar riwayat transaksi popup ini (permintaan user: sumber
-// dibedain juga di Stock Balance, tapi cuma di tampilan detail-nya — nggak
-// nambahin kolom baru di tabel utama). Reuse sumberOptionLabel dari
-// js/pemakaian.js (fungsi label yang sama dipakai form Barang Keluar) biar
-// labelnya konsisten di semua tempat.
-// ---------------------------------------------------------------------------
-function renderSbSumberBreakdown(sumberBreakdown) {
-  const wrap = document.getElementById('sbRiwayatModalSumberBreakdown');
-  if (!sumberBreakdown || !sumberBreakdown.length) {
-    wrap.innerHTML = '';
-    wrap.hidden = true;
-    return;
-  }
-  const chips = sumberBreakdown.map((s) =>
-    `<span class="sb-sumber-chip">${escapeHtml(sumberOptionLabel(s))} <span class="sb-sumber-chip-qty">${s.sisa}</span></span>`
-  ).join('');
-  wrap.innerHTML = `<span class="sb-sumber-breakdown-label">Sisa saat ini per Sumber:</span>${chips}`;
-  wrap.hidden = false;
-}
-
-function renderSbRiwayatModalBody(riwayat) {
-  const body = document.getElementById('sbRiwayatModalBody');
-  if (!riwayat.length) {
-    body.innerHTML = '<div class="empty-state">Tidak ada transaksi di periode ini.</div>';
-    return;
-  }
-  body.innerHTML = riwayat.map((r) => {
-    const qtyText = r.qty > 0 ? `+${r.qty}` : String(r.qty);
-    const qtyClass = r.qty > 0 ? 'sb-num-in' : (r.qty < 0 ? 'sb-num-out' : '');
-    const meta = itemMetaLine(r);
-    return `
-      <div class="ra-item">
-        <div class="ra-item-main">
-          <div class="ra-item-title">${escapeHtml(r.tanggal)} <span class="${qtyClass}">${escapeHtml(qtyText)}</span></div>
-          <div class="ra-item-sub">${escapeHtml(r.keterangan || '-')}${r.user ? ' · ' + escapeHtml(r.user) : ''}</div>
-          ${meta ? `<div class="item-meta-line">${meta}</div>` : ''}
-        </div>
-        <span class="ra-badge ${SB_RIWAYAT_JENIS_CLASS[r.jenis] || ''}">${escapeHtml(r.jenis)}</span>
+    <form id="loginForm" class="login-form">
+      <div class="form-row">
+        <label>Username</label>
+        <input type="text" id="loginUsername" autocomplete="username" placeholder="Username kamu" required>
       </div>
-    `;
-  }).join('');
-}
+      <div class="form-row">
+        <label>Password</label>
+        <div class="password-field">
+          <input type="password" id="loginPin" autocomplete="current-password" placeholder="Password" required>
+          <button type="button" class="toggle-password" data-target="loginPin" aria-label="Tampilkan Password">
+            <svg viewBox="0 0 24 24" class="icon-eye"><path d="M1.5 12S5 5 12 5s10.5 7 10.5 7-3.5 7-10.5 7S1.5 12 1.5 12Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+            <svg viewBox="0 0 24 24" class="icon-eye-off" hidden><path d="M3 3l18 18M10.6 10.6a3 3 0 0 0 4.24 4.24M9.5 5.2A10.4 10.4 0 0 1 12 5c7 0 10.5 7 10.5 7a13.4 13.4 0 0 1-3.15 3.9M6.3 6.3C3.4 8.1 1.5 12 1.5 12s3.5 7 10.5 7a10.4 10.4 0 0 0 3.1-.47" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+      </div>
+      <div id="loginError" class="form-error" hidden></div>
+      <button type="submit" id="btnLoginSubmit" class="btn btn-primary btn-block">Masuk</button>
+      <button type="button" id="btnShowRegister" class="btn btn-link btn-block">Belum punya akun? Daftar di sini</button>
+    </form>
 
-function closeSbRiwayatModal() {
-  document.getElementById('sbRiwayatModalBackdrop').hidden = true;
-  document.getElementById('sbRiwayatModal').hidden = true;
-}
+    <form id="registerForm" class="login-form" hidden>
+      <div class="form-row">
+        <label>Nama Lengkap</label>
+        <input type="text" id="registerNama" autocomplete="name" placeholder="Nama lengkap kamu" required>
+      </div>
+      <div class="form-row">
+        <label>Username</label>
+        <input type="text" id="registerUsername" autocomplete="username" placeholder="Username yang mau dipakai" required>
+      </div>
+      <div class="form-row">
+        <label>Email</label>
+        <input type="email" id="registerEmail" autocomplete="email" placeholder="Email aktif kamu" required>
+      </div>
+      <div class="form-row">
+        <label>NIK</label>
+        <input type="text" id="registerNIK" inputmode="numeric" maxlength="20" placeholder="Nomor Induk Karyawan" required>
+      </div>
+      <div class="form-row">
+        <label>Password</label>
+        <div class="password-field">
+          <input type="password" id="registerPin" autocomplete="new-password" placeholder="Password (min 4 karakter)" required>
+          <button type="button" class="toggle-password" data-target="registerPin" aria-label="Tampilkan Password">
+            <svg viewBox="0 0 24 24" class="icon-eye"><path d="M1.5 12S5 5 12 5s10.5 7 10.5 7-3.5 7-10.5 7S1.5 12 1.5 12Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+            <svg viewBox="0 0 24 24" class="icon-eye-off" hidden><path d="M3 3l18 18M10.6 10.6a3 3 0 0 0 4.24 4.24M9.5 5.2A10.4 10.4 0 0 1 12 5c7 0 10.5 7 10.5 7a13.4 13.4 0 0 1-3.15 3.9M6.3 6.3C3.4 8.1 1.5 12 1.5 12s3.5 7 10.5 7a10.4 10.4 0 0 0 3.1-.47" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="form-row">
+        <label>Ulangi Password</label>
+        <div class="password-field">
+          <input type="password" id="registerPinConfirm" autocomplete="new-password" placeholder="Ketik ulang Password" required>
+          <button type="button" class="toggle-password" data-target="registerPinConfirm" aria-label="Tampilkan Password">
+            <svg viewBox="0 0 24 24" class="icon-eye"><path d="M1.5 12S5 5 12 5s10.5 7 10.5 7-3.5 7-10.5 7S1.5 12 1.5 12Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+            <svg viewBox="0 0 24 24" class="icon-eye-off" hidden><path d="M3 3l18 18M10.6 10.6a3 3 0 0 0 4.24 4.24M9.5 5.2A10.4 10.4 0 0 1 12 5c7 0 10.5 7 10.5 7a13.4 13.4 0 0 1-3.15 3.9M6.3 6.3C3.4 8.1 1.5 12 1.5 12s3.5 7 10.5 7a10.4 10.4 0 0 0 3.1-.47" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+      </div>
+      <p class="md-preview-hint">Akun baru butuh persetujuan Admin dulu sebelum bisa dipakai login.</p>
+      <div id="registerError" class="form-error" hidden></div>
+      <div id="registerSuccess" class="form-success" hidden></div>
+      <button type="submit" id="btnRegisterSubmit" class="btn btn-primary btn-block">Daftar</button>
+      <button type="button" id="btnShowLogin" class="btn btn-link btn-block">Sudah punya akun? Masuk</button>
+    </form>
+  </div>
+</div>
+
+<div id="appShell" class="app-shell" hidden>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <button type="button" id="btnMenuToggle" class="menu-toggle" aria-label="Buka menu" aria-expanded="false" aria-controls="sidebar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
+    </button>
+    <div class="topbar-title" id="pageTitle">Dashboard</div>
+  </div>
+</header>
+
+<aside id="sidebar" class="sidebar">
+  <div class="sidebar-brand">
+    <img src="icons/icon-192.png" class="sidebar-logo" alt="Logo W-SMART">
+    <div>
+      <div class="sidebar-title">W-SMART</div>
+      <div class="sidebar-subtitle">Spare Part Inventory</div>
+    </div>
+  </div>
+  <nav class="sidebar-nav">
+    <a href="#/dashboard" class="nav-item" data-nav="dashboard">
+      <svg viewBox="0 0 24 24" class="nav-icon"><path d="M3 11.5 12 4l9 7.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.5 10v9a1 1 0 0 0 1 1H10v-6h4v6h3.5a1 1 0 0 0 1-1v-9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span>Dashboard</span>
+    </a>
+
+    <div class="nav-group" data-group="transaksi">
+      <button type="button" class="nav-group-toggle" data-group-toggle="transaksi" aria-expanded="false">
+        <svg viewBox="0 0 24 24" class="nav-icon"><path d="M7 7h11M18 7l-3.5-3.5M18 7l-3.5 3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 17H6M6 17l3.5-3.5M6 17l3.5 3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>Transaksi</span>
+        <svg viewBox="0 0 24 24" class="nav-chevron"><path d="m8 10 4 4 4-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div class="nav-flyout">
+        <a href="#/penerimaan" class="nav-item nav-subitem" data-nav="penerimaan">
+          <svg viewBox="0 0 24 24" class="nav-icon"><path d="M3 7.5 12 3l9 4.5v9L12 21l-9-4.5v-9Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M3 7.5 12 12l9-4.5M12 12v9" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+          <span>Barang Masuk</span>
+        </a>
+        <a href="#/putaway" class="nav-item nav-subitem" data-nav="putaway">
+          <svg viewBox="0 0 24 24" class="nav-icon"><rect x="4" y="4" width="7" height="7" rx="1" fill="none" stroke="currentColor" stroke-width="2"/><rect x="13" y="4" width="7" height="7" rx="1" fill="none" stroke="currentColor" stroke-width="2"/><rect x="4" y="13" width="7" height="7" rx="1" fill="none" stroke="currentColor" stroke-width="2"/><path d="M15.5 17.5 17 19l3-3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span>Put Away</span>
+        </a>
+        <a href="#/pemakaian" class="nav-item nav-subitem" data-nav="pemakaian">
+          <svg viewBox="0 0 24 24" class="nav-icon"><path d="M12 3v12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="m7 10 5 5 5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span>Barang Keluar</span>
+        </a>
+      </div>
+    </div>
+
+    <div class="nav-group" data-group="stock-control">
+      <button type="button" class="nav-group-toggle" data-group-toggle="stock-control" aria-expanded="false">
+        <svg viewBox="0 0 24 24" class="nav-icon"><path d="M3 9.5 12 4l9 5.5v9a1 1 0 0 1-1 1h-4v-6H10v6H4a1 1 0 0 1-1-1v-9Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 12h6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <span>Stock Control</span>
+        <svg viewBox="0 0 24 24" class="nav-chevron"><path d="m8 10 4 4 4-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div class="nav-flyout">
+        <a href="#/stock-balance" class="nav-item nav-subitem" data-nav="stock-balance">
+          <svg viewBox="0 0 24 24" class="nav-icon"><path d="M3 9.5 12 4l9 5.5v9a1 1 0 0 1-1 1h-4v-6H10v6H4a1 1 0 0 1-1-1v-9Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 12h6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          <span>Stock Balance</span>
+        </a>
+        <a href="#/opname" class="nav-item nav-subitem" data-nav="opname">
+          <svg viewBox="0 0 24 24" class="nav-icon"><rect x="3.5" y="3.5" width="6" height="6" rx="1" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 6.5h2M6.5 8v2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M14.5 5.5h6M14.5 9.5h6M14.5 13.5h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="m14.5 18.5 2 2 4-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span>Stock Opname</span>
+        </a>
+        <a href="#/riwayat" class="nav-item nav-subitem" data-nav="riwayat">
+          <svg viewBox="0 0 24 24" class="nav-icon"><path d="M3 12a9 9 0 1 0 2.64-6.36" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 4v5h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 7v5l4 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span>Riwayat Transaksi</span>
+        </a>
+        <a href="#/master-data" class="nav-item nav-subitem" data-nav="master-data">
+          <svg viewBox="0 0 24 24" class="nav-icon"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4h13A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18.5v-13Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M4 9.5h16M9 9.5V20" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+          <span>Master Data</span>
+        </a>
+        <a href="#/qr-labels" class="nav-item nav-subitem" data-nav="qr-labels">
+          <svg viewBox="0 0 24 24" class="nav-icon"><rect x="3.5" y="3.5" width="7" height="7" rx="1" fill="none" stroke="currentColor" stroke-width="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="1" fill="none" stroke="currentColor" stroke-width="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="1" fill="none" stroke="currentColor" stroke-width="2"/><path d="M14.5 14.5h3M17.5 14.5v3M20.5 14.5v6M14.5 20.5h3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span>Cetak Label QR</span>
+        </a>
+      </div>
+    </div>
+
+    <a href="#/alert-order" class="nav-item" data-nav="alert-order">
+      <svg viewBox="0 0 24 24" class="nav-icon"><path d="M12 3a6 6 0 0 0-6 6c0 4.5-2 6-2 6h16s-2-1.5-2-6a6 6 0 0 0-6-6Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 20a2 2 0 0 0 4 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      <span>Alert Order</span>
+    </a>
+    <a href="#/users" class="nav-item" data-nav="users">
+      <svg viewBox="0 0 24 24" class="nav-icon"><path d="M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3.5 20c0-3.6 2.5-6 5.5-6s5.5 2.4 5.5 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M16 5.5c1.5.4 2.5 1.7 2.5 3.2S17.5 11.5 16 12M19 20c0-2.8-1.6-4.9-3.8-5.7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span>Kelola User</span>
+    </a>
+    <a href="#/pengaturan" class="nav-item" data-nav="pengaturan">
+      <svg viewBox="0 0 24 24" class="nav-icon"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1.08-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9.6a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span>Pengaturan</span>
+    </a>
+  </nav>
+  <div id="sidebarUserBox" class="sidebar-user-box">
+    <div class="sidebar-user-info">
+      <div class="sidebar-user-name" id="sidebarUserName">—</div>
+      <div class="sidebar-user-role" id="sidebarUserRole">—</div>
+    </div>
+    <button type="button" id="btnLogout" class="sidebar-logout-btn" title="Keluar" aria-label="Keluar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+    </button>
+  </div>
+  <button type="button" id="sidebarFooter" class="sidebar-footer" title="Klik untuk cek update">W-SMART <span id="sidebarVersion"></span></button>
+</aside>
+<div id="sidebarBackdrop" class="sidebar-backdrop" hidden></div>
+
+<main id="app" class="app-content">
+
+  <!-- ============================= DASHBOARD ============================= -->
+  <section id="page-dashboard" class="page">
+
+    <div class="dash-toolbar">
+      <button type="button" id="btnRefreshDashboard" class="btn btn-small" title="Refresh" aria-label="Refresh">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 4v6h-6"/></svg>
+        Refresh
+      </button>
+    </div>
+
+    <div class="stat-card stat-card-hero stat-card-clickable" role="button" tabindex="0" data-dash-filter="semua">
+      <div class="stat-icon stat-icon-stock">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8 12 3 3 8v8l9 5 9-5Z"/><path d="M3 8l9 5 9-5"/><path d="M12 13v8"/></svg>
+      </div>
+      <div class="stat-body">
+        <div class="stat-label">Stock Saat Ini</div>
+        <div class="stat-value" id="statStockSaatIni">0</div>
+        <div class="stat-unit">pcs · semua barang di gudang</div>
+      </div>
+    </div>
+
+    <div class="stat-grid" id="stockStatGrid">
+      <div class="stat-card stat-card-clickable" role="button" tabindex="0" data-dash-filter="total">
+        <div class="stat-icon stat-icon-a">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4h13A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18.5v-13Z"/><path d="M4 9.5h16M9 9.5V20"/></svg>
+        </div>
+        <div class="stat-body">
+          <div class="stat-label">Total SKU Terdaftar</div>
+          <div class="stat-value" id="statTotalSku">0</div>
+          <div class="stat-unit">item aktif</div>
+        </div>
+      </div>
+      <div class="stat-card stat-card-clickable" role="button" tabindex="0" data-dash-filter="normal">
+        <div class="stat-icon stat-icon-normal">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8.5 12.5 2.5 2.5 4.5-5"/></svg>
+        </div>
+        <div class="stat-body">
+          <div class="stat-label">Normal</div>
+          <div class="stat-value" id="statStokNormal">0</div>
+          <div class="stat-unit" id="statStokNormalPct">0%</div>
+        </div>
+      </div>
+      <div class="stat-card stat-card-clickable" role="button" tabindex="0" data-dash-filter="near-rop">
+        <div class="stat-icon stat-icon-near">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M10.3 3.9 2.5 17.5a1.5 1.5 0 0 0 1.3 2.2h16.4a1.5 1.5 0 0 0 1.3-2.2L13.7 3.9a1.5 1.5 0 0 0-2.6 0Z"/><path d="M12 16.2h.01"/></svg>
+        </div>
+        <div class="stat-body">
+          <div class="stat-label">Near ROP</div>
+          <div class="stat-value" id="statStokNearRop">0</div>
+          <div class="stat-unit" id="statStokNearRopPct">0%</div>
+        </div>
+      </div>
+      <div class="stat-card stat-card-clickable" role="button" tabindex="0" data-dash-filter="need-reorder">
+        <div class="stat-icon stat-icon-reorder">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="20" r="1.3"/><circle cx="18" cy="20" r="1.3"/><path d="M2.5 3.5h2l2.6 12.2a1.5 1.5 0 0 0 1.5 1.2h8.6a1.5 1.5 0 0 0 1.5-1.2l1.3-6.7H6"/></svg>
+        </div>
+        <div class="stat-body">
+          <div class="stat-label">Need Reorder</div>
+          <div class="stat-value" id="statStokNeedReorder">0</div>
+          <div class="stat-unit" id="statStokNeedReorderPct">0%</div>
+        </div>
+      </div>
+      <div class="stat-card stat-card-clickable" role="button" tabindex="0" data-dash-filter="stock-out">
+        <div class="stat-icon stat-icon-out">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m9 9 6 6M15 9l-6 6"/></svg>
+        </div>
+        <div class="stat-body">
+          <div class="stat-label">Out of Stock</div>
+          <div class="stat-value" id="statStokOut">0</div>
+          <div class="stat-unit" id="statStokOutPct">0%</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card card-clickable" id="reorderAlertCard" role="button" tabindex="0" aria-haspopup="dialog">
+      <div class="card-header">
+        <svg viewBox="0 0 24 24" class="card-header-icon" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 2.5 17.5a1.5 1.5 0 0 0 1.3 2.2h16.4a1.5 1.5 0 0 0 1.3-2.2L13.7 3.9a1.5 1.5 0 0 0-2.6 0Z"/><path d="M12 9v4M12 16.2h.01"/></svg>
+        Reorder Alert (Perlu Tindakan)
+        <span class="count-badge" id="reorderAlertCount">0 Item</span>
+      </div>
+      <div class="ra-card-hint" id="reorderAlertHint">Semua stock dalam kondisi normal.</div>
+    </div>
+
+    <div class="card card-clickable" id="belumTerdaftarCard" role="button" tabindex="0" data-dash-filter="belum-terdaftar" aria-haspopup="dialog">
+      <div class="card-header">
+        <svg viewBox="0 0 24 24" class="card-header-icon" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M8 3v3M16 3v3M8 13h5M8 17h8"/></svg>
+        Belum Terdaftar di Master Data
+        <span class="count-badge" id="belumTerdaftarCount">0 Item</span>
+      </div>
+      <div class="ra-card-hint" id="belumTerdaftarHint">Semua barang sudah terdaftar di Master Data.</div>
+    </div>
+
+    <div class="stat-grid">
+      <div class="stat-card stat-card-clickable" role="button" tabindex="0" data-dash-filter="terima-hari-ini">
+        <div class="stat-icon stat-icon-a">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M3 9h18M8 3v3M16 3v3"/></svg>
+        </div>
+        <div class="stat-body">
+          <div class="stat-label">Diterima Hari Ini</div>
+          <div class="stat-value" id="statHariIni">0</div>
+          <div class="stat-unit">pcs</div>
+        </div>
+      </div>
+      <div class="stat-card stat-card-clickable" role="button" tabindex="0" data-dash-filter="keluar-hari-ini">
+        <div class="stat-icon stat-icon-e">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M3 9h18"/><path d="M12 13v6M9 16l3 3 3-3"/></svg>
+        </div>
+        <div class="stat-body">
+          <div class="stat-label">Dikeluarkan Hari Ini</div>
+          <div class="stat-value" id="statKeluarHariIni">0</div>
+          <div class="stat-unit">pcs</div>
+        </div>
+      </div>
+      <div class="stat-card stat-card-clickable" role="button" tabindex="0" data-dash-filter="terima-bulan-ini">
+        <div class="stat-icon stat-icon-b">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8 12 3 3 8v8l9 5 9-5Z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg>
+        </div>
+        <div class="stat-body">
+          <div class="stat-label">Diterima Bulan Ini</div>
+          <div class="stat-value" id="statBulanIni">0</div>
+          <div class="stat-unit">pcs</div>
+        </div>
+      </div>
+      <div class="stat-card stat-card-clickable" role="button" tabindex="0" data-dash-filter="keluar-bulan-ini">
+        <div class="stat-icon stat-icon-f">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8 12 3 3 8v8l9 5 9-5Z"/><path d="M3 8l9 5 9-5"/><path d="M12 13v6M9 16l3 3 3-3"/></svg>
+        </div>
+        <div class="stat-body">
+          <div class="stat-label">Dikeluarkan Bulan Ini</div>
+          <div class="stat-value" id="statKeluarBulanIni">0</div>
+          <div class="stat-unit">pcs</div>
+        </div>
+      </div>
+      <div class="stat-card stat-card-clickable" role="button" tabindex="0" data-dash-filter="transaksi-bulan-ini">
+        <div class="stat-icon stat-icon-c">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+        </div>
+        <div class="stat-body">
+          <div class="stat-label">Transaksi Bulan Ini</div>
+          <div class="stat-value" id="statTransaksi">0</div>
+          <div class="stat-unit">transaksi</div>
+        </div>
+      </div>
+      <div class="stat-card stat-card-clickable" role="button" tabindex="0" data-dash-filter="sku-bulan-ini">
+        <div class="stat-icon stat-icon-d">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 12.6 12.7 4.7a2 2 0 0 0-1.4-.6H5a1 1 0 0 0-1 1v6.3a2 2 0 0 0 .6 1.4l7.9 7.9a2 2 0 0 0 2.8 0l5.3-5.3a2 2 0 0 0 0-2.8Z"/><circle cx="8" cy="8.5" r="1.3"/></svg>
+        </div>
+        <div class="stat-body">
+          <div class="stat-label">SKU Bulan Ini</div>
+          <div class="stat-value" id="statSku">0</div>
+          <div class="stat-unit">jenis barang</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <svg viewBox="0 0 24 24" class="card-header-icon" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/></svg>
+        Penerimaan vs Pemakaian 7 Hari Terakhir
+        <span class="chart-legend">
+          <span class="chart-legend-item"><span class="chart-legend-dot chart-legend-dot-masuk"></span>Masuk</span>
+          <span class="chart-legend-item"><span class="chart-legend-dot chart-legend-dot-keluar"></span>Keluar</span>
+        </span>
+      </div>
+      <canvas id="chartMingguan" height="160"></canvas>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <svg viewBox="0 0 24 24" class="card-header-icon" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect x="7" y="12" width="3" height="6"/><rect x="12" y="8" width="3" height="10"/><rect x="17" y="5" width="3" height="13"/></svg>
+        Top Pemakaian Bulan Ini
+      </div>
+      <div id="topPemakaianList" class="tp-list">
+        <div class="empty-state">Belum ada data pemakaian bulan ini.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <svg viewBox="0 0 24 24" class="card-header-icon" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 9 9h-9V3Z"/></svg>
+        Kategori Item
+      </div>
+      <div class="kt-wrap">
+        <canvas id="chartKategori" width="140" height="140"></canvas>
+        <div id="kategoriLegend" class="kt-legend"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <svg viewBox="0 0 24 24" class="card-header-icon" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v4l3 2"/><circle cx="12" cy="12" r="9"/></svg>
+        Riwayat Penerimaan Terbaru
+      </div>
+      <div id="riwayatList" class="riwayat-list">
+        <div class="empty-state">Belum ada data penerimaan.</div>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ============================= PENERIMAAN ============================= -->
+  <section id="page-penerimaan" class="page" hidden>
+
+    <div class="mode-switch">
+      <button class="mode-btn active" id="btnModeManual" type="button">Input Manual</button>
+      <button class="mode-btn" id="btnModeScan" type="button">Scan SPB</button>
+    </div>
+
+    <!-- Panel Scan SPB -->
+    <div id="scanPanel" class="card" hidden>
+      <div class="card-header">Scan Surat Pengiriman Barang (SPB)</div>
+      <p class="hint-text">Foto SPB akan dibaca otomatis untuk mengisi form di bawah. Foto <strong>tidak disimpan</strong> — hanya datanya yang diambil, lalu filenya langsung dihapus dari server.</p>
+
+      <label class="file-drop" for="scanFileInput">
+        <div id="scanPreviewWrap" class="scan-preview-wrap">
+          <span id="scanDropText">Ketuk untuk ambil foto / pilih file SPB</span>
+          <img id="scanPreviewImg" hidden alt="Preview SPB">
+        </div>
+      </label>
+      <input type="file" id="scanFileInput" accept="image/*" capture="environment" hidden>
+
+      <button id="btnScanProcess" class="btn btn-primary btn-block" type="button" disabled>Baca Data SPB</button>
+      <div id="scanStatus" class="scan-status" hidden></div>
+      <button type="button" id="btnFallbackManual" class="btn-link">Susah dibaca? Isi manual saja</button>
+
+      <details id="rawTextWrap" class="raw-text-wrap" hidden>
+        <summary>Lihat teks mentah hasil OCR</summary>
+        <pre id="rawTextContent" class="raw-text-content"></pre>
+      </details>
+    </div>
+
+    <!-- Form Penerimaan (dipakai untuk manual & hasil scan — field yang bisa terisi
+         otomatis dari scan tetap bisa dikoreksi di sini) -->
+    <form id="formPenerimaan" class="card">
+      <div class="card-header">Detail Penerimaan</div>
+
+      <div class="form-row">
+        <label>Tanggal Kedatangan (otomatis, tidak bisa diubah)</label>
+        <input type="date" id="fKedatanganDisplay" disabled>
+      </div>
+      <div class="form-row">
+        <label>Tanggal Dokumen / PO</label>
+        <input type="date" id="fTanggal">
+      </div>
+      <div class="form-row">
+        <label>No. PO</label>
+        <input type="text" id="fNoPO" placeholder="Nomor PO dari SPB">
+      </div>
+      <div class="form-row">
+        <label>Vendor</label>
+        <input type="text" id="fVendor" list="listSupplier" placeholder="Kode - Nama vendor">
+        <datalist id="listSupplier"></datalist>
+      </div>
+      <div class="form-row">
+        <label>Penerima</label>
+        <input type="text" id="fUser" placeholder="Otomatis terisi dari akun yang login" readonly>
+      </div>
+      <div class="form-row">
+        <label>Pemesan *</label>
+        <select id="fPemesanTipe" required>
+          <option value="">-- Pilih --</option>
+          <option value="OBS">OBS</option>
+          <option value="FAST MOVING">FAST MOVING</option>
+          <option value="USER">USER</option>
+        </select>
+      </div>
+      <div class="form-row" id="fPemesanNamaWrap" hidden>
+        <label>Nama Pemesan *</label>
+        <input type="text" id="fPemesanNama" list="listPemesanNama" placeholder="Nama yang order barang ini (bukan penerima)" autocomplete="off">
+        <datalist id="listPemesanNama"></datalist>
+      </div>
+      <div class="form-row" id="fPemesanNikWrap" hidden>
+        <label>NIK Pemesan</label>
+        <input type="text" id="fPemesanNik" list="listPemesanNik" inputmode="numeric" placeholder="Bisa cari lewat Nomor Induk Karyawan (opsional)" autocomplete="off">
+        <datalist id="listPemesanNik"></datalist>
+      </div>
+      <div class="form-row form-row-full" id="fPemesanEmailWrap" hidden>
+        <label id="fPemesanEmailLabel">Email Pemesan *</label>
+        <input type="email" id="fPemesanEmail" placeholder="Email aktif pemesan (buat kirim notif otomatis barang datang)" autocomplete="off">
+        <div id="fPemesanStatusHint" class="hint-text" hidden></div>
+      </div>
+      <div class="form-row-pair">
+        <div class="form-row">
+          <label>Plant</label>
+          <input type="text" id="fPlant" placeholder="Contoh: 1111">
+        </div>
+        <div class="form-row">
+          <label>S. Loc *</label>
+          <input type="text" id="fSLoc" class="input-uppercase" placeholder="Contoh: GDSP" required>
+        </div>
+      </div>
+
+      <div class="items-header">
+        <span>Daftar Barang</span>
+        <button type="button" id="btnAddItem" class="btn btn-small">+ Tambah Item</button>
+      </div>
+      <div id="itemsContainer"></div>
+
+      <div class="form-row form-row-full">
+        <label>Keterangan</label>
+        <textarea id="fKeterangan" rows="2" placeholder="Catatan tambahan (opsional)"></textarea>
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-block">Simpan Penerimaan</button>
+    </form>
+
+  </section>
+
+  <!-- ============================= PUT AWAY ============================= -->
+  <section id="page-putaway" class="page" hidden>
+    <form id="formPutaway" class="card">
+      <div class="card-header">Put Away — Masukkan ke Bin</div>
+
+      <div class="form-row">
+        <label>Lokasi/Bin *</label>
+        <div class="scan-lokasi-row">
+          <button type="button" id="btnScanPwLokasi" class="btn btn-small btn-scan">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7V5a1 1 0 0 1 1-1h2M17 4h2a1 1 0 0 1 1 1v2M20 17v2a1 1 0 0 1-1 1h-2M7 20H5a1 1 0 0 1-1-1v-2"/><rect x="8" y="8" width="8" height="8" rx="1"/></svg>
+            Scan Lokasi
+          </button>
+        </div>
+        <input type="text" id="pwLokasi" placeholder="Atau ketik manual, contoh: SP-R01-03" required>
+      </div>
+      <div class="form-row">
+        <label>S. Loc *</label>
+        <input type="text" id="pwSLoc" class="input-uppercase" placeholder="Contoh: GDJT" required>
+      </div>
+
+      <div class="form-row">
+        <label>Kode Barang *</label>
+        <input type="text" id="pwKode" list="listBelumMapping" placeholder="Ketik kode atau pilih dari daftar di bawah" required autocomplete="off">
+        <div id="pwNamaHint" class="hint-text" hidden></div>
+        <datalist id="listBelumMapping"></datalist>
+      </div>
+      <div class="form-row-pair">
+        <div class="form-row">
+          <label>Qty *</label>
+          <input type="number" id="pwQty" min="1" step="1" required>
+        </div>
+        <div class="form-row">
+          <label>Satuan</label>
+          <input type="text" id="pwSatuan" placeholder="Otomatis" readonly>
+        </div>
+      </div>
+      <div class="form-row">
+        <label>Nama User *</label>
+        <input type="text" id="pwUser" placeholder="Otomatis terisi dari akun yang login" readonly required>
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-block">Simpan Put Away</button>
+    </form>
+
+    <div class="card">
+      <div class="card-header">
+        Belum Ter-mapping (Perlu Put Away)
+        <span class="count-badge" id="pwBelumMappingCount">0 Item</span>
+      </div>
+      <p class="md-preview-hint">Sudah diterima (Penerimaan) tapi belum di-scan masuk ke bin manapun. Klik item buat langsung pilih.</p>
+      <div id="pwBelumMappingList" class="pw-list">
+        <div class="empty-state">Memuat...</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================= PEMAKAIAN (Barang Keluar) ============================= -->
+  <section id="page-pemakaian" class="page" hidden>
+    <form id="formPemakaian" class="card">
+      <div class="card-header">Catat Barang Keluar</div>
+
+      <div class="form-row">
+        <label>Tanggal (otomatis, tidak bisa diubah)</label>
+        <input type="date" id="pmTanggalDisplay" disabled>
+      </div>
+      <div class="form-row">
+        <label>Ambil dari Lokasi/Bin (opsional, scan diprioritaskan)</label>
+        <div class="scan-lokasi-row">
+          <button type="button" id="btnScanPmLokasi" class="btn btn-small btn-scan">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7V5a1 1 0 0 1 1-1h2M17 4h2a1 1 0 0 1 1 1v2M20 17v2a1 1 0 0 1-1 1h-2M7 20H5a1 1 0 0 1-1-1v-2"/><rect x="8" y="8" width="8" height="8" rx="1"/></svg>
+            Scan Lokasi
+          </button>
+          <span id="pmLokasiBadge" class="lokasi-badge" hidden></span>
+          <button type="button" id="btnClearPmLokasi" class="btn-clear-lokasi" hidden aria-label="Hapus lokasi">×</button>
+        </div>
+      </div>
+      <div class="form-row">
+        <label>Kode Barang *</label>
+        <input type="text" id="pmKode" list="listMasterBarang" placeholder="Ketik kode atau pilih dari daftar" required autocomplete="off">
+        <div id="pmNamaHint" class="hint-text" hidden></div>
+      </div>
+      <div class="form-row-pair">
+        <div class="form-row">
+          <label>Qty *</label>
+          <input type="number" id="pmQty" min="1" step="1" required>
+        </div>
+        <div class="form-row">
+          <label>Satuan</label>
+          <input type="text" id="pmSatuan" placeholder="Otomatis dari Master Data">
+        </div>
+      </div>
+      <div class="form-row">
+        <label>Nama Teknisi / User *</label>
+        <input type="text" id="pmTeknisi" placeholder="Otomatis terisi dari akun yang login" readonly required>
+      </div>
+      <div class="form-row-pair">
+        <div class="form-row">
+          <label>Plant *</label>
+          <select id="pmPlant" required>
+            <option value="" disabled selected>Pilih Plant</option>
+            <option value="1111">1111</option>
+            <option value="1112">1112</option>
+            <option value="1113">1113</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label>S. Loc *</label>
+          <input type="text" id="pmSLoc" class="input-uppercase" placeholder="Contoh: GDSP" required>
+        </div>
+      </div>
+      <div id="pmStockHint" class="hint-text" hidden></div>
+      <div class="form-row" id="pmSumberWrap" hidden>
+        <label>Sumber Barang *</label>
+        <select id="pmSumber" required></select>
+      </div>
+      <div id="pmSumberHint" class="hint-text" hidden></div>
+      <div class="form-row">
+        <label>Keterangan</label>
+        <textarea id="pmKeterangan" rows="2" placeholder="Contoh: Maintenance Line 1 (opsional)"></textarea>
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-block">Simpan Pemakaian</button>
+    </form>
+  </section>
+
+  <!-- ============================= STOCK BALANCE ============================= -->
+  <section id="page-stock-balance" class="page" hidden>
+
+    <div class="card sb-filter-card">
+      <div class="card-header">Filter Mutasi Stock</div>
+      <div class="sb-filter-grid">
+        <div class="form-row">
+          <label>Periode Dari *</label>
+          <input type="date" id="sbTglMulai" required>
+        </div>
+        <div class="form-row">
+          <label>Periode Sampai *</label>
+          <input type="date" id="sbTglAkhir" required>
+        </div>
+        <div class="form-row">
+          <label>Plant</label>
+          <select id="sbPlant">
+            <option value="">Semua Plant</option>
+            <option value="1111">1111</option>
+            <option value="1112">1112</option>
+            <option value="1113">1113</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label>Storage Location</label>
+          <input type="text" id="sbStorage" placeholder="Contoh: GDSP (opsional)">
+        </div>
+        <div class="form-row sb-filter-material">
+          <label>Material (Kode / Nama Barang)</label>
+          <input type="text" id="sbMaterial" placeholder="Kosongkan untuk tampilkan semua">
+        </div>
+      </div>
+      <div class="sb-filter-actions">
+        <label class="sb-detail-toggle">
+          <input type="checkbox" id="sbDetailToggle">
+          <span>Tampilkan Detail (Min/Max, Lead Time, ROP, Avg Usage)</span>
+        </label>
+        <button type="button" id="btnApplySbFilter" class="btn btn-primary">Tampilkan</button>
+      </div>
+    </div>
+
+    <div class="sb-summary">
+      <span id="sbCount">0 SKU</span>
+      <span class="sb-summary-right">
+        <span id="sbUpdatedAt"></span>
+        <button type="button" id="btnRefreshStockBalance" class="btn btn-small" title="Refresh" aria-label="Refresh">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 4v6h-6"/></svg>
+        </button>
+      </span>
+    </div>
+
+    <div class="sb-kategori-legend">
+      <span class="sb-kategori-legend-item"><span class="md-badge md-badge-a">A</span> Critical</span>
+      <span class="sb-kategori-legend-item"><span class="md-badge md-badge-b">B</span> Medium</span>
+      <span class="sb-kategori-legend-item"><span class="md-badge md-badge-c">C</span> Fast Moving</span>
+    </div>
+
+    <div class="card sb-table-card">
+      <div class="sb-table-wrap" id="sbTableWrap">
+        <table class="sb-table">
+          <thead>
+            <tr>
+              <th>Kode Barang</th>
+              <th>Nama Barang</th>
+              <th>Satuan</th>
+              <th>Kategori</th>
+              <th>Jenis</th>
+              <th class="sb-num">Beginning Balance</th>
+              <th class="sb-num">Receipt</th>
+              <th class="sb-num">Issued</th>
+              <th class="sb-num">Ending Balance</th>
+              <th class="sb-col-detail sb-num">Min</th>
+              <th class="sb-col-detail sb-num">Max</th>
+              <th class="sb-col-detail sb-num">Lead Time</th>
+              <th class="sb-col-detail sb-num">ROP</th>
+              <th class="sb-col-detail sb-num">Avg Usg</th>
+            </tr>
+          </thead>
+          <tbody id="sbTableBody">
+            <tr><td colspan="14" class="empty-state">Pilih periode, lalu klik "Tampilkan".</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ============================= MASTER DATA ============================= -->
+  <section id="page-master-data" class="page" hidden>
+
+    <div class="md-toolbar">
+      <input type="search" id="mdSearch" class="md-search" placeholder="Cari kode / nama barang...">
+      <button type="button" id="btnAddMasterItem" class="btn btn-primary">+ Tambah Item</button>
+    </div>
+
+    <div class="card md-hint">
+      <strong>Min &amp; Max Stock</strong> diisi langsung sesuai ketentuan perusahaan. &nbsp;·&nbsp;
+      Yang dihitung otomatis cuma <strong>ROP (titik order)</strong> = Min Stock + (Avg Usage × Lead Time).
+    </div>
+
+    <div id="mdList" class="md-list">
+      <div class="empty-state">Belum ada data master barang. Klik "+ Tambah Item" untuk mulai.</div>
+    </div>
+
+  </section>
+
+  <!-- ============================= QR LABELS ============================= -->
+  <section id="page-qr-labels" class="page" hidden>
+
+    <div class="mode-switch">
+      <button type="button" class="mode-btn active" id="btnQrModeBarang">QR Barang</button>
+      <button type="button" class="mode-btn" id="btnQrModeBin">QR Bin/Lokasi</button>
+    </div>
+
+    <div id="qrPanelBarang" class="card">
+      <div class="card-header">
+        <svg class="card-header-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3.5" y="3.5" width="7" height="7" rx="1"/><rect x="13.5" y="3.5" width="7" height="7" rx="1"/><rect x="3.5" y="13.5" width="7" height="7" rx="1"/></svg>
+        Pilih Barang untuk Label QR
+      </div>
+      <p class="hint-text">QR akan berisi Kode Barang — sama seperti yang dibaca fitur scan di Put Away &amp; Barang Keluar. Ketik buat cari barangnya, klik dari saran yang muncul, ulangi buat nambah beberapa barang sekaligus.</p>
+      <div class="qr-pick-search-wrap">
+        <input type="search" id="qrBarangSearch" class="md-search" placeholder="Ketik kode / nama barang..." autocomplete="off">
+        <div id="qrBarangSuggest" class="qr-pick-suggest" hidden></div>
+      </div>
+      <div id="qrBarangSelected" class="qr-pick-selected">
+        <div class="qr-pick-selected-empty">Belum ada barang dipilih — cari & klik dari saran di atas.</div>
+      </div>
+      <button type="button" id="btnGenerateQrBarang" class="btn btn-primary btn-block">Buat Label QR</button>
+    </div>
+
+    <div id="qrPanelBin" class="card" hidden>
+      <div class="card-header">
+        <svg class="card-header-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="7" height="7" rx="1"/><rect x="13" y="4" width="7" height="7" rx="1"/><rect x="4" y="13" width="7" height="7" rx="1"/></svg>
+        Kode Bin/Lokasi untuk Label QR
+      </div>
+      <p class="hint-text">Satu kode bin per baris (mis. SP-R01-01). QR ini yang dibaca lewat tombol "Scan" di Put Away &amp; Barang Keluar untuk isi Lokasi/Bin.</p>
+      <div class="form-row">
+        <label>Daftar Kode Bin</label>
+        <textarea id="qrBinCodes" rows="6" placeholder="SP-R01-01&#10;SP-R01-02&#10;SP-R02-01"></textarea>
+      </div>
+      <button type="button" id="btnGenerateQrBin" class="btn btn-primary btn-block">Buat Label QR</button>
+    </div>
+
+    <div id="qrLabelResultCard" class="card" hidden>
+      <div class="card-header qr-label-result-header">
+        <span>Label Siap Cetak (<span id="qrLabelCount">0</span>)</span>
+        <button type="button" id="btnPrintQrLabels" class="btn btn-small">Cetak / Simpan PDF</button>
+      </div>
+      <div id="qrLabelGrid" class="qr-label-grid"></div>
+    </div>
+
+  </section>
+
+  <!-- ============================= RIWAYAT TRANSAKSI ============================= -->
+  <section id="page-riwayat" class="page" hidden>
+
+    <div class="md-toolbar">
+      <input type="search" id="rwSearch" class="md-search" placeholder="Cari kode / nama / user...">
+      <select id="rwJenis" class="rw-select">
+        <option value="Semua">Semua Jenis</option>
+        <option value="Penerimaan">Barang Masuk</option>
+        <option value="Putaway">Put Away</option>
+        <option value="Pemakaian">Barang Keluar</option>
+        <option value="Koreksi">Koreksi Stock</option>
+        <option value="Opname">Stock Opname</option>
+        <option value="PR">Purchase Request</option>
+      </select>
+    </div>
+
+    <div class="rw-date-row">
+      <div class="form-row form-row-small">
+        <label>Dari Tanggal</label>
+        <input type="date" id="rwDari">
+      </div>
+      <div class="form-row form-row-small">
+        <label>Sampai Tanggal</label>
+        <input type="date" id="rwSampai">
+      </div>
+      <button type="button" id="btnRwFilter" class="btn btn-small">Terapkan</button>
+      <button type="button" id="btnRwReset" class="btn-link">Reset</button>
+    </div>
+
+    <div class="sb-summary">
+      <span id="rwCount">0 Transaksi</span>
+      <button type="button" id="btnRefreshRiwayat" class="btn btn-small" title="Refresh" aria-label="Refresh">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 4v6h-6"/></svg>
+      </button>
+    </div>
+
+    <div id="rwList" class="rw-list">
+      <div class="empty-state">Memuat riwayat...</div>
+    </div>
+
+  </section>
+
+  <!-- ============================= STOCK OPNAME ============================= -->
+  <section id="page-opname" class="page" hidden>
+
+    <div class="card">
+      <div class="card-header">Stock Opname — Cari / Scan Barang atau Bin</div>
+      <p class="md-preview-hint">Scan atau cari Kode Barang buat lihat data lengkapnya (qty tercatat sistem + riwayat kedatangan: kapan, dari vendor mana, No PO). Atau scan/cari Kode Lokasi/Bin buat lihat semua barang yang ada di situ. Scan di sini cuma buat lihat data referensi — hasil hitung fisik tetap diisi manual di bawah.</p>
+
+      <div class="mode-switch">
+        <button type="button" class="mode-btn active" id="btnOpModeBarang">Cari Barang</button>
+        <button type="button" class="mode-btn" id="btnOpModeBin">Cari Lokasi/Bin</button>
+      </div>
+
+      <div id="opPanelBarang">
+        <div class="form-row">
+          <label>Kode Barang</label>
+          <div class="scan-lokasi-row">
+            <button type="button" id="btnScanOpBarang" class="btn btn-small btn-scan">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7V5a1 1 0 0 1 1-1h2M17 4h2a1 1 0 0 1 1 1v2M20 17v2a1 1 0 0 1-1 1h-2M7 20H5a1 1 0 0 1-1-1v-2"/><rect x="8" y="8" width="8" height="8" rx="1"/></svg>
+              Scan QR Barang
+            </button>
+          </div>
+          <input type="text" id="opKodeBarang" list="listMasterBarang" placeholder="Ketik atau scan Kode Barang" autocomplete="off">
+        </div>
+        <button type="button" id="btnOpCariBarang" class="btn btn-small">Cari</button>
+      </div>
+
+      <div id="opPanelBin" hidden>
+        <div class="form-row">
+          <label>Kode Lokasi/Bin</label>
+          <div class="scan-lokasi-row">
+            <button type="button" id="btnScanOpBin" class="btn btn-small btn-scan">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7V5a1 1 0 0 1 1-1h2M17 4h2a1 1 0 0 1 1 1v2M20 17v2a1 1 0 0 1-1 1h-2M7 20H5a1 1 0 0 1-1-1v-2"/><rect x="8" y="8" width="8" height="8" rx="1"/></svg>
+              Scan QR Bin
+            </button>
+          </div>
+          <input type="text" id="opKodeBin" placeholder="Ketik atau scan Kode Lokasi/Bin" autocomplete="off">
+        </div>
+        <button type="button" id="btnOpCariBin" class="btn btn-small">Cari</button>
+      </div>
+    </div>
+
+    <div id="opBinResultCard" class="card" hidden>
+      <div class="card-header">Barang di Lokasi <span id="opBinResultLokasi"></span></div>
+      <div id="opBinResultList" class="op-bin-list"></div>
+    </div>
+
+    <div id="opDetailCard" class="card" hidden></div>
+
+    <div class="card">
+      <div class="card-header">
+        Sesi Opname Ini
+        <span class="count-badge" id="opSesiCount">0 Item</span>
+      </div>
+      <p class="md-preview-hint">Item yang sudah dicatat hasil hitung fisiknya di sesi ini (belum tersimpan sampai klik "Simpan Hasil Opname"). Ini cuma catatan selisih untuk direview — belum otomatis mengubah stock.</p>
+      <div id="opSesiList" class="op-list">
+        <div class="empty-state">Belum ada item yang dicatat di sesi ini.</div>
+      </div>
+      <div class="form-row">
+        <label>Nama User (yang opname)</label>
+        <input type="text" id="opUser" placeholder="Otomatis terisi dari akun yang login" readonly>
+      </div>
+      <button type="button" id="btnSimpanOpname" class="btn btn-primary btn-block" disabled>Simpan Hasil Opname</button>
+    </div>
+
+  </section>
+
+
+  <!-- ============================= ALERT ORDER ============================= -->
+  <section id="page-alert-order" class="page" hidden>
+
+    <div class="card">
+      <div class="card-header ao-header">
+        <span>Barang Perlu Diorder <span class="count-badge" id="aoCount">0 Item</span></span>
+        <div class="ao-header-actions">
+          <button type="button" id="btnRefreshAlertOrder" class="btn btn-small" title="Refresh" aria-label="Refresh">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 4v6h-6"/></svg>
+          </button>
+          <button type="button" id="btnDownloadAlertOrderCsv" class="btn btn-small">CSV</button>
+          <button type="button" id="btnDownloadAlertOrderExcel" class="btn btn-small">Excel</button>
+          <button type="button" id="btnDownloadAlertOrderPdf" class="btn btn-small">PDF</button>
+        </div>
+      </div>
+      <p class="md-preview-hint">Barang dengan status Stock Out / Need Reorder / Near ROP. Klik "Buat PR" untuk mencatat kapan proses order dimulai — begitu barang datang lewat Barang Masuk, PR ini otomatis ditutup &amp; Lead Time asli terekam, jadi Avg Usage &amp; Lead Time Otomatis makin akurat seiring waktu.</p>
+      <div id="aoList" class="ao-list">
+        <div class="empty-state">Memuat data...</div>
+      </div>
+    </div>
+
+    <!-- Kartu ini CUMA dipakai buat sumber cetak PDF (window.print) — nggak
+         pernah ditampilkan di layar, lihat CSS .ao-print-card & @media print. -->
+    <div class="card ao-print-card" id="aoPrintCard" hidden>
+      <div class="card-header">Alert Order — Barang Perlu Diorder</div>
+      <div class="ao-print-meta" id="aoPrintMeta"></div>
+      <table class="ao-print-table">
+        <thead>
+          <tr>
+            <th>Kode</th><th>Nama Barang</th><th>Status</th><th>Stock</th><th>Min</th><th>ROP</th><th>MAX</th><th>Order Qty</th>
+            <th>PR Terbuka</th><th>Avg Usage Otm.</th><th>Lead Time Otm.</th><th>ROP Otm.</th><th>Saran Min/Max Otm.</th>
+          </tr>
+        </thead>
+        <tbody id="aoPrintTbody"></tbody>
+      </table>
+    </div>
+
+  </section>
+
+  <!-- ============================= KELOLA USER ============================= -->
+  <section id="page-users" class="page" hidden>
+
+    <div class="card md-hint">
+      <strong>Admin</strong>: semua akses termasuk Master Data &amp; Kelola User. &nbsp;·&nbsp;
+      <strong>Staff</strong>: bisa input transaksi (Barang Masuk/Keluar/Put Away/Koreksi/Opname), tidak bisa ubah Master Data/User. &nbsp;·&nbsp;
+      <strong>Viewer</strong>: cuma bisa lihat Dashboard, Stock Balance, Riwayat Transaksi &amp; Alert Order.
+    </div>
+
+    <div class="md-toolbar">
+      <button type="button" id="btnAddUser" class="btn btn-primary">+ Tambah User</button>
+    </div>
+
+    <div id="usersList" class="md-list">
+      <div class="empty-state">Memuat data...</div>
+    </div>
+
+  </section>
+
+  <!-- ============================= PENGATURAN ============================= -->
+  <section id="page-pengaturan" class="page" hidden>
+
+    <div class="card md-hint">
+      Template email ini dikirim <strong>otomatis</strong> ke Pemesan (Pemesan bertipe USER di form Barang Masuk) begitu transaksinya disimpan.
+      Placeholder di bawah diganti otomatis pas email dikirim — boleh dipakai berkali-kali atau dihapus kalau tidak perlu.
+    </div>
+
+    <form id="formPengaturanEmail" class="card">
+      <div class="form-row">
+        <label>Subjek Email *</label>
+        <input type="text" id="pgEmailSubject" required>
+      </div>
+      <div class="form-row">
+        <label>Isi Email *</label>
+        <textarea id="pgEmailBody" rows="12" required></textarea>
+      </div>
+      <div class="hint-text">
+        Placeholder yang bisa dipakai: <code>{{nama}}</code> nama Pemesan ·
+        <code>{{daftarBarang}}</code> daftar barang yang diterima ·
+        <code>{{noPO}}</code> No. Dokumen/PO ·
+        <code>{{tanggal}}</code> tanggal barang diterima ·
+        <code>{{plant}}</code> Plant · <code>{{sloc}}</code> S.Loc ·
+        <code>{{keterangan}}</code> catatan tambahan (kosong kalau tidak diisi).
+      </div>
+      <button type="submit" class="btn btn-primary btn-block" id="btnSavePengaturanEmail">Simpan Template</button>
+    </form>
+
+    <div class="card">
+      <label class="pg-preview-label">Pratinjau (pakai contoh data)</label>
+      <div id="pgPreviewSubject" class="pg-preview-subject"></div>
+      <pre id="pgPreviewBody" class="pg-preview-body"></pre>
+    </div>
+
+  </section>
+
+</main>
+
+</div><!-- /#appShell -->
+
+<!-- Modal Tambah/Edit Item Master Data -->
+<div id="mdModalBackdrop" class="modal-backdrop" hidden></div>
+<div id="mdModal" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="mdModalTitle">
+  <div class="modal-card card">
+    <div class="modal-header">
+      <span id="mdModalTitle">Tambah Item</span>
+      <button type="button" id="btnCloseMdModal" class="modal-close" aria-label="Tutup">×</button>
+    </div>
+    <form id="mdForm">
+      <div class="form-row-pair">
+        <div class="form-row">
+          <label>Kode Barang *</label>
+          <input type="text" id="mdKode" required>
+        </div>
+        <div class="form-row">
+          <label>Satuan</label>
+          <input type="text" id="mdSatuan" placeholder="EA / PCS / UNT">
+        </div>
+      </div>
+      <div class="form-row">
+        <label>Nama Barang *</label>
+        <input type="text" id="mdNama" required>
+      </div>
+      <div class="form-row-pair">
+        <div class="form-row">
+          <label>Kategori</label>
+          <select id="mdKategori">
+            <option value="A">A — Critical</option>
+            <option value="B" selected>B — Medium</option>
+            <option value="C">C — Fast Moving</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label>Lokasi Default</label>
+          <input type="text" id="mdLokasi" placeholder="Contoh: SP-R01-03">
+        </div>
+      </div>
+      <div class="form-row-pair">
+        <div class="form-row">
+          <label>Jenis</label>
+          <select id="mdJenis">
+            <option value="">Belum ditentukan</option>
+            <option value="OBS">OBS</option>
+            <option value="Fast Moving">Fast Moving</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label>Area</label>
+          <input type="text" id="mdArea" placeholder="Contoh: Area Produksi">
+        </div>
+      </div>
+      <div class="form-row">
+        <label>Plant</label>
+        <select id="mdPlant">
+          <option value="">Belum ditentukan</option>
+          <option value="1111">1111</option>
+          <option value="1112">1112</option>
+          <option value="1113">1113</option>
+        </select>
+      </div>
+
+      <div class="items-header"><span>Min-Max (dari Perusahaan)</span></div>
+      <div class="md-formula-grid">
+        <div class="form-row">
+          <label>Min Stock (pcs) *</label>
+          <input type="number" id="mdMinStock" min="0" step="1" value="0" required>
+        </div>
+        <div class="form-row">
+          <label>Max Stock (pcs) *</label>
+          <input type="number" id="mdMaxStock" min="0" step="1" value="0" required>
+        </div>
+      </div>
+
+      <div class="items-header"><span>Buffer &amp; Titik Order (dihitung otomatis)</span></div>
+      <div class="md-formula-grid">
+        <div class="form-row">
+          <label>Avg Usage (pcs/hari)</label>
+          <input type="number" id="mdAvgUsage" min="0" step="0.1" value="0">
+        </div>
+        <div class="form-row">
+          <label>Lead Time (hari)</label>
+          <input type="number" id="mdLeadTime" min="0" step="1" value="0">
+        </div>
+      </div>
+
+      <div class="md-preview">
+        <div class="md-preview-item"><span>ROP (Titik Order)</span><strong id="mdPreviewRop">0</strong></div>
+        <div class="md-preview-item"><span>Buffer di atas Min</span><strong id="mdPreviewBuffer">0</strong></div>
+      </div>
+      <div id="mdPreviewWarning" class="md-preview-warning" hidden></div>
+      <p class="md-preview-hint">ROP = Min Stock + (Avg Usage × Lead Time) — ini titik kapan kamu harus order, supaya stock nggak sempat turun di bawah Min selagi nunggu barang datang.</p>
+
+      <button type="submit" class="btn btn-primary btn-block">Simpan Item</button>
+    </form>
+  </div>
+</div>
+
+<!-- Modal Tambah/Edit User (Kelola User) -->
+<div id="userModalBackdrop" class="modal-backdrop" hidden></div>
+<div id="userModal" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="userModalTitle">
+  <div class="modal-card card">
+    <div class="modal-header">
+      <span id="userModalTitle">Tambah User</span>
+      <button type="button" id="btnCloseUserModal" class="modal-close" aria-label="Tutup">×</button>
+    </div>
+    <form id="userForm">
+      <div class="form-row">
+        <label>Nama Lengkap *</label>
+        <input type="text" id="userNama" required>
+      </div>
+      <div class="form-row">
+        <label>Username *</label>
+        <input type="text" id="userUsername" autocomplete="off" required>
+      </div>
+      <div class="form-row">
+        <label id="userEmailLabel">Email *</label>
+        <input type="email" id="userEmail" autocomplete="off">
+      </div>
+      <div class="form-row">
+        <label id="userNIKLabel">NIK *</label>
+        <input type="text" id="userNIK" inputmode="numeric" maxlength="20" placeholder="Nomor Induk Karyawan">
+      </div>
+      <div class="form-row">
+        <label>Password</label>
+        <div class="password-field">
+          <input type="password" id="userPin" autocomplete="new-password" placeholder="Password (min 4 karakter)">
+          <button type="button" class="toggle-password" data-target="userPin" aria-label="Tampilkan Password">
+            <svg viewBox="0 0 24 24" class="icon-eye"><path d="M1.5 12S5 5 12 5s10.5 7 10.5 7-3.5 7-10.5 7S1.5 12 1.5 12Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+            <svg viewBox="0 0 24 24" class="icon-eye-off" hidden><path d="M3 3l18 18M10.6 10.6a3 3 0 0 0 4.24 4.24M9.5 5.2A10.4 10.4 0 0 1 12 5c7 0 10.5 7 10.5 7a13.4 13.4 0 0 1-3.15 3.9M6.3 6.3C3.4 8.1 1.5 12 1.5 12s3.5 7 10.5 7a10.4 10.4 0 0 0 3.1-.47" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="form-row">
+        <label>Role *</label>
+        <select id="userRole">
+          <option value="Admin">Admin</option>
+          <option value="Staff" selected>Staff</option>
+          <option value="Viewer">Viewer</option>
+        </select>
+      </div>
+      <div id="userFormError" class="form-error" hidden></div>
+      <button type="submit" id="btnSaveUser" class="btn btn-primary btn-block">Simpan User</button>
+    </form>
+  </div>
+</div>
+
+<!-- Popup setelah simpan Barang Masuk: tawarkan lanjut Put Away sekarang atau nanti -->
+<div id="pnPutawayModalBackdrop" class="modal-backdrop" hidden></div>
+<div id="pnPutawayModal" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="pnPutawayModalTitle">
+  <div class="modal-card card">
+    <div class="modal-header">
+      <span id="pnPutawayModalTitle">Barang Masuk Tersimpan</span>
+    </div>
+    <p class="hint-text" id="pnPutawayModalText">Barang sudah tercatat. Lanjut Put Away sekarang untuk taruh ke bin/lokasi?</p>
+    <div class="pn-putaway-modal-actions">
+      <button type="button" id="btnPnPutawayNow" class="btn btn-primary btn-block">Ya, Put Away Sekarang</button>
+      <button type="button" id="btnPnPrintQr" class="btn btn-small btn-block">Cetak Label QR Dulu</button>
+      <button type="button" id="btnPnPutawayLater" class="btn-link">Nanti</button>
+    </div>
+  </div>
+</div>
+
+<div id="reorderAlertModalBackdrop" class="modal-backdrop" hidden></div>
+<div id="reorderAlertModal" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="reorderAlertModalTitle">
+  <div class="modal-card card">
+    <div class="modal-header">
+      <span id="reorderAlertModalTitle">Reorder Alert (Perlu Tindakan)</span>
+      <button type="button" id="btnCloseReorderAlertModal" class="modal-close" aria-label="Tutup">×</button>
+    </div>
+    <p class="md-preview-hint">Gabungan barang berstatus Stock Out, Need Reorder, & Near ROP (paling kritis duluan) — beda dari kartu status di atas yang menghitung tiap status TERPISAH. Maksimal 50 item teratas ditampilkan.</p>
+    <div id="reorderAlertList" class="ra-list">
+      <div class="empty-state">Belum ada item yang perlu di-reorder.</div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Konfirmasi umum — pengganti confirm() bawaan browser, dipakai lewat
+     showConfirmModal() di js/app.js (logout, hapus/nonaktif/tolak user, dst) -->
+<div id="confirmModalBackdrop" class="modal-backdrop" hidden></div>
+<div id="confirmModal" class="modal" hidden role="alertdialog" aria-modal="true" aria-labelledby="confirmModalTitle" aria-describedby="confirmModalMessage">
+  <div class="modal-card card confirm-modal-card">
+    <div class="modal-header">
+      <span id="confirmModalTitle">Konfirmasi</span>
+      <button type="button" id="btnCloseConfirmModal" class="modal-close" aria-label="Tutup">×</button>
+    </div>
+    <p class="hint-text" id="confirmModalMessage"></p>
+    <div class="confirm-modal-actions">
+      <button type="button" id="btnConfirmModalOk" class="btn btn-primary btn-block">OK</button>
+      <button type="button" id="btnConfirmModalCancel" class="btn-link">Batal</button>
+    </div>
+  </div>
+</div>
+
+<div id="dashListModalBackdrop" class="modal-backdrop" hidden></div>
+<div id="dashListModal" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="dashListModalTitle">
+  <div class="modal-card card">
+    <div class="modal-header">
+      <span id="dashListModalTitle">Daftar Barang</span>
+      <button type="button" id="btnCloseDashListModal" class="modal-close" aria-label="Tutup">×</button>
+    </div>
+    <p class="md-preview-hint" id="dashListModalHint"></p>
+    <div id="dashListModalPlantFilter" class="dm-plant-filter" hidden></div>
+    <div id="dashListModalBody" class="ra-list">
+      <div class="empty-state">Memuat...</div>
+    </div>
+  </div>
+</div>
+
+<!-- Popup Riwayat Transaksi 1 SKU (klik baris di halaman Stock Balance / Mutasi Stock) -->
+<div id="sbRiwayatModalBackdrop" class="modal-backdrop" hidden></div>
+<div id="sbRiwayatModal" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="sbRiwayatModalTitle">
+  <div class="modal-card card">
+    <div class="modal-header">
+      <span id="sbRiwayatModalTitle">Riwayat Transaksi</span>
+      <button type="button" id="btnCloseSbRiwayatModal" class="modal-close" aria-label="Tutup">×</button>
+    </div>
+    <p class="md-preview-hint" id="sbRiwayatModalHint"></p>
+    <div id="sbRiwayatModalSumberBreakdown" class="sb-sumber-breakdown" hidden></div>
+    <div id="sbRiwayatModalBody" class="ra-list">
+      <div class="empty-state">Memuat...</div>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast" hidden></div>
+
+<div id="qrScanOverlay" class="qr-scan-overlay" hidden>
+  <video id="qrScanVideo" class="qr-scan-video" playsinline muted></video>
+  <div class="qr-scan-frame"></div>
+  <div class="qr-scan-hint">Arahkan kamera ke QR lokasi/bin</div>
+  <button type="button" id="btnCloseQrScan" class="qr-scan-close" aria-label="Tutup scan">×</button>
+</div>
+
+<div id="updateBanner" class="update-banner" hidden>
+  <div class="update-banner-text">
+    <strong>Versi baru tersedia</strong>
+    <span id="updateBannerVersion"></span>
+  </div>
+  <div class="update-banner-actions">
+    <button type="button" id="btnUpdateLater" class="btn-link-inline">Nanti</button>
+    <button type="button" id="btnUpdateNow" class="btn btn-primary btn-small">Update Sekarang</button>
+  </div>
+</div>
+
+<template id="itemRowTemplate">
+  <div class="item-row">
+    <button type="button" class="item-remove" title="Hapus item">×</button>
+    <div class="item-row-grid">
+      <div class="form-row">
+        <label>Kode Barang</label>
+        <input type="text" class="i-kode" list="listMasterBarang">
+      </div>
+      <div class="form-row">
+        <label>Nama Barang</label>
+        <input type="text" class="i-nama" required>
+      </div>
+      <div class="form-row form-row-small">
+        <label>Qty</label>
+        <input type="number" class="i-qty" min="0" step="1" required>
+      </div>
+      <div class="form-row form-row-small">
+        <label>Satuan</label>
+        <input type="text" class="i-satuan" placeholder="EA / PCS / UNT">
+      </div>
+    </div>
+  </div>
+</template>
+<datalist id="listMasterBarang"></datalist>
+
+<script src="js/config.js"></script>
+<script src="js/feedback.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/api.js"></script>
+<script src="js/router.js"></script>
+<script src="js/qr-scan.js"></script>
+<script src="js/dashboard.js"></script>
+<script src="js/penerimaan.js"></script>
+<script src="js/putaway.js"></script>
+<script src="js/pemakaian.js"></script>
+<script src="js/stock-balance.js"></script>
+<script src="js/master-data.js"></script>
+<script src="js/qrcode-lib.js"></script>
+<script src="js/qr-labels.js"></script>
+<script src="js/riwayat.js"></script>
+<script src="js/opname.js"></script>
+<script src="js/alert-order.js"></script>
+<script src="js/users.js"></script>
+<script src="js/pengaturan.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
