@@ -2,15 +2,43 @@
 // DASHBOARD PAGE
 // ============================================================================
 
+// Filter "Sumber" (OBS/Fast Moving/User) — dipakai bareng di Dashboard (semua
+// popup kartu statistik & Reorder Alert, lihat di bawah) DAN Stock Balance
+// (lihat js/stock-balance.js) — permintaan user: "di dashboard juga disemua
+// popup dan di stock balance harus ada filter per sumbernya, obs, fast
+// moving, dan user". Konstanta ini file-nya SATU tempat di sini (dashboard.js
+// di-load PALING AWAL dari semua halaman lain, lihat urutan <script> di
+// index.html) biar labelnya konsisten di mana-mana, nggak didefinisikan ulang
+// beda-beda per file.
+const SUMBER_FILTER_OPTIONS = [
+  { value: '', label: 'Semua Sumber' },
+  { value: 'OBS', label: 'OBS' },
+  { value: 'FAST MOVING', label: 'Fast Moving' },
+  { value: 'USER', label: 'User' }
+];
+function sumberFilterLabel(value) {
+  const opt = SUMBER_FILTER_OPTIONS.find((o) => o.value === value);
+  return opt ? opt.label : value;
+}
+
 let dashboardLoadedOnce = false;
 let dashFullBalances = null; // cache Stock Balance LENGKAP (semua SKU + belum terdaftar), dipakai buat isi popup kartu2 statistik Dashboard — di-reset tiap loadDashboard() supaya nggak nampilin data basi
-let dashReceivingDetail = null; // cache itemized Penerimaan (Api.getReceivingDetail), dipakai popup 4 kartu bawah (Diterima Hari Ini/Bulan Ini, Transaksi Bulan Ini, SKU Bulan Ini) — sama-sama di-reset tiap loadDashboard()
-let dashPemakaianDetail = null; // pasangan dashReceivingDetail, tapi buat Pemakaian (Api.getPemakaianDetail) — dipakai popup kartu Dikeluarkan Hari Ini/Bulan Ini, sama-sama di-reset tiap loadDashboard()
+// dashReceivingDetailBySumber/dashPemakaianDetailBySumber: cache Api.getReceivingDetail/
+// getPemakaianDetail, di-KEY per filter Sumber yang lagi aktif ('' = Semua Sumber)
+// — beda dari dashFullBalances (yang bisa di-filter Sumber CLIENT-SIDE lewat
+// sumberBreakdown, lihat filterItemsBySumber di bawah), qty di popup Diterima/
+// Dikeluarkan Hari Ini/Bulan Ini itu HASIL AGREGASI per Kode Barang di server
+// (handleGetReceivingDetail/handleGetPemakaianDetail), jadi ganti Sumber
+// beneran butuh fetch ulang ke server (bukan cuma filter array yang sudah ada)
+// — tapi tetap di-cache per Sumber biar gonta-ganti balik ke Sumber yang SAMA
+// nggak fetch ulang. Di-reset tiap loadDashboard() supaya nggak nampilin data basi.
+let dashReceivingDetailBySumber = {};
+let dashPemakaianDetailBySumber = {};
 
 async function loadDashboard() {
   dashFullBalances = null;
-  dashReceivingDetail = null;
-  dashPemakaianDetail = null;
+  dashReceivingDetailBySumber = {};
+  dashPemakaianDetailBySumber = {};
   try {
     const res = await Api.getDashboard();
     renderStockStats(res);
@@ -80,10 +108,47 @@ const STATUS_LABEL = {
   'Belum Terdaftar': 'Belum Terdaftar'
 };
 
+// ---------------------------------------------------------------------------
+// Filter "Sumber" buat item BERBASIS STOCK (Dashboard mode 'stock'/
+// 'stock-by-plant' & Reorder Alert — bukan mode 'receiving'/'pemakaian' yang
+// perlu fetch ulang ke server, lihat renderDashTransaksiAtauPemakaianMode_ di
+// bawah). `it.sumberBreakdown` sudah dihitung BULK di hitungBalances_/Code.gs
+// (permintaan user: "angka ikut ganti jadi sisa khusus dari sumber itu aja")
+// — jadi cuma perlu filter+ganti field onHand di sini, TANPA fetch ulang.
+// Item yang nggak punya sisa (>0) di Sumber terpilih di-buang dari daftar
+// (bukan cuma disembunyiin angkanya), soalnya artinya barang itu memang nggak
+// ada stock dari Sumber itu.
+// ---------------------------------------------------------------------------
+function filterItemsBySumber(items, tipe) {
+  if (!tipe) return items;
+  const out = [];
+  (items || []).forEach((it) => {
+    const entries = Array.isArray(it.sumberBreakdown) ? it.sumberBreakdown.filter((b) => b.tipe === tipe) : [];
+    const sisa = entries.reduce((s, b) => s + b.sisa, 0);
+    if (sisa > 0) out.push(Object.assign({}, it, { onHand: sisa }));
+  });
+  return out;
+}
+
+// Chip filter Sumber generik (dipakai bareng di dashListModal & reorderAlertModal
+// — beda container/state, tapi bentuk chip-nya sama, numpang class .dm-plant-chip
+// yang sebenarnya cuma styling chip generik, bukan spesifik Plant).
+function renderSumberFilterChipsInto(containerId, selected) {
+  const wrap = document.getElementById(containerId);
+  if (!wrap) return;
+  wrap.hidden = false;
+  wrap.innerHTML = SUMBER_FILTER_OPTIONS.map((o) => `
+      <button type="button" class="dm-plant-chip${selected === o.value ? ' active' : ''}" data-sumber="${escapeHtml(o.value)}">${escapeHtml(o.label)}</button>
+    `).join('');
+}
+
 // Kartu di Dashboard cuma nunjukin RINGKASAN (jumlah + hint) — daftar lengkapnya
 // sengaja dipindah ke popup/modal (buka pas kartu diklik, lihat openReorderAlertModal
 // di app.js) biar Dashboard nggak kepanjangan discroll cuma gara-gara banyak
 // barang yang perlu diorder.
+let reorderAlertBaseList = []; // list ASLI (belum difilter Sumber) — di-refresh tiap loadDashboard()/renderReorderAlert
+let dashReorderSumberSelected = ''; // di-reset tiap kali modal Reorder Alert dibuka (lihat openReorderAlertModal)
+
 function renderReorderAlert(list) {
   document.getElementById('reorderAlertCount').textContent = list.length + ' Item';
   const hint = document.getElementById('reorderAlertHint');
@@ -91,12 +156,18 @@ function renderReorderAlert(list) {
     ? `${list.length} barang butuh diorder — ketuk buat lihat daftarnya`
     : 'Semua stock dalam kondisi normal.';
 
+  reorderAlertBaseList = list;
+  renderReorderAlertBodyFiltered(); // idempotent kalau modalnya lagi ketutup, aman dipanggil kapan saja
+}
+
+function renderReorderAlertBodyFiltered() {
   const wrap = document.getElementById('reorderAlertList');
-  if (!list.length) {
-    wrap.innerHTML = '<div class="empty-state">Belum ada item yang perlu di-reorder.</div>';
+  const items = filterItemsBySumber(reorderAlertBaseList, dashReorderSumberSelected);
+  if (!items.length) {
+    wrap.innerHTML = `<div class="empty-state">${dashReorderSumberSelected ? 'Tidak ada barang reorder dari Sumber ini.' : 'Belum ada item yang perlu di-reorder.'}</div>`;
     return;
   }
-  wrap.innerHTML = list.map((it) => {
+  wrap.innerHTML = items.map((it) => {
     const meta = itemMetaLine(it);
     return `
       <div class="ra-item">
@@ -109,6 +180,12 @@ function renderReorderAlert(list) {
       </div>
     `;
   }).join('');
+}
+
+function selectReorderAlertSumberFilter(value) {
+  dashReorderSumberSelected = value;
+  renderSumberFilterChipsInto('reorderAlertModalSumberFilter', dashReorderSumberSelected);
+  renderReorderAlertBodyFiltered();
 }
 
 // Kartu "Belum Terdaftar di Master Data" — jumlah barang yang PUNYA stock
@@ -131,6 +208,9 @@ function renderBelumTerdaftar(count) {
 }
 
 function openReorderAlertModal() {
+  dashReorderSumberSelected = ''; // reset tiap kali modal dibuka, biar filter Sumber selalu mulai dari "Semua Sumber"
+  renderSumberFilterChipsInto('reorderAlertModalSumberFilter', dashReorderSumberSelected);
+  renderReorderAlertBodyFiltered();
   document.getElementById('reorderAlertModalBackdrop').hidden = false;
   document.getElementById('reorderAlertModal').hidden = false;
 }
@@ -246,67 +326,118 @@ const DASH_CARD_FILTERS = {
   }
 };
 
+// dashStatModalCfg + dashSumberSelected: cfg & filter Sumber yang LAGI AKTIF di
+// dashListModal — dipakai selectDashSumberFilter (dipanggil pas chip Sumber
+// diklik) buat tau harus re-render/re-fetch dengan cara apa (beda mode beda
+// caranya, lihat renderDashStatModalBody_ di bawah). dashStockModalItems:
+// base items (SUDAH kena cfg.filter/sort, SEBELUM difilter Sumber) — dipakai
+// mode 'stock' biasa (BUKAN 'stock-by-plant', itu pakai dashTotalPlantItems
+// sendiri) supaya ganti Sumber nggak perlu filter ulang dashFullBalances.
+let dashStatModalCfg = null;
+let dashSumberSelected = '';
+let dashStockModalItems = [];
+
 async function openDashStatModal(filterKey) {
   const cfg = DASH_CARD_FILTERS[filterKey];
   if (!cfg) return;
+
+  dashStatModalCfg = cfg;
+  dashSumberSelected = ''; // reset tiap kali popup dibuka, biar filter Sumber selalu mulai dari "Semua Sumber"
 
   document.getElementById('dashListModalTitle').textContent = cfg.title;
   document.getElementById('dashListModalHint').textContent = cfg.hint;
   document.getElementById('dashListModalBody').innerHTML = '<div class="empty-state">Memuat...</div>';
   document.getElementById('dashListModalPlantFilter').hidden = true;
   document.getElementById('dashListModalPlantFilter').innerHTML = '';
+  // Filter Sumber ditampilin di SEMUA mode popup (stock & transaksi) — permintaan
+  // user: "di dashboard juga disemua popup ... harus ada filter per sumbernya".
+  renderSumberFilterChipsInto('dashListModalSumberFilter', dashSumberSelected);
   document.getElementById('dashListModalBackdrop').hidden = false;
   document.getElementById('dashListModal').hidden = false;
 
   try {
-    if (cfg.mode === 'receiving') {
-      if (!dashReceivingDetail) {
-        dashReceivingDetail = await Api.getReceivingDetail();
-      }
-      const items = dashReceivingDetail[cfg.dataKey] || [];
-      if (cfg.view === 'transaksi') renderDashTransaksiModalBody(items, cfg.emptyText);
-      else renderDashReceivingModalBody(items, cfg.emptyText);
-      return;
-    }
-
-    if (cfg.mode === 'pemakaian') {
-      if (!dashPemakaianDetail) {
-        dashPemakaianDetail = await Api.getPemakaianDetail();
-      }
-      const items = dashPemakaianDetail[cfg.dataKey] || [];
-      renderDashPemakaianModalBody(items, cfg.emptyText);
-      return;
-    }
-
-    if (!dashFullBalances) {
-      const res = await Api.getStockBalance({});
-      dashFullBalances = res.data || [];
-    }
-    const items = dashFullBalances.filter(cfg.filter).sort(cfg.sort);
-
-    if (cfg.mode === 'stock-by-plant') {
-      // "Total SKU Terdaftar" — 1 Kode Barang bisa muncul di lebih dari 1 Plant
-      // (baris Master Data terpisah per Plant, lihat kodePlantCount di
-      // hitungBalances_/Code.gs). Dulu semua Plant ditumpuk jadi 1 list panjang
-      // (harus discroll jauh buat pindah Plant) — sekarang Plant jadi FILTER
-      // (chip di atas list) supaya bisa langsung loncat ke Plant yang dimau.
-      dashTotalPlantItems = items;
-      dashTotalPlantSelected = '';
-      renderDashPlantFilterChips();
-      renderDashPlantFilteredList();
-    } else {
-      renderDashListModalBody(items);
-    }
+    await renderDashStatModalBody_(cfg);
   } catch (err) {
     document.getElementById('dashListModalBody').innerHTML =
       `<div class="empty-state">Gagal memuat: ${escapeHtml(err.message)}</div>`;
   }
 }
 
+// Isi body dashListModal sesuai cfg.mode & dashSumberSelected yang LAGI AKTIF.
+// Dipanggil dari openDashStatModal (pertama buka) MAUPUN selectDashSumberFilter
+// (ganti Sumber) — mode 'receiving'/'pemakaian' fetch ulang ke server (qty-nya
+// hasil agregasi server, lihat komentar dashReceivingDetailBySumber di atas),
+// mode 'stock'/'stock-by-plant' cukup filter ulang data yang sudah ada di
+// memori (sumberBreakdown sudah dihitung bulk di hitungBalances_/Code.gs).
+async function renderDashStatModalBody_(cfg) {
+  if (cfg.mode === 'receiving') {
+    const cacheKey = dashSumberSelected;
+    if (!dashReceivingDetailBySumber[cacheKey]) {
+      dashReceivingDetailBySumber[cacheKey] = await Api.getReceivingDetail({ sumberTipe: dashSumberSelected });
+    }
+    const items = dashReceivingDetailBySumber[cacheKey][cfg.dataKey] || [];
+    if (cfg.view === 'transaksi') renderDashTransaksiModalBody(items, cfg.emptyText);
+    else renderDashReceivingModalBody(items, cfg.emptyText);
+    return;
+  }
+
+  if (cfg.mode === 'pemakaian') {
+    const cacheKey = dashSumberSelected;
+    if (!dashPemakaianDetailBySumber[cacheKey]) {
+      dashPemakaianDetailBySumber[cacheKey] = await Api.getPemakaianDetail({ sumberTipe: dashSumberSelected });
+    }
+    const items = dashPemakaianDetailBySumber[cacheKey][cfg.dataKey] || [];
+    renderDashPemakaianModalBody(items, cfg.emptyText);
+    return;
+  }
+
+  if (!dashFullBalances) {
+    const res = await Api.getStockBalance({});
+    dashFullBalances = res.data || [];
+  }
+  const items = dashFullBalances.filter(cfg.filter).sort(cfg.sort);
+
+  if (cfg.mode === 'stock-by-plant') {
+    // "Total SKU Terdaftar" — 1 Kode Barang bisa muncul di lebih dari 1 Plant
+    // (baris Master Data terpisah per Plant, lihat kodePlantCount di
+    // hitungBalances_/Code.gs). Dulu semua Plant ditumpuk jadi 1 list panjang
+    // (harus discroll jauh buat pindah Plant) — sekarang Plant jadi FILTER
+    // (chip di atas list) supaya bisa langsung loncat ke Plant yang dimau.
+    dashTotalPlantItems = items;
+    dashTotalPlantSelected = '';
+    renderDashPlantFilterChips();
+    renderDashPlantFilteredList();
+  } else {
+    dashStockModalItems = items;
+    renderDashListModalBody(filterItemsBySumber(dashStockModalItems, dashSumberSelected));
+  }
+}
+
+// Dipanggil pas chip Sumber di dashListModal diklik (lihat app.js).
+function selectDashSumberFilter(value) {
+  dashSumberSelected = value;
+  renderSumberFilterChipsInto('dashListModalSumberFilter', dashSumberSelected);
+  if (!dashStatModalCfg) return;
+
+  if (dashStatModalCfg.mode === 'stock-by-plant') {
+    renderDashPlantFilteredList();
+    return;
+  }
+  if (dashStatModalCfg.mode === 'receiving' || dashStatModalCfg.mode === 'pemakaian') {
+    document.getElementById('dashListModalBody').innerHTML = '<div class="empty-state">Memuat...</div>';
+    renderDashStatModalBody_(dashStatModalCfg).catch((err) => {
+      document.getElementById('dashListModalBody').innerHTML =
+        `<div class="empty-state">Gagal memuat: ${escapeHtml(err.message)}</div>`;
+    });
+    return;
+  }
+  renderDashListModalBody(filterItemsBySumber(dashStockModalItems, dashSumberSelected));
+}
+
 function renderDashListModalBody(items) {
   const body = document.getElementById('dashListModalBody');
   if (!items.length) {
-    body.innerHTML = '<div class="empty-state">Tidak ada barang di kategori ini.</div>';
+    body.innerHTML = '<div class="empty-state">Tidak ada barang di kategori/Sumber ini.</div>';
     return;
   }
   body.innerHTML = items.map((it) => dashStockItemHtml(it)).join('');
@@ -400,13 +531,14 @@ function renderDashPlantFilterChips() {
 }
 
 function renderDashPlantFilteredList() {
-  const items = dashTotalPlantSelected
+  let items = dashTotalPlantSelected
     ? dashTotalPlantItems.filter((it) => (it.plant || DASH_PLANT_NONE) === dashTotalPlantSelected)
     : dashTotalPlantItems;
+  items = filterItemsBySumber(items, dashSumberSelected); // gabungan filter Plant (chip lama) + Sumber (chip baru)
 
   const body = document.getElementById('dashListModalBody');
   if (!items.length) {
-    body.innerHTML = '<div class="empty-state">Tidak ada barang terdaftar di Plant ini.</div>';
+    body.innerHTML = '<div class="empty-state">Tidak ada barang terdaftar di Plant/Sumber ini.</div>';
     return;
   }
   body.innerHTML = items.map((it) => dashStockItemHtml(it)).join('');
