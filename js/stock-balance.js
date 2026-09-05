@@ -37,7 +37,7 @@ function initStockBalancePage() {
       document.getElementById('sbTableWrap').classList.toggle('detail-off', !e.target.checked);
     });
     // Enter di salah satu field filter langsung apply, biar nggak wajib klik tombol.
-    ['sbTglMulai', 'sbTglAkhir', 'sbPlant', 'sbStorage', 'sbMaterial'].forEach((id) => {
+    ['sbTglMulai', 'sbTglAkhir', 'sbPlant', 'sbStorage', 'sbMaterial', 'sbSumber'].forEach((id) => {
       document.getElementById(id).addEventListener('keydown', (e) => {
         if (e.key === 'Enter') { e.preventDefault(); applySbFilter(); }
       });
@@ -86,7 +86,14 @@ async function applySbFilter() {
     tanggalAkhir: tglAkhir,
     plant: document.getElementById('sbPlant').value.trim(),
     storage: document.getElementById('sbStorage').value.trim(),
-    material: document.getElementById('sbMaterial').value.trim()
+    material: document.getElementById('sbMaterial').value.trim(),
+    // Sumber (OBS/Fast Moving/User) — opsional. Kalau diisi, Beginning/Receipt/
+    // Issued/Ending yang dikembalikan server SUDAH dihitung ULANG cuma dari
+    // transaksi Sumber itu (Koreksi Stock di-skip total — lihat komentar
+    // sumberFilter di handleGetStockMutasi/Code.gs), BUKAN angka total semua
+    // sumber — permintaan user: "di stock balance harus ada filter per
+    // sumbernya, obs, fast moving, dan user".
+    sumberTipe: document.getElementById('sbSumber').value
   };
 
   try {
@@ -94,8 +101,9 @@ async function applySbFilter() {
     sbCurrentPeriod = { tanggalMulai: res.tanggalMulai, tanggalAkhir: res.tanggalAkhir };
     renderSbTable(res.items || []);
     document.getElementById('sbCount').textContent = (res.items || []).length + ' SKU';
+    const sumberSuffix = payload.sumberTipe ? ` · Sumber: ${escapeHtml(sumberFilterLabel(payload.sumberTipe))}` : '';
     document.getElementById('sbUpdatedAt').textContent =
-      `Periode ${escapeHtml(res.tanggalMulai)} s/d ${escapeHtml(res.tanggalAkhir)}`;
+      `Periode ${escapeHtml(res.tanggalMulai)} s/d ${escapeHtml(res.tanggalAkhir)}${sumberSuffix}`;
   } catch (err) {
     body.innerHTML = `<tr><td colspan="14" class="empty-state">Gagal memuat: ${escapeHtml(err.message)}</td></tr>`;
     document.getElementById('sbCount').textContent = '0 SKU';
