@@ -153,6 +153,12 @@ function sumberOptionValue(o) {
 function sumberOptionLabel(o) {
   if (o.tipe === 'USER') return (o.nama || '-') + ' (User)';
   if (o.tipe === 'OBS') return 'OBS';
+  // 'KOREKSI' cuma pernah muncul dari hitungSumberBreakdownTampilan_ di
+  // Code.gs (breakdown "Sisa saat ini per Sumber" di Stock Balance) — NGGAK
+  // PERNAH jadi opsi di dropdown form Barang Keluar ini (Koreksi Stock bukan
+  // "Sumber" yang bisa dipilih user), tapi label-nya tetap ditaruh di sini
+  // biar 1 fungsi label ini dipakai konsisten di semua tempat.
+  if (o.tipe === 'KOREKSI') return 'Koreksi Stock';
   return 'Fast Moving';
 }
 
