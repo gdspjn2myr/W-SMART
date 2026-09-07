@@ -191,6 +191,38 @@ function filterItemsByPlant(items, plant) {
   return (items || []).filter((it) => (it.plant || DASH_PLANT_NONE) === plant);
 }
 
+// Filter "Kondisi Stock" (Over Max / Normal / Under Min) — permintaan user:
+// tambahan di popup kartu statistik Dashboard (mis. "Stock Saat Ini") biar
+// bisa nyaring cepat barang yang overstock/understock. "Over Max" & "Normal"
+// dicocokkan LANGSUNG ke it.status (backend, hitungBalances_) supaya hasilnya
+// selalu konsisten sama badge status yang sudah ditampilkan per baris (lihat
+// dashStockItemHtml). "Under Min" BUKAN status backend (status yang ada cuma
+// berbasis ROP: Stock Out/Need Reorder/Near ROP/Over Max/Normal) — dihitung
+// sendiri di sini dari onHand vs minStock, jadi bisa saja tumpang tindih sama
+// status Need Reorder/Near ROP/Stock Out yang sudah ada (ROP biasanya >= Min).
+// Barang yang belum terdaftar (belumAdaMaster, belum punya Min/Max) otomatis
+// nggak match salah satu pun kecuali "Semua Kondisi".
+const KONDISI_STOCK_FILTER_OPTIONS = [
+  { value: '', label: 'Semua Kondisi' },
+  { value: 'over-max', label: 'Over Max' },
+  { value: 'normal', label: 'Normal' },
+  { value: 'under-min', label: 'Under Min' }
+];
+function filterItemsByKondisiStock(items, kondisi) {
+  if (!kondisi) return items;
+  return (items || []).filter((it) => {
+    if (it.belumAdaMaster) return false;
+    if (kondisi === 'over-max') return it.status === 'Over Max';
+    if (kondisi === 'normal') return it.status === 'Normal';
+    if (kondisi === 'under-min') {
+      const min = Number(it.minStock) || 0;
+      const onHand = Number(it.onHand) || 0;
+      return min > 0 && onHand < min;
+    }
+    return true;
+  });
+}
+
 // Filter S.Loc — sama pola dengan Sumber (VALUE-SUBSTITUTION: 1 item bisa
 // nyebar stock-nya di lebih dari 1 S.Loc, lihat `slocBreakdown` yang sudah
 // dihitung bulk di hitungBalances_/Code.gs), jadi milih S.Loc tertentu bikin
@@ -285,14 +317,14 @@ function renderDynamicChipOptionsFor_(containerId, values, selected, datasetKey,
 // section filter ini DEFAULT KETUTUP (lihat openDashStatModal/
 // openReorderAlertModal), user tinggal ketuk tombol "Filter" buat buka.
 // ---------------------------------------------------------------------------
-function dashFilterActiveCount_(plant, sumber, kategori, sloc) {
-  return [plant, sumber, kategori, sloc].filter(Boolean).length;
+function dashFilterActiveCount_(plant, sumber, kategori, sloc, kondisi) {
+  return [plant, sumber, kategori, sloc, kondisi].filter(Boolean).length;
 }
 
 function refreshFilterChrome_(ids, selected) {
   const rowVisible = (id) => { const el = document.getElementById(id); return !!el && !el.hidden; };
   const anyVisible = ids.rows.some(rowVisible);
-  const count = dashFilterActiveCount_(selected.plant, selected.sumber, selected.kategori, selected.sloc);
+  const count = dashFilterActiveCount_(selected.plant, selected.sumber, selected.kategori, selected.sloc, selected.kondisi);
 
   const toggleBtn = document.getElementById(ids.toggle);
   if (toggleBtn) {
@@ -314,11 +346,11 @@ function refreshFilterChrome_(ids, selected) {
 
 function refreshDashFilterChrome_() {
   refreshFilterChrome_({
-    rows: ['dashListModalPlantFilter', 'dashListModalSumberFilter', 'dashListModalKategoriFilter', 'dashListModalSlocFilter'],
+    rows: ['dashListModalPlantFilter', 'dashListModalSumberFilter', 'dashListModalKategoriFilter', 'dashListModalSlocFilter', 'dashListModalKondisiFilter'],
     sumberRow: 'dashListModalSumberFilter', slocRow: 'dashListModalSlocFilter',
     toggle: 'dashListModalFilterToggle', toggleLabel: 'dashListModalFilterToggleLabel',
     reset: 'dashListModalResetFilter', hint: 'dashListModalSumberSlocHint'
-  }, { plant: dashPlantSelected, sumber: dashSumberSelected, kategori: dashKategoriSelected, sloc: dashSlocSelected });
+  }, { plant: dashPlantSelected, sumber: dashSumberSelected, kategori: dashKategoriSelected, sloc: dashSlocSelected, kondisi: dashKondisiSelected });
 }
 
 function refreshReorderFilterChrome_() {
@@ -597,6 +629,7 @@ let dashSumberSelected = '';
 let dashKategoriSelected = '';
 let dashPlantSelected = '';
 let dashSlocSelected = '';
+let dashKondisiSelected = ''; // Over Max/Normal/Under Min — cuma relevan di mode 'stock', lihat filterItemsByKondisiStock
 let dashStockModalItems = [];
 
 async function openDashStatModal(filterKey) {
@@ -609,6 +642,7 @@ async function openDashStatModal(filterKey) {
   dashKategoriSelected = '';
   dashPlantSelected = '';
   dashSlocSelected = '';
+  dashKondisiSelected = '';
 
   document.getElementById('dashListModalTitle').textContent = cfg.title;
   document.getElementById('dashListModalHint').textContent = cfg.hint;
@@ -621,6 +655,12 @@ async function openDashStatModal(filterKey) {
   document.getElementById('dashListModalPlantFilter').innerHTML = '';
   document.getElementById('dashListModalSlocFilter').hidden = true;
   document.getElementById('dashListModalSlocFilter').innerHTML = '';
+  // Kondisi Stock (Over Max/Normal/Under Min) CUMA relevan di mode 'stock'
+  // (item receiving/pemakaian nggak punya onHand/Min/Max) — disembunyikan
+  // dulu di sini, baru ditampilin di renderDashStatModalBody_ kalau cfg.mode
+  // === 'stock'.
+  document.getElementById('dashListModalKondisiFilter').hidden = true;
+  document.getElementById('dashListModalKondisiFilter').innerHTML = '';
   // Filter Sumber & Kategori ditampilin di SEMUA mode popup (stock &
   // transaksi) — permintaan user: "di dashboard juga disemua popup ... harus
   // ada filter per sumbernya" (Kategori nyusul pola yang sama).
@@ -686,15 +726,23 @@ async function renderDashStatModalBody_(cfg) {
   dashStockModalItems = dashFullBalances.filter(cfg.filter).sort(cfg.sort);
   renderDashPlantFilterChipsFor('dashListModalPlantFilter', dashStockModalItems, dashPlantSelected);
   renderDashSlocFilterChipsFor('dashListModalSlocFilter', dashStockModalItems, dashSlocSelected);
+  // Kondisi Stock (Over Max/Normal/Under Min) — opsinya TETAP (bukan dinamis
+  // kayak Plant/S.Loc), jadi selalu ditampilin di mode 'stock' (permintaan
+  // user: tambahan filter di popup "Stock Saat Ini" dkk).
+  renderChipFilterInto('dashListModalKondisiFilter', KONDISI_STOCK_FILTER_OPTIONS, dashKondisiSelected, 'kondisi', 'Kondisi Stock');
   renderDashListModalBody(applyDashStockFilters_(dashStockModalItems));
 }
 
-// Gabungan SEMUA filter dashListModal mode 'stock': Plant+Kategori (EQUALITY,
-// bebas digabung) lalu Sumber/S.Loc (VALUE-SUBSTITUTION, saling kunci — lihat
-// applyDashValueSubstitution_).
+// Gabungan SEMUA filter dashListModal mode 'stock': Plant+Kategori+Kondisi
+// (EQUALITY, bebas digabung) lalu Sumber/S.Loc (VALUE-SUBSTITUTION, saling
+// kunci — lihat applyDashValueSubstitution_). Kondisi Stock dijalankan
+// SEBELUM value-substitution supaya perbandingan onHand vs Min/Max-nya selalu
+// pakai onHand TOTAL item (bukan onHand yang sudah "dipotong" jadi sisa 1
+// Sumber/S.Loc tertentu).
 function applyDashStockFilters_(items) {
   let out = filterItemsByPlant(items, dashPlantSelected);
   out = filterItemsByKategori(out, dashKategoriSelected);
+  out = filterItemsByKondisiStock(out, dashKondisiSelected);
   return applyDashValueSubstitution_(out, dashSumberSelected, dashSlocSelected);
 }
 
@@ -724,15 +772,25 @@ function selectDashSlocFilter(value) {
   reapplyDashStatModalFilter_();
 }
 
-// Tombol "Reset Filter" — balikin Plant/Sumber/Kategori/S.Loc ke "Semua"
-// sekaligus, biar nggak perlu klik "Semua" 1-1 di 4 baris chip.
+function selectDashKondisiFilter(value) {
+  dashKondisiSelected = value;
+  renderChipFilterInto('dashListModalKondisiFilter', KONDISI_STOCK_FILTER_OPTIONS, dashKondisiSelected, 'kondisi', 'Kondisi Stock');
+  reapplyDashStatModalFilter_();
+}
+
+// Tombol "Reset Filter" — balikin Plant/Sumber/Kategori/S.Loc/Kondisi ke
+// "Semua" sekaligus, biar nggak perlu klik "Semua" 1-1 di tiap baris chip.
 function resetDashStatModalFilters() {
   dashPlantSelected = '';
   dashSumberSelected = '';
   dashKategoriSelected = '';
   dashSlocSelected = '';
+  dashKondisiSelected = '';
   renderSumberFilterChipsInto('dashListModalSumberFilter', dashSumberSelected);
   renderKategoriFilterChipsInto('dashListModalKategoriFilter', dashKategoriSelected);
+  if (dashStatModalCfg && dashStatModalCfg.mode === 'stock') {
+    renderChipFilterInto('dashListModalKondisiFilter', KONDISI_STOCK_FILTER_OPTIONS, dashKondisiSelected, 'kondisi', 'Kondisi Stock');
+  }
   reapplyDashStatModalFilter_();
 }
 
@@ -1181,6 +1239,19 @@ function itemMetaLine(it) {
   if (kategoriVal) parts.push(escapeHtml(KATEGORI_META_LABEL[String(kategoriVal).toUpperCase()] || ('Kategori ' + kategoriVal)));
   const jenisText = it.itemJenis || it.jenis;
   if (jenisText) parts.push('Jenis ' + escapeHtml(jenisText));
+
+  // Posisi bin (Put Away) SAAT INI, kalau barangnya sudah di-putaway — dari
+  // `bins` ([{lokasi, qty}], lihat buildBinsForKode_/hitungBalances_ di
+  // Code.gs). Permintaan user: "diketerangan tambahkan juga posisi barangnya
+  // jika sudah di putaway". Sengaja TIDAK nampilin apa-apa kalau bins kosong
+  // (barang belum di-putaway/masih di area) — biar keterangan nggak
+  // kepanjangan buat kasus yang nggak relevan. Aman dipanggil dari mana pun
+  // (Dashboard/Stock Balance/dst) walau objek `it`-nya nggak punya field
+  // `bins` sama sekali (transaksi Riwayat/Opname/dst) — tinggal di-skip.
+  if (Array.isArray(it.bins) && it.bins.length) {
+    const posisiText = it.bins.map((b) => escapeHtml(b.lokasi) + ' ' + b.qty).join(', ');
+    parts.push('Posisi: ' + posisiText);
+  }
 
   return parts.join(' · ');
 }
