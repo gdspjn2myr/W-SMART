@@ -195,6 +195,7 @@
   <section id="page-dashboard" class="page">
 
     <div class="dash-toolbar">
+      <span class="dash-updated" id="dashUpdatedAt"></span>
       <button type="button" id="btnRefreshDashboard" class="btn btn-small" title="Refresh" aria-label="Refresh">
         <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 4v6h-6"/></svg>
         Refresh
@@ -212,6 +213,7 @@
       </div>
     </div>
 
+    <div class="section-eyebrow">Status Stok</div>
     <div class="stat-grid" id="stockStatGrid">
       <div class="stat-card stat-card-clickable" role="button" tabindex="0" data-dash-filter="total">
         <div class="stat-icon stat-icon-a">
@@ -265,24 +267,37 @@
       </div>
     </div>
 
-    <div class="card card-clickable" id="reorderAlertCard" role="button" tabindex="0" aria-haspopup="dialog">
+    <div class="card" id="perluTindakanCard">
       <div class="card-header">
         <svg viewBox="0 0 24 24" class="card-header-icon" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 2.5 17.5a1.5 1.5 0 0 0 1.3 2.2h16.4a1.5 1.5 0 0 0 1.3-2.2L13.7 3.9a1.5 1.5 0 0 0-2.6 0Z"/><path d="M12 9v4M12 16.2h.01"/></svg>
-        Reorder Alert (Perlu Tindakan)
-        <span class="count-badge" id="reorderAlertCount">0 Item</span>
+        Perlu Tindakan
       </div>
-      <div class="ra-card-hint" id="reorderAlertHint">Semua stock dalam kondisi normal.</div>
+      <div class="action-row" id="reorderAlertCard" role="button" tabindex="0" aria-haspopup="dialog">
+        <div class="stat-icon stat-icon-reorder">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="20" r="1.3"/><circle cx="18" cy="20" r="1.3"/><path d="M2.5 3.5h2l2.6 12.2a1.5 1.5 0 0 0 1.5 1.2h8.6a1.5 1.5 0 0 0 1.5-1.2l1.3-6.7H6"/></svg>
+        </div>
+        <div class="action-row-body">
+          <div class="action-row-title">Reorder Alert</div>
+          <div class="action-row-sub" id="reorderAlertHint">Semua stock dalam kondisi normal.</div>
+        </div>
+        <span class="action-badge" id="reorderAlertCount">0 Item</span>
+        <span class="chevron">›</span>
+      </div>
+      <div class="action-divider"></div>
+      <div class="action-row" id="belumTerdaftarCard" role="button" tabindex="0" data-dash-filter="belum-terdaftar" aria-haspopup="dialog">
+        <div class="stat-icon stat-icon-a">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M8 3v3M16 3v3M8 13h5M8 17h8"/></svg>
+        </div>
+        <div class="action-row-body">
+          <div class="action-row-title">Belum Terdaftar di Master Data</div>
+          <div class="action-row-sub" id="belumTerdaftarHint">Semua barang sudah terdaftar di Master Data.</div>
+        </div>
+        <span class="action-badge" id="belumTerdaftarCount">0 Item</span>
+        <span class="chevron">›</span>
+      </div>
     </div>
 
-    <div class="card card-clickable" id="belumTerdaftarCard" role="button" tabindex="0" data-dash-filter="belum-terdaftar" aria-haspopup="dialog">
-      <div class="card-header">
-        <svg viewBox="0 0 24 24" class="card-header-icon" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M8 3v3M16 3v3M8 13h5M8 17h8"/></svg>
-        Belum Terdaftar di Master Data
-        <span class="count-badge" id="belumTerdaftarCount">0 Item</span>
-      </div>
-      <div class="ra-card-hint" id="belumTerdaftarHint">Semua barang sudah terdaftar di Master Data.</div>
-    </div>
-
+    <div class="section-eyebrow">Ringkasan Transaksi</div>
     <div class="stat-grid">
       <div class="stat-card stat-card-clickable" role="button" tabindex="0" data-dash-filter="terima-hari-ini">
         <div class="stat-icon stat-icon-a">
@@ -361,18 +376,17 @@
     <div class="card">
       <div class="card-header">
         <svg viewBox="0 0 24 24" class="card-header-icon" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect x="7" y="12" width="3" height="6"/><rect x="12" y="8" width="3" height="10"/><rect x="17" y="5" width="3" height="13"/></svg>
-        Top Pemakaian Bulan Ini
+        Analisis Pemakaian Bulan Ini
       </div>
+
+      <div class="subsection-label">Top Pemakaian</div>
       <div id="topPemakaianList" class="tp-list">
         <div class="empty-state">Belum ada data pemakaian bulan ini.</div>
       </div>
-    </div>
 
-    <div class="card">
-      <div class="card-header">
-        <svg viewBox="0 0 24 24" class="card-header-icon" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 9 9h-9V3Z"/></svg>
-        Kategori Item
-      </div>
+      <div class="analysis-divider"></div>
+
+      <div class="subsection-label">Kategori Item</div>
       <div class="kt-wrap">
         <canvas id="chartKategori" width="140" height="140"></canvas>
         <div id="kategoriLegend" class="kt-legend"></div>
@@ -1143,7 +1157,7 @@
       <div class="md-formula-grid">
         <div class="form-row">
           <label>Avg Usage (pcs/hari)</label>
-          <input type="number" id="mdAvgUsage" min="0" step="0.1" value="0">
+          <input type="number" id="mdAvgUsage" min="0" step="any" value="0">
         </div>
         <div class="form-row">
           <label>Lead Time (hari)</label>
