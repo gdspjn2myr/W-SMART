@@ -544,6 +544,17 @@ document.addEventListener('DOMContentLoaded', () => {
     if (chip) selectReorderAlertSlocFilter(chip.dataset.sloc);
   });
 
+  // Tombol "Filter (N aktif) ▾" (buka/tutup 4 baris chip di atas, default
+  // ketutup — lihat toggleDashFilterSection/toggleReorderFilterSection di
+  // dashboard.js) & tombol "Reset Filter" (balikin semua ke "Semua" sekaligus,
+  // lihat resetDashStatModalFilters/resetReorderAlertFilters) — hasil cek
+  // UI/UX: 4 filter numpuk kalau langsung kebuka semua bikin daftar barang
+  // ketutupan, apalagi di HP.
+  document.getElementById('dashListModalFilterToggle').addEventListener('click', toggleDashFilterSection);
+  document.getElementById('reorderAlertModalFilterToggle').addEventListener('click', toggleReorderFilterSection);
+  document.getElementById('dashListModalResetFilter').addEventListener('click', resetDashStatModalFilters);
+  document.getElementById('reorderAlertModalResetFilter').addEventListener('click', resetReorderAlertFilters);
+
   // Tombol "Daftarkan" di tiap baris kartu "Belum Terdaftar di Master Data"
   // (lihat dashStockItemHtml di dashboard.js) — delegated karena isi list-nya
   // dibangun ulang tiap kali popup dibuka. Pindah ke halaman Master Data &
