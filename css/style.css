@@ -2054,6 +2054,13 @@ body {
 .op-koreksi-inline .hint-text { margin-top: 0; margin-bottom: 10px; }
 .op-koreksi-inline-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
 
+/* Breakdown per Bin (Stock Opname) — tiap baris bin + tombol "Pindah" + form
+   inline "Pindah Bin" (reuse .op-koreksi-inline utk isi form, cuma wrapper
+   luarnya dikasih border biar baris bin & form-nya kebaca 1 kelompok). */
+.op-bin-row-wrap { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.op-bin-row-wrap .op-bin-breakdown-item { border: none; border-radius: 0; }
+.op-bin-breakdown-side { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
 /* ---------- Opname Manual (tabel gaya form kertas fisik) ---------- */
 .op-manual-table-wrap {
   border: 1px solid var(--border);
