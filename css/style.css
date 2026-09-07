@@ -2128,6 +2128,96 @@ body {
 }
 .ao-print-table th { background: #f0f2f7; font-weight: 700; }
 
+/* ---------- Buat PR (modal) — dokumen PR berisi beberapa barang sekaligus,
+   format "Form Pengadaan Spare Part". ---------- */
+.modal-card-wide { max-width: 520px; }
+@media (min-width: 900px) {
+  .modal-card-wide { max-width: 1080px; }
+}
+.pr-filter-section { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+.pr-search-input {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 13px;
+  font-family: inherit;
+  margin-top: 6px;
+}
+.pr-table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 10px; margin-bottom: 10px; }
+.pr-table { width: 100%; border-collapse: collapse; font-size: 12.5px; min-width: 900px; }
+.pr-table th, .pr-table td {
+  border: 1px solid var(--border); padding: 6px 7px; text-align: left; vertical-align: middle; white-space: nowrap;
+}
+.pr-table th { background: #eef1f8; font-weight: 700; color: var(--navy); font-size: 11.5px; }
+.pr-table td:first-child, .pr-table th:first-child { text-align: center; white-space: normal; }
+.pr-table input, .pr-table select {
+  width: 100%;
+  min-width: 70px;
+  border: 1px solid transparent;
+  background: transparent;
+  padding: 4px 5px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  font-family: inherit;
+}
+.pr-table input:hover, .pr-table select:hover { border-color: var(--border); }
+.pr-table input:focus, .pr-table select:focus {
+  outline: none; border-color: var(--navy-light); background: #f4f6fb;
+}
+.pr-table input[type="number"] { min-width: 60px; }
+.pr-table td.pr-col-nama input, .pr-table td.pr-col-unit input { min-width: 130px; }
+.pr-row-diluar-filter { background: #fff8e6; }
+.pr-badge-diluar-filter {
+  display: inline-block; margin-top: 3px; font-size: 10px; font-weight: 700;
+  color: #a06a00; background: #fff3d6; padding: 2px 7px; border-radius: 999px; white-space: nowrap;
+}
+.pr-row-remove-btn {
+  border: none; background: none; color: var(--red); cursor: pointer; font-size: 16px; line-height: 1; padding: 4px;
+}
+.pr-add-manual-panel {
+  border: 1px solid var(--border); border-radius: 10px; padding: 10px; margin-bottom: 10px; background: #f6f8fc;
+}
+.pr-add-manual-panel input {
+  width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; font-family: inherit; margin-bottom: 8px;
+}
+.pr-add-manual-results { display: flex; flex-direction: column; gap: 4px; max-height: 180px; overflow-y: auto; }
+.pr-add-manual-result-item {
+  display: flex; justify-content: space-between; align-items: center; gap: 8px;
+  padding: 7px 9px; border: 1px solid var(--border); border-radius: 8px; background: var(--card-bg);
+  cursor: pointer; font-size: 12.5px;
+}
+.pr-add-manual-result-item:hover { border-color: var(--navy-light); background: #eef1f8; }
+.pr-footer {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding-top: 10px; border-top: 1px solid var(--border);
+}
+.pr-footer span { font-size: 12.5px; color: var(--text-muted); font-weight: 600; }
+.pr-saved-panel {
+  margin-top: 12px; padding: 12px; background: #e7f7ee; border-radius: 10px;
+}
+.pr-saved-panel p { margin: 0 0 10px; font-size: 12.5px; color: var(--green, #1a8a4c); font-weight: 600; }
+.pr-saved-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* Kartu ini cuma sumber cetak PDF dokumen PR (window.print), dibuat semirip
+   mungkin sama format Excel resmi perusahaan — selalu hidden di layar,
+   ditampilkan lagi khusus di @media print (lihat body.printing-pr di bawah). */
+.pr-print-card { display: none; }
+.pr-print-doc-code { text-align: right; font-weight: 700; font-size: 13px; margin-bottom: 6px; }
+.pr-print-title { text-align: center; font-weight: 700; font-size: 15px; margin-bottom: 12px; text-transform: uppercase; }
+.pr-print-table { width: 100%; border-collapse: collapse; font-size: 10.5px; }
+.pr-print-table th, .pr-print-table td {
+  border: 1px solid #999; padding: 4px 5px; text-align: center; vertical-align: middle;
+}
+.pr-print-table th { background: #ffff00; font-weight: 700; }
+.pr-print-table td.pr-print-left { text-align: left; }
+.pr-print-signature { display: flex; justify-content: space-between; gap: 10px; margin-top: 28px; font-size: 11px; text-align: center; }
+.pr-print-sign-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.pr-print-sign-col-wide { flex: 2; }
+.pr-print-sign-row { display: flex; gap: 18px; justify-content: center; flex-wrap: wrap; width: 100%; }
+.pr-print-sign-item { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 110px; }
+.pr-print-sign-space { height: 40px; }
+
 /* ---------- Login & Kelola User (Fase 5 — Login & Hak Akses per Role) ---------- */
 .login-screen {
   position: fixed;
@@ -2258,4 +2348,20 @@ body {
   #page-alert-order > .card:not(.ao-print-card) { display: none !important; }
   .ao-print-card[hidden] { display: block !important; }
   .ao-print-card { box-shadow: none; border: none; padding: 0; margin: 0; }
+
+  /* Dokumen PR (lihat printPRDocument di js/alert-order.js) — modal builder-nya
+     ditutup dulu di JS SEBELUM window.print(), tapi ini jaga2 kalau ada modal
+     lain yang somehow masih ke-print. body.printing-pr ditambahkan tepat
+     sebelum window.print() khusus buat print ini, supaya cuma #prPrintCard
+     yang kelihatan (bukan .ao-print-card atau halaman lain). */
+  .modal, .modal-backdrop { display: none !important; }
+  .pr-print-card { display: none; }
+  body.printing-pr #page-alert-order,
+  body.printing-pr .ao-print-card {
+    display: none !important;
+  }
+  body.printing-pr #prPrintCard[hidden] {
+    display: block !important;
+  }
+  #prPrintCard { box-shadow: none; border: none; padding: 0; margin: 0; }
 }
