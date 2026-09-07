@@ -83,26 +83,6 @@ function wireRefreshButton(buttonId, loadFn) {
 // SIDEBAR (drawer navigasi via tombol hamburger)
 // ---------------------------------------------------------------------------
 
-// Deteksi apakah SATU interaksi klik ini beneran pakai mouse — dipakai buat
-// bedain desktop vs HP/sentuh di initSidebar & initNavGroups di bawah.
-// SEBELUMNYA pakai matchMedia('(hover: hover) and (pointer: fine)') doang,
-// tapi itu ngecek KEMAMPUAN device (device-nya PUNYA layar sentuh atau
-// nggak), BUKAN input yang beneran dipakai saat itu — di laptop/PC layar
-// SENTUH yang dipakai pakai MOUSE, matchMedia itu tetap bilang "nggak ada
-// hover presisi" (dianggap kayak HP) walau usernya jelas-jelas nge-klik pakai
-// mouse. Makanya sidebar ikut nutup sendiri & grup navigasi ikut meluas ke
-// bawah padahal harusnya nggak (keluhan user, device: desktop layar sentuh +
-// mouse). e.pointerType ('mouse'/'touch'/'pen') di event click browser
-// modern jauh lebih akurat karena based on INPUT YANG BENERAN DIPAKAI saat
-// event itu terjadi — kalau kosong (klik dipicu keyboard Enter/Space, bukan
-// pointer device sama sekali), baru balik pakai matchMedia sebagai fallback.
-function isMouseClickEvent(e) {
-  if (e && typeof e.pointerType === 'string' && e.pointerType) {
-    return e.pointerType === 'mouse';
-  }
-  return window.matchMedia('(hover: hover) and (pointer: fine)').matches;
-}
-
 function initSidebar() {
   const sidebar = document.getElementById('sidebar');
   const backdrop = document.getElementById('sidebarBackdrop');
@@ -127,39 +107,12 @@ function initSidebar() {
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') closeSidebar();
   });
-  // Di device sentuh (HP/tablet) sidebar-nya drawer sekali-pakai — cocok
-  // ditutup otomatis abis pilih 1 halaman. Tapi di desktop (mouse), sidebar
-  // ini overlay yang harus dibuka manual lewat hamburger tiap kali, jadi
-  // kalau ikut auto-close abis klik, user kepaksa buka-hover-klik ulang dari
-  // nol buat pindah ke halaman lain (keluhan user: "susah buat pindah
-  // halaman"). Makanya di desktop sidebar DIBIARKAN TERBUKA abis klik link,
-  // biar bisa lanjut klik halaman lain tanpa perlu buka-tutup berulang.
-  // Dicek pas klik (bukan sekali di awal) biar tetap benar kalau device-nya
-  // hybrid (laptop layar sentuh, dst).
+  // Sidebar SELALU ditutup otomatis begitu 1 halaman dipilih — di HP/tablet
+  // maupun desktop (mouse), sama seperti sebelumnya. (Sempat dicoba dibiarkan
+  // terbuka khusus di desktop biar gampang lompat antar halaman, tapi balik
+  // ke auto-close di semua device sesuai permintaan user.)
   sidebar.querySelectorAll('.nav-item').forEach((el) => {
-    el.addEventListener('click', (e) => {
-      const isDesktopPointer = isMouseClickEvent(e);
-      if (!isDesktopPointer) { closeSidebar(); return; }
-
-      // Desktop: sidebar KESELURUHAN tetap terbuka (lihat catatan di atas) —
-      // tapi kalau link yang diklik ada di dalam flyout submenu (Transaksi/
-      // Stock Control), flyout itu SENDIRI harus langsung nutup begitu
-      // dipilih. Tanpa ini, flyout-nya cuma nutup pas kursor bener2 pindah
-      // (murni CSS :hover) — kalau kursor diem di tempat abis klik (yang
-      // wajar, klik gak selalu diikuti gerak mouse), flyout-nya kelihatan
-      // "nyangkut" ngambang di atas halaman yang baru aja dibuka (keluhan
-      // user: "setelah memilih halaman harusnya ke-close si navigation tab").
-      // Class .just-picked maksa nutup instan lewat CSS (lihat style.css),
-      // dilepas lagi begitu kursor beneran ninggalin grup-nya (atau abis
-      // 1.5 detik sebagai jaga-jaga kalau mouseleave gak sempat kepicu).
-      const group = el.closest('.nav-group');
-      if (group) {
-        group.classList.add('just-picked');
-        const clearJustPicked = () => group.classList.remove('just-picked');
-        group.addEventListener('mouseleave', clearJustPicked, { once: true });
-        setTimeout(() => { group.removeEventListener('mouseleave', clearJustPicked); clearJustPicked(); }, 1500);
-      }
-    });
+    el.addEventListener('click', closeSidebar);
   });
 }
 
@@ -237,7 +190,8 @@ function wireConfirmModal() {
 // Di HP/tablet/pen (gak ada hover presisi) INI yang jadi cara utama: tap
 // togglenya -> submenu meluas ke bawah di tempat, tap lagi -> nutup.
 // Klik pakai MOUSE (termasuk di laptop/PC layar SENTUH yang dipakai pakai
-// mouse, lihat catatan di isMouseClickEvent) SENGAJA di-skip di sini —
+// mouse — makanya deteksinya pakai e.pointerType, bukan cuma matchMedia,
+// lihat komentar di bawah) SENGAJA di-skip di sini —
 // biarkan hover-flyout yang nangani, soalnya kalau accordion ini ikut
 // kepicu, judul grup lain ikut ketutup & seluruh sidebar meluas ke bawah
 // (keluhan user: "masih kebawah" walau di desktop, gara-gara ke-klik pakai
