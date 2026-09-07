@@ -100,6 +100,7 @@ const Api = {
   getOpnameBinDetail: (payload) => callApi('getOpnameBinDetail', payload),
   saveStockOpname: (payload) => callApi('saveStockOpname', payload),
   saveKoreksiStock: (payload) => callApi('saveKoreksiStock', payload),
+  pindahBin: (payload) => callApi('pindahBin', payload),
   getAlertOrder: () => callApi('getAlertOrder'),
   createPR: (payload) => callApi('createPR', payload),
   createPRBatch: (payload) => callApi('createPRBatch', payload),
