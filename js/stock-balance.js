@@ -93,7 +93,7 @@ async function applySbFilter() {
 
   if (!tglMulai || !tglAkhir) {
     showToast('Periode (tanggal dari & sampai) wajib diisi.', 'error');
-    body.innerHTML = '<tr><td colspan="14" class="empty-state">Periode wajib diisi.</td></tr>';
+    body.innerHTML = '<tr><td colspan="15" class="empty-state">Periode wajib diisi.</td></tr>';
     document.getElementById('sbCount').textContent = '0 SKU';
     document.getElementById('sbUpdatedAt').textContent = '';
     return;
@@ -103,7 +103,7 @@ async function applySbFilter() {
     return;
   }
 
-  body.innerHTML = '<tr><td colspan="14" class="empty-state">Memuat...</td></tr>';
+  body.innerHTML = '<tr><td colspan="15" class="empty-state">Memuat...</td></tr>';
 
   const payload = {
     tanggalMulai: tglMulai,
@@ -134,7 +134,7 @@ async function applySbFilter() {
     document.getElementById('sbUpdatedAt').textContent =
       `Periode ${escapeHtml(res.tanggalMulai)} s/d ${escapeHtml(res.tanggalAkhir)}${sumberSuffix}${kategoriSuffix}`;
   } catch (err) {
-    body.innerHTML = `<tr><td colspan="14" class="empty-state">Gagal memuat: ${escapeHtml(err.message)}</td></tr>`;
+    body.innerHTML = `<tr><td colspan="15" class="empty-state">Gagal memuat: ${escapeHtml(err.message)}</td></tr>`;
     document.getElementById('sbCount').textContent = '0 SKU';
     document.getElementById('sbUpdatedAt').textContent = '';
   }
@@ -143,7 +143,7 @@ async function applySbFilter() {
 function renderSbTable(items) {
   const body = document.getElementById('sbTableBody');
   if (!items.length) {
-    body.innerHTML = '<tr><td colspan="14" class="empty-state">Tidak ada SKU yang cocok dengan filter ini.</td></tr>';
+    body.innerHTML = '<tr><td colspan="15" class="empty-state">Tidak ada SKU yang cocok dengan filter ini.</td></tr>';
     return;
   }
   body.innerHTML = items.map((it) => {
@@ -153,6 +153,14 @@ function renderSbTable(items) {
       ? `<span class="md-badge-jenis ${SB_JENIS_CLASS[it.jenis] || ''}">${escapeHtml(it.jenis)}</span>`
       : '<span class="sb-jenis-kosong">-</span>';
     const plantTag = it.plant ? `<div class="sb-plant-tag">Plant ${escapeHtml(it.plant)}</div>` : '';
+    // Bin Loc (posisi Put Away SAAT INI, bukan per-periode) — dari `bins`
+    // ([{lokasi, qty}], lihat handleGetStockMutasi/hitungBalances_ di
+    // Code.gs). Permintaan user: "untuk di stock valance juga jika ada
+    // pilihan detail munculkan kolom bin loc nya". Item yang belum di-putaway
+    // (bins kosong) ditandai "-" biar kolomnya nggak keliatan kosong/rusak.
+    const binLocText = (it.bins || []).length
+      ? it.bins.map((b) => escapeHtml(b.lokasi) + ' (' + b.qty + ')').join(', ')
+      : '<span class="sb-jenis-kosong">-</span>';
 
     return `
       <tr class="sb-row-clickable" data-kode="${escapeHtml(it.kode)}" data-plant="${escapeHtml(it.plant || '')}" data-nama="${escapeHtml(it.namaBarang || '')}" tabindex="0">
@@ -173,6 +181,7 @@ function renderSbTable(items) {
         <td class="sb-col-detail sb-num">${it.leadTime}</td>
         <td class="sb-col-detail sb-num">${it.rop}</td>
         <td class="sb-col-detail sb-num">${it.avgUsage}</td>
+        <td class="sb-col-detail">${binLocText}</td>
       </tr>
     `;
   }).join('');
