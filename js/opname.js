@@ -270,15 +270,19 @@ function renderOpDetailCard(item, riwayatKedatangan) {
               ${expanded ? `
                 <div class="op-koreksi-inline">
                   <p class="hint-text">Pindahin sebagian/semua qty <strong>${escapeHtml(item.kode)}</strong> dari bin <strong>${escapeHtml(b.lokasi)}</strong> ke bin lain. Tercatat otomatis sebagai 2 baris Koreksi Stock (bin asal berkurang, bin tujuan bertambah) — histori & Riwayat tetap akurat.</p>
-                  <div class="form-row-pair">
-                    <div class="form-row">
-                      <label>Ke Bin *</label>
-                      <input type="text" id="opPindahTujuan-${binSafeId}" placeholder="Kode bin tujuan">
+                  <div class="form-row">
+                    <label>Ke Bin *</label>
+                    <div class="scan-lokasi-row">
+                      <button type="button" class="btn btn-small btn-scan op-btn-pindah-scan" data-target="opPindahTujuan-${binSafeId}">
+                        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7V5a1 1 0 0 1 1-1h2M17 4h2a1 1 0 0 1 1 1v2M20 17v2a1 1 0 0 1-1 1h-2M7 20H5a1 1 0 0 1-1-1v-2"/><rect x="8" y="8" width="8" height="8" rx="1"/></svg>
+                        Scan QR Bin
+                      </button>
                     </div>
-                    <div class="form-row">
-                      <label>Qty Dipindah * (maks ${b.qty})</label>
-                      <input type="number" id="opPindahQty-${binSafeId}" min="0" max="${b.qty}" step="1" placeholder="Maks ${b.qty}">
-                    </div>
+                    <input type="text" id="opPindahTujuan-${binSafeId}" placeholder="Ketik atau scan kode bin tujuan" autocomplete="off">
+                  </div>
+                  <div class="form-row">
+                    <label>Qty Dipindah * (maks ${b.qty})</label>
+                    <input type="number" id="opPindahQty-${binSafeId}" min="0" max="${b.qty}" step="1" placeholder="Maks ${b.qty}">
                   </div>
                   <div class="form-row">
                     <label>Alasan *</label>
@@ -375,6 +379,19 @@ function renderOpDetailCard(item, riwayatKedatangan) {
   });
   card.querySelectorAll('.op-btn-pindah-confirm').forEach((btn) => {
     btn.addEventListener('click', () => handlePindahBinConfirm(item, btn.dataset.lokasi));
+  });
+  card.querySelectorAll('.op-btn-pindah-scan').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const targetInput = document.getElementById(btn.dataset.target);
+      if (!targetInput) return;
+      openQrScanner(
+        (value) => {
+          targetInput.value = value;
+          showToast('Kode Bin terbaca: ' + value, 'success');
+        },
+        (err) => showToast(err, 'error')
+      );
+    });
   });
 }
 
