@@ -679,6 +679,7 @@
           <input type="checkbox" id="sbDetailToggle">
           <span>Tampilkan Detail (Min/Max, Lead Time, ROP, Avg Usage)</span>
         </label>
+        <button type="button" id="btnResetSbFilter" class="dm-filter-reset" hidden>Reset Filter</button>
         <button type="button" id="btnApplySbFilter" class="btn btn-primary">Tampilkan</button>
       </div>
     </div>
@@ -1235,10 +1236,18 @@
       <button type="button" id="btnCloseReorderAlertModal" class="modal-close" aria-label="Tutup">×</button>
     </div>
     <p class="md-preview-hint">Gabungan barang berstatus Stock Out, Need Reorder, & Near ROP (paling kritis duluan) — beda dari kartu status di atas yang menghitung tiap status TERPISAH. Maksimal 50 item teratas ditampilkan.</p>
-    <div id="reorderAlertModalPlantFilter" class="dm-plant-filter" hidden></div>
-    <div id="reorderAlertModalSumberFilter" class="dm-plant-filter" hidden></div>
-    <div id="reorderAlertModalKategoriFilter" class="dm-plant-filter" hidden></div>
-    <div id="reorderAlertModalSlocFilter" class="dm-plant-filter" hidden></div>
+    <button type="button" id="reorderAlertModalFilterToggle" class="dm-filter-toggle" hidden>
+      <span id="reorderAlertModalFilterToggleLabel">Filter</span>
+      <span class="dm-filter-chevron">▾</span>
+    </button>
+    <div id="reorderAlertModalFilterSection" class="dm-filter-section" hidden>
+      <div id="reorderAlertModalPlantFilter" class="dm-plant-filter" hidden></div>
+      <div id="reorderAlertModalSumberFilter" class="dm-plant-filter" hidden></div>
+      <div id="reorderAlertModalKategoriFilter" class="dm-plant-filter" hidden></div>
+      <div id="reorderAlertModalSlocFilter" class="dm-plant-filter" hidden></div>
+      <p id="reorderAlertModalSumberSlocHint" class="dm-filter-hint" hidden>Sumber &amp; S.Loc nggak bisa dipilih bareng (angkanya nggak bisa digabung) — pilih salah satu aja, yang lain otomatis balik ke "Semua".</p>
+      <button type="button" id="reorderAlertModalResetFilter" class="dm-filter-reset" hidden>Reset Filter</button>
+    </div>
     <div id="reorderAlertList" class="ra-list">
       <div class="empty-state">Belum ada item yang perlu di-reorder.</div>
     </div>
@@ -1270,10 +1279,18 @@
       <button type="button" id="btnCloseDashListModal" class="modal-close" aria-label="Tutup">×</button>
     </div>
     <p class="md-preview-hint" id="dashListModalHint"></p>
-    <div id="dashListModalPlantFilter" class="dm-plant-filter" hidden></div>
-    <div id="dashListModalSumberFilter" class="dm-plant-filter" hidden></div>
-    <div id="dashListModalKategoriFilter" class="dm-plant-filter" hidden></div>
-    <div id="dashListModalSlocFilter" class="dm-plant-filter" hidden></div>
+    <button type="button" id="dashListModalFilterToggle" class="dm-filter-toggle" hidden>
+      <span id="dashListModalFilterToggleLabel">Filter</span>
+      <span class="dm-filter-chevron">▾</span>
+    </button>
+    <div id="dashListModalFilterSection" class="dm-filter-section" hidden>
+      <div id="dashListModalPlantFilter" class="dm-plant-filter" hidden></div>
+      <div id="dashListModalSumberFilter" class="dm-plant-filter" hidden></div>
+      <div id="dashListModalKategoriFilter" class="dm-plant-filter" hidden></div>
+      <div id="dashListModalSlocFilter" class="dm-plant-filter" hidden></div>
+      <p id="dashListModalSumberSlocHint" class="dm-filter-hint" hidden>Sumber &amp; S.Loc nggak bisa dipilih bareng (angkanya nggak bisa digabung) — pilih salah satu aja, yang lain otomatis balik ke "Semua".</p>
+      <button type="button" id="dashListModalResetFilter" class="dm-filter-reset" hidden>Reset Filter</button>
+    </div>
     <div id="dashListModalBody" class="ra-list">
       <div class="empty-state">Memuat...</div>
     </div>
