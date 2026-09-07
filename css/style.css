@@ -591,13 +591,18 @@ body {
 }
 .dash-toolbar {
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: space-between;
   margin-bottom: 10px;
 }
 .dash-toolbar .btn-small {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+}
+.dash-updated {
+  font-size: 12px;
+  color: var(--text-muted);
 }
 .btn-link {
   display: block;
@@ -877,6 +882,56 @@ body {
   padding: 3px 9px;
   border-radius: 999px;
 }
+
+/* Label kecil di atas sekelompok kartu (Status Stok/Ringkasan Transaksi) —
+   dipakai buat kasih judul ke grup stat-card tanpa perlu bungkus tiap grup
+   pakai .card sendiri (lihat hasil review UI/UX dashboard). */
+.section-eyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin: 4px 2px 10px;
+}
+
+/* Baris aksi di dalam kartu "Perlu Tindakan" (gabungan Reorder Alert & Belum
+   Terdaftar di Master Data — dulu 2 kartu terpisah, lihat hasil review UI/UX
+   dashboard: 2 kartu yang sama-sama "hal yang perlu ditindaklanjuti" digabung
+   jadi 1 kartu berisi beberapa baris, biar nggak berulang & lebih ringkas). */
+.action-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 2px;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: background .15s ease;
+}
+.action-row:hover, .action-row:focus-visible {
+  background: var(--bg);
+  outline: none;
+}
+.action-row-body { flex: 1; min-width: 0; }
+.action-row-title { font-weight: 700; font-size: 13.5px; color: var(--text); }
+.action-row-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.action-divider { height: 1px; background: var(--border); margin: 2px 0; }
+.action-badge {
+  flex-shrink: 0;
+  background: #fdeaea;
+  color: var(--red);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.chevron { font-size: 18px; font-weight: 700; color: var(--navy-light); flex-shrink: 0; }
+
+/* Sub-judul di dalam kartu "Analisis Pemakaian Bulan Ini" (gabungan Top
+   Pemakaian & Kategori Item — sama alasannya dengan .action-row di atas). */
+.subsection-label { font-size: 12px; font-weight: 700; color: var(--navy); margin: 0 0 10px; }
+.analysis-divider { height: 1px; background: var(--border); margin: 18px 0; }
 
 .card-clickable {
   cursor: pointer;
@@ -1682,11 +1737,8 @@ body {
   #page-dashboard #stockStatGrid .stat-card:nth-child(5) {
     grid-column: auto;
   }
-  #page-dashboard #reorderAlertCard {
-    grid-column: 1 / -1;
-  }
   #page-dashboard .dash-toolbar,
-  #page-dashboard #belumTerdaftarCard {
+  #page-dashboard #perluTindakanCard {
     grid-column: 1 / -1;
   }
   #page-dashboard .card { margin-bottom: 0; }
