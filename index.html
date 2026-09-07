@@ -989,6 +989,7 @@
       <div class="card-header ao-header">
         <span>Barang Perlu Diorder <span class="count-badge" id="aoCount">0 Item</span></span>
         <div class="ao-header-actions">
+          <button type="button" id="btnBuatPR" class="btn btn-small btn-primary">+ Buat PR</button>
           <button type="button" id="btnRefreshAlertOrder" class="btn btn-small" title="Refresh" aria-label="Refresh">
             <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 4v6h-6"/></svg>
           </button>
@@ -997,7 +998,7 @@
           <button type="button" id="btnDownloadAlertOrderPdf" class="btn btn-small">PDF</button>
         </div>
       </div>
-      <p class="md-preview-hint">Barang dengan status Stock Out / Need Reorder / Near ROP. Klik "Buat PR" untuk mencatat kapan proses order dimulai — begitu barang datang lewat Barang Masuk, PR ini otomatis ditutup &amp; Lead Time asli terekam, jadi Avg Usage &amp; Lead Time Otomatis makin akurat seiring waktu.</p>
+      <p class="md-preview-hint">Barang dengan status Stock Out / Need Reorder / Near ROP. Klik "+ Buat PR" di atas untuk membuat 1 dokumen PR berisi beberapa barang sekaligus (format "Form Pengadaan Spare Part") — begitu barang datang lewat Barang Masuk, PR yang mencakupnya otomatis ditutup &amp; Lead Time asli terekam, jadi Avg Usage &amp; Lead Time Otomatis makin akurat seiring waktu.</p>
       <div id="aoList" class="ao-list">
         <div class="empty-state">Memuat data...</div>
       </div>
@@ -1020,6 +1021,131 @@
     </div>
 
   </section>
+
+  <!-- Modal "Buat PR" — bikin 1 dokumen PR berisi beberapa barang sekaligus
+       (format "Form Pengadaan Spare Part"), lihat js/alert-order.js. -->
+  <div id="buatPRModalBackdrop" class="modal-backdrop" hidden></div>
+  <div id="buatPRModal" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="buatPRModalTitle">
+    <div class="modal-card modal-card-wide card">
+      <div class="modal-header">
+        <span id="buatPRModalTitle">Buat PR</span>
+        <button type="button" id="btnCloseBuatPRModal" class="modal-close" aria-label="Tutup">×</button>
+      </div>
+
+      <div class="form-row">
+        <label>Judul Dokumen</label>
+        <input type="text" id="buatPRJudul">
+      </div>
+
+      <div id="buatPRFilterSection" class="pr-filter-section">
+        <div id="buatPRPlantFilter" class="dm-plant-filter" hidden></div>
+        <div id="buatPRStatusFilter" class="dm-plant-filter" hidden></div>
+        <input type="text" id="buatPRSearchItem" class="pr-search-input" placeholder="Cari kode / nama barang di tabel...">
+      </div>
+
+      <div class="pr-table-wrap">
+        <table class="pr-table" id="buatPRTable">
+          <thead>
+            <tr>
+              <th>NO</th><th>Kode Barang</th><th>Nama Barang</th><th>Unit Mesin</th>
+              <th>Min</th><th>Max</th><th>Satuan</th><th>Status</th>
+              <th id="buatPRStockPerHeader">Stock Per</th><th>Order</th><th></th>
+            </tr>
+          </thead>
+          <tbody id="buatPRTbody">
+            <tr><td colspan="11" class="empty-state">Tidak ada barang yang cocok dengan filter.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <button type="button" id="btnBuatPRAddManual" class="btn-link">+ Tambah Item Manual (di luar filter)</button>
+      <div id="buatPRAddManualPanel" class="pr-add-manual-panel" hidden>
+        <input type="text" id="buatPRAddManualSearch" placeholder="Cari Kode Barang / Nama Barang di Master Data...">
+        <div id="buatPRAddManualResults" class="pr-add-manual-results"></div>
+      </div>
+
+      <div class="pr-footer">
+        <span id="buatPRSummary">0 item</span>
+        <button type="button" id="btnSimpanPR" class="btn btn-primary">Simpan PR</button>
+      </div>
+
+      <div id="buatPRSavedPanel" class="pr-saved-panel" hidden>
+        <p id="buatPRSavedInfo"></p>
+        <div class="pr-saved-actions">
+          <button type="button" id="btnDownloadPRExcel" class="btn btn-small">Download Excel</button>
+          <button type="button" id="btnDownloadPRPdf" class="btn btn-small">Download PDF</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Kartu ini CUMA dipakai buat sumber cetak PDF dokumen PR (window.print),
+       dibuat semirip mungkin sama format Excel resmi perusahaan yang dikirim
+       user ("FORM PENGADAAN SPARE PART...") — nggak pernah ditampilkan di
+       layar, lihat CSS .pr-print-card & @media print. -->
+  <div class="card pr-print-card" id="prPrintCard" hidden>
+    <div class="pr-print-doc-code" id="prPrintDocCode"></div>
+    <div class="pr-print-title" id="prPrintTitle"></div>
+    <table class="pr-print-table">
+      <thead>
+        <tr>
+          <th rowspan="2">NO</th>
+          <th rowspan="2">Kode Barang</th>
+          <th rowspan="2">Nama Barang</th>
+          <th rowspan="2">Unit Mesin</th>
+          <th colspan="2">Buffer Stock</th>
+          <th rowspan="2">Satuan</th>
+          <th rowspan="2">Status</th>
+          <th rowspan="2" id="prPrintStockPerHeader">Stock Per</th>
+          <th colspan="2">Proses</th>
+          <th rowspan="2">Order</th>
+        </tr>
+        <tr>
+          <th>MIN</th><th>MAX</th><th>PO</th><th>PR</th>
+        </tr>
+      </thead>
+      <tbody id="prPrintTbody"></tbody>
+    </table>
+    <div class="pr-print-signature">
+      <div class="pr-print-sign-col">
+        <span>Dibuat oleh:</span>
+        <div class="pr-print-sign-space"></div>
+        <strong>( M Iqbal )</strong>
+        <span>GDSP</span>
+      </div>
+      <div class="pr-print-sign-col pr-print-sign-col-wide">
+        <span>Mengetahui:</span>
+        <div class="pr-print-sign-row">
+          <div class="pr-print-sign-item">
+            <div class="pr-print-sign-space"></div>
+            <strong>( Rizal N )</strong>
+            <span>Planner</span>
+          </div>
+          <div class="pr-print-sign-item">
+            <div class="pr-print-sign-space"></div>
+            <strong>( Agus H )</strong>
+            <span>DH Warehouse</span>
+          </div>
+          <div class="pr-print-sign-item">
+            <div class="pr-print-sign-space"></div>
+            <strong>( Sarjono )</strong>
+            <span>DH Teknik Wafer</span>
+          </div>
+          <div class="pr-print-sign-item">
+            <div class="pr-print-sign-space"></div>
+            <strong>( Oka Kurnia Adhy )</strong>
+            <span>DH Produksi Wafer</span>
+          </div>
+        </div>
+      </div>
+      <div class="pr-print-sign-col">
+        <span>Disetujui:</span>
+        <div class="pr-print-sign-space"></div>
+        <strong>( Endar Purnomo )</strong>
+        <span>Factory Manager</span>
+      </div>
+    </div>
+  </div>
 
   <!-- ============================= KELOLA USER ============================= -->
   <section id="page-users" class="page" hidden>
