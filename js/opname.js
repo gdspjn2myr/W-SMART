@@ -25,6 +25,7 @@ let opInitialized = false;
 let opMode = 'barang'; // 'barang' | 'bin' | 'manual'
 let opContextLokasi = ''; // keisi kalau item dibuka dari hasil scan Bin (prefill Lokasi di form hitung)
 let opCurrentItemBins = []; // breakdown per-bin item yang lagi dibuka (buat baseline selisih per-bin)
+let opPindahExpandedLokasi = null; // lokasi bin yang lagi kebuka form "Pindah Bin"-nya di #opDetailCard (null = semua tertutup)
 let opSesiItems = [];
 let opManualRowSeq = 0; // id unik tiap baris tabel Opname Manual (buat data-row-id, bukan index array — biar aman walau baris ditambah/dihapus)
 
@@ -147,6 +148,7 @@ async function handleCariBarang() {
 // renderOpBinResult yang sudah tahu persis Plant-nya dari breakdown per-bin).
 async function fetchAndRenderOpnameItem(kode, plant) {
   document.getElementById('opBinResultCard').hidden = true;
+  opPindahExpandedLokasi = null; // item baru dibuka -> tutup form "Pindah Bin" item sebelumnya (kalau ada)
   const btn = document.getElementById('btnOpCariBarang');
   btn.disabled = true;
   try {
@@ -246,11 +248,51 @@ function renderOpDetailCard(item, riwayatKedatangan) {
   const statusClass = OP_STATUS_CLASS[item.status] || 'ra-badge-unregistered';
   const statusLabel = OP_STATUS_LABEL[item.status] || (item.belumAdaMaster ? 'Belum Terdaftar' : item.status || '-');
 
+  // Tiap baris breakdown per-bin dapat tombol "Pindah" — buka form inline buat
+  // pindahin sebagian/semua qty bin ini ke bin lain dalam 1 aksi (lihat
+  // handlePindahBinConfirm & handlePindahBin di Code.gs). Ini jawaban atas
+  // pertanyaan user "setelah di putaway gaada opsi revisi bin loc ya?" — dulu
+  // cuma bisa lewat 2x Koreksi Stock manual, sekarang 1 form di sini cukup.
   const binsHtml = (item.bins && item.bins.length)
     ? `<div class="op-section-title">Breakdown per Bin</div>
-       <div class="op-riwayat-list">${item.bins.map((b) => `
-          <div class="op-riwayat-item"><div class="op-riwayat-main">${escapeHtml(b.lokasi)}</div><div class="op-riwayat-qty">${b.qty} ${escapeHtml(item.satuan || '')}</div></div>
-        `).join('')}</div>`
+       <div class="op-riwayat-list">${item.bins.map((b) => {
+          const binSafeId = opSafeId(item.kode, b.lokasi);
+          const expanded = opPindahExpandedLokasi === b.lokasi;
+          return `
+            <div class="op-bin-row-wrap">
+              <div class="op-riwayat-item op-bin-breakdown-item">
+                <div class="op-riwayat-main">${escapeHtml(b.lokasi)}</div>
+                <div class="op-bin-breakdown-side">
+                  <span class="op-riwayat-qty">${b.qty} ${escapeHtml(item.satuan || '')}</span>
+                  <button type="button" class="btn btn-small op-btn-pindah-bin" data-lokasi="${escapeHtml(b.lokasi)}">Pindah</button>
+                </div>
+              </div>
+              ${expanded ? `
+                <div class="op-koreksi-inline">
+                  <p class="hint-text">Pindahin sebagian/semua qty <strong>${escapeHtml(item.kode)}</strong> dari bin <strong>${escapeHtml(b.lokasi)}</strong> ke bin lain. Tercatat otomatis sebagai 2 baris Koreksi Stock (bin asal berkurang, bin tujuan bertambah) — histori & Riwayat tetap akurat.</p>
+                  <div class="form-row-pair">
+                    <div class="form-row">
+                      <label>Ke Bin *</label>
+                      <input type="text" id="opPindahTujuan-${binSafeId}" placeholder="Kode bin tujuan">
+                    </div>
+                    <div class="form-row">
+                      <label>Qty Dipindah * (maks ${b.qty})</label>
+                      <input type="number" id="opPindahQty-${binSafeId}" min="0" max="${b.qty}" step="1" placeholder="Maks ${b.qty}">
+                    </div>
+                  </div>
+                  <div class="form-row">
+                    <label>Alasan *</label>
+                    <input type="text" id="opPindahAlasan-${binSafeId}" placeholder="Mis. reorganisasi gudang, gabung bin, dst.">
+                  </div>
+                  <div class="op-koreksi-inline-actions">
+                    <button type="button" class="btn btn-small btn-primary op-btn-pindah-confirm" data-lokasi="${escapeHtml(b.lokasi)}">Konfirmasi Pindah</button>
+                    <button type="button" class="btn btn-small op-btn-pindah-cancel">Batal</button>
+                  </div>
+                </div>
+              ` : ''}
+            </div>
+          `;
+        }).join('')}</div>`
     : '';
 
   const riwayatHtml = riwayatKedatangan.length
@@ -314,6 +356,80 @@ function renderOpDetailCard(item, riwayatKedatangan) {
   document.getElementById('btnTambahSesiOpname').addEventListener('click', addToSesi);
   wireUppercaseInput('opDetailSLoc'); // form ini dibangun ulang tiap kali card di-render, jadi di-wire ulang tiap saat
   document.getElementById('opQtyFisik').focus();
+
+  card.querySelectorAll('.op-btn-pindah-bin').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      opPindahExpandedLokasi = opPindahExpandedLokasi === btn.dataset.lokasi ? null : btn.dataset.lokasi;
+      renderOpDetailCard(item, riwayatKedatangan); // re-render in place (breakdown bin belum berubah, cuma toggle form)
+      if (opPindahExpandedLokasi) {
+        const tujuanEl = document.getElementById('opPindahTujuan-' + opSafeId(item.kode, opPindahExpandedLokasi));
+        if (tujuanEl) tujuanEl.focus(); // override fokus default ke #opQtyFisik di atas
+      }
+    });
+  });
+  card.querySelectorAll('.op-btn-pindah-cancel').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      opPindahExpandedLokasi = null;
+      renderOpDetailCard(item, riwayatKedatangan);
+    });
+  });
+  card.querySelectorAll('.op-btn-pindah-confirm').forEach((btn) => {
+    btn.addEventListener('click', () => handlePindahBinConfirm(item, btn.dataset.lokasi));
+  });
+}
+
+// Konfirmasi form "Pindah" di 1 baris Breakdown per Bin (#opDetailCard) —
+// panggil Api.pindahBin (handlePindahBin di Code.gs, nulis 2 baris Koreksi
+// Stock per-bin sekaligus/atomik) lalu refresh detail item dari server biar
+// breakdown per-bin & Qty Sistem yang tampil selalu data terbaru.
+async function handlePindahBinConfirm(item, lokasiAsal) {
+  const binSafeId = opSafeId(item.kode, lokasiAsal);
+  const tujuanInput = document.getElementById('opPindahTujuan-' + binSafeId);
+  const qtyInput = document.getElementById('opPindahQty-' + binSafeId);
+  const alasanInput = document.getElementById('opPindahAlasan-' + binSafeId);
+  if (!tujuanInput || !qtyInput || !alasanInput) return;
+
+  const lokasiTujuan = tujuanInput.value.trim();
+  if (!lokasiTujuan) { showToast('Isi bin tujuan dulu.', 'error'); tujuanInput.focus(); return; }
+  if (lokasiTujuan === lokasiAsal) { showToast('Bin tujuan tidak boleh sama dengan bin asal.', 'error'); tujuanInput.focus(); return; }
+
+  const qtyRaw = qtyInput.value.trim();
+  if (qtyRaw === '' || isNaN(Number(qtyRaw)) || Number(qtyRaw) <= 0) {
+    showToast('Isi Qty yang dipindah dengan angka lebih dari 0.', 'error');
+    qtyInput.focus();
+    return;
+  }
+
+  const alasan = alasanInput.value.trim();
+  if (!alasan) { showToast('Alasan pindah bin wajib diisi.', 'error'); alasanInput.focus(); return; }
+
+  const confirmBtn = document.querySelector(`.op-btn-pindah-confirm[data-lokasi="${cssEscapeAttr(lokasiAsal)}"]`);
+  const cancelBtn = document.querySelector('.op-btn-pindah-cancel');
+  if (confirmBtn) { confirmBtn.disabled = true; confirmBtn.textContent = 'Memindahkan...'; }
+  if (cancelBtn) cancelBtn.disabled = true;
+
+  const user = document.getElementById('opUser').value.trim();
+  try {
+    const res = await Api.pindahBin({
+      kode: item.kode,
+      namaBarang: item.namaBarang,
+      satuan: item.satuan,
+      plant: item.plant,
+      lokasiAsal,
+      lokasiTujuan,
+      qty: Number(qtyRaw),
+      alasan,
+      user
+    });
+    showToast(`${res.qty} ${item.satuan || ''} dipindah: ${res.lokasiAsal} → ${res.lokasiTujuan}.`, 'success');
+    opPindahExpandedLokasi = null;
+    dashboardLoadedOnce = false; // supaya Dashboard/Stock Balance refresh breakdown bin terbaru saat dibuka lagi
+    await fetchAndRenderOpnameItem(item.kode, item.plant); // ambil ulang breakdown bin yang sudah ter-update dari server
+  } catch (err) {
+    showToast('Gagal pindah bin: ' + err.message, 'error');
+    if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = 'Konfirmasi Pindah'; }
+    if (cancelBtn) cancelBtn.disabled = false;
+  }
 }
 
 // ---------------------------------------------------------------------------
