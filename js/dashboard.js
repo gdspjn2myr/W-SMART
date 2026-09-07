@@ -41,20 +41,26 @@ function filterItemsByKategori(items, kategori) {
 }
 
 // Chip filter generik (Sumber & Kategori sama-sama numpang di sini — bentuk
-// chip-nya identik, cuma beda opsi & atribut data-* yang dipasang).
-function renderChipFilterInto(containerId, options, selected, datasetKey) {
+// chip-nya identik, cuma beda opsi & atribut data-* yang dipasang). `label`
+// (opsional) dirender sebagai caption kecil di ATAS baris chip-nya sendiri
+// (lihat .dm-filter-label di style.css, flex-basis:100% bikin dia otomatis
+// majang di baris sendiri) — permintaan user: sekarang ada 4 baris chip
+// (Plant/Sumber/Kategori/S.Loc) numpuk di 1 popup, jadi perlu label biar
+// jelas baris mana isinya apa tanpa perlu baca teliti satu-satu.
+function renderChipFilterInto(containerId, options, selected, datasetKey, label) {
   const wrap = document.getElementById(containerId);
   if (!wrap) return;
   wrap.hidden = false;
-  wrap.innerHTML = options.map((o) => `
+  const labelHtml = label ? `<span class="dm-filter-label">${escapeHtml(label)}</span>` : '';
+  wrap.innerHTML = labelHtml + options.map((o) => `
       <button type="button" class="dm-plant-chip${selected === o.value ? ' active' : ''}" data-${datasetKey}="${escapeHtml(o.value)}">${escapeHtml(o.label)}</button>
     `).join('');
 }
 function renderSumberFilterChipsInto(containerId, selected) {
-  renderChipFilterInto(containerId, SUMBER_FILTER_OPTIONS, selected, 'sumber');
+  renderChipFilterInto(containerId, SUMBER_FILTER_OPTIONS, selected, 'sumber', 'Sumber');
 }
 function renderKategoriFilterChipsInto(containerId, selected) {
-  renderChipFilterInto(containerId, KATEGORI_FILTER_OPTIONS, selected, 'kategori');
+  renderChipFilterInto(containerId, KATEGORI_FILTER_OPTIONS, selected, 'kategori', 'Kategori');
 }
 
 let dashboardLoadedOnce = false;
@@ -229,7 +235,7 @@ function renderDashPlantFilterChipsFor(containerId, items, selected) {
   if (plants.length <= 1) { wrap.hidden = true; wrap.innerHTML = ''; return; }
   const options = [{ value: '', label: 'Semua Plant' }]
     .concat(plants.map((p) => ({ value: p, label: p === DASH_PLANT_NONE ? 'Belum Ditentukan' : 'Plant ' + p })));
-  renderChipFilterInto(containerId, options, selected, 'plant');
+  renderChipFilterInto(containerId, options, selected, 'plant', 'Plant');
 }
 
 function renderDashSlocFilterChipsFor(containerId, items, selected) {
@@ -243,7 +249,7 @@ function renderDashSlocFilterChipsFor(containerId, items, selected) {
   )).sort();
   if (slocs.length <= 1) { wrap.hidden = true; wrap.innerHTML = ''; return; }
   const options = [{ value: '', label: 'Semua S.Loc' }].concat(slocs.map((s) => ({ value: s, label: s })));
-  renderChipFilterInto(containerId, options, selected, 'sloc');
+  renderChipFilterInto(containerId, options, selected, 'sloc', 'S.Loc');
 }
 
 // Sama seperti renderDashPlantFilterChipsFor/renderDashSlocFilterChipsFor,
@@ -253,12 +259,84 @@ function renderDashSlocFilterChipsFor(containerId, items, selected) {
 // dari item yang lagi ditampilkan di frontend (mustahil, karena baris yang
 // TIDAK cocok filter Plant/S.Loc yang lagi aktif sudah di-skip duluan di
 // server, jadi opsi lain nggak akan kelihatan lagi kalau dihitung dari situ).
-function renderDynamicChipOptionsFor_(containerId, values, selected, datasetKey, allLabel, labelFn) {
+function renderDynamicChipOptionsFor_(containerId, values, selected, datasetKey, allLabel, labelFn, groupLabel) {
   const wrap = document.getElementById(containerId);
   if (!wrap) return;
   if (!values || values.length <= 1) { wrap.hidden = true; wrap.innerHTML = ''; return; }
   const options = [{ value: '', label: allLabel }].concat(values.map((v) => ({ value: v, label: labelFn(v) })));
-  renderChipFilterInto(containerId, options, selected, datasetKey);
+  renderChipFilterInto(containerId, options, selected, datasetKey, groupLabel);
+}
+
+// ---------------------------------------------------------------------------
+// "Chrome" tombol Filter (toggle buka/tutup + label "N aktif"), catatan
+// saling-kunci Sumber/S.Loc, & tombol "Reset Filter" — dipakai BARENG oleh
+// dashListModal (popup kartu statistik) & reorderAlertModal (lihat
+// refreshDashFilterChrome_/refreshReorderFilterChrome_ di bawah). Ditulis
+// generik di sini (1 fungsi dipanggil dgn id container beda-beda) biar nggak
+// nulis logic yang sama 2x buat 2 modal itu.
+//
+// Kenapa perlu ini: sekarang ada 4 baris chip (Plant/Sumber/Kategori/S.Loc)
+// yang bisa numpuk sekaligus di 1 popup — kalau semua langsung kebuka, di HP
+// daftar barangnya ketutupan tombol filter (lihat hasil cek UI/UX). Makanya
+// section filter ini DEFAULT KETUTUP (lihat openDashStatModal/
+// openReorderAlertModal), user tinggal ketuk tombol "Filter" buat buka.
+// ---------------------------------------------------------------------------
+function dashFilterActiveCount_(plant, sumber, kategori, sloc) {
+  return [plant, sumber, kategori, sloc].filter(Boolean).length;
+}
+
+function refreshFilterChrome_(ids, selected) {
+  const rowVisible = (id) => { const el = document.getElementById(id); return !!el && !el.hidden; };
+  const anyVisible = ids.rows.some(rowVisible);
+  const count = dashFilterActiveCount_(selected.plant, selected.sumber, selected.kategori, selected.sloc);
+
+  const toggleBtn = document.getElementById(ids.toggle);
+  if (toggleBtn) {
+    toggleBtn.hidden = !anyVisible;
+    toggleBtn.classList.toggle('has-active', count > 0);
+  }
+  const labelEl = document.getElementById(ids.toggleLabel);
+  if (labelEl) labelEl.textContent = count > 0 ? `Filter (${count} aktif)` : 'Filter';
+
+  const resetBtn = document.getElementById(ids.reset);
+  if (resetBtn) resetBtn.hidden = count === 0;
+
+  // Catatan "Sumber & S.Loc saling kunci" cuma relevan kalau KEDUANYA lagi
+  // ada opsinya (kalau salah satu nggak ada opsi sama sekali, nggak ada yang
+  // bisa "saling kunci").
+  const hintEl = document.getElementById(ids.hint);
+  if (hintEl) hintEl.hidden = !(rowVisible(ids.sumberRow) && rowVisible(ids.slocRow));
+}
+
+function refreshDashFilterChrome_() {
+  refreshFilterChrome_({
+    rows: ['dashListModalPlantFilter', 'dashListModalSumberFilter', 'dashListModalKategoriFilter', 'dashListModalSlocFilter'],
+    sumberRow: 'dashListModalSumberFilter', slocRow: 'dashListModalSlocFilter',
+    toggle: 'dashListModalFilterToggle', toggleLabel: 'dashListModalFilterToggleLabel',
+    reset: 'dashListModalResetFilter', hint: 'dashListModalSumberSlocHint'
+  }, { plant: dashPlantSelected, sumber: dashSumberSelected, kategori: dashKategoriSelected, sloc: dashSlocSelected });
+}
+
+function refreshReorderFilterChrome_() {
+  refreshFilterChrome_({
+    rows: ['reorderAlertModalPlantFilter', 'reorderAlertModalSumberFilter', 'reorderAlertModalKategoriFilter', 'reorderAlertModalSlocFilter'],
+    sumberRow: 'reorderAlertModalSumberFilter', slocRow: 'reorderAlertModalSlocFilter',
+    toggle: 'reorderAlertModalFilterToggle', toggleLabel: 'reorderAlertModalFilterToggleLabel',
+    reset: 'reorderAlertModalResetFilter', hint: 'reorderAlertModalSumberSlocHint'
+  }, { plant: dashReorderPlantSelected, sumber: dashReorderSumberSelected, kategori: dashReorderKategoriSelected, sloc: dashReorderSlocSelected });
+}
+
+// Ketuk tombol "Filter (N aktif) ▾" — buka/tutup section-nya (default ketutup
+// tiap popup dibuka, lihat openDashStatModal/openReorderAlertModal).
+function toggleDashFilterSection() {
+  const section = document.getElementById('dashListModalFilterSection');
+  section.hidden = !section.hidden;
+  document.getElementById('dashListModalFilterToggle').classList.toggle('expanded', !section.hidden);
+}
+function toggleReorderFilterSection() {
+  const section = document.getElementById('reorderAlertModalFilterSection');
+  section.hidden = !section.hidden;
+  document.getElementById('reorderAlertModalFilterToggle').classList.toggle('expanded', !section.hidden);
 }
 
 
@@ -294,6 +372,7 @@ function renderReorderAlertBodyFiltered() {
   let items = filterItemsByPlant(reorderAlertBaseList, dashReorderPlantSelected);
   items = filterItemsByKategori(items, dashReorderKategoriSelected);
   items = applyDashValueSubstitution_(items, dashReorderSumberSelected, dashReorderSlocSelected);
+  refreshReorderFilterChrome_();
   const adaFilterAktif = dashReorderSumberSelected || dashReorderKategoriSelected || dashReorderPlantSelected || dashReorderSlocSelected;
   if (!items.length) {
     wrap.innerHTML = `<div class="empty-state">${adaFilterAktif ? 'Tidak ada barang reorder dari filter ini.' : 'Belum ada item yang perlu di-reorder.'}</div>`;
@@ -339,6 +418,18 @@ function selectReorderAlertSlocFilter(value) {
   renderReorderAlertBodyFiltered();
 }
 
+// Tombol "Reset Filter" — balikin Plant/Sumber/Kategori/S.Loc ke "Semua"
+// sekaligus, biar nggak perlu klik "Semua" 1-1 di 4 baris chip.
+function resetReorderAlertFilters() {
+  dashReorderPlantSelected = '';
+  dashReorderSumberSelected = '';
+  dashReorderKategoriSelected = '';
+  dashReorderSlocSelected = '';
+  renderSumberFilterChipsInto('reorderAlertModalSumberFilter', dashReorderSumberSelected);
+  renderKategoriFilterChipsInto('reorderAlertModalKategoriFilter', dashReorderKategoriSelected);
+  renderReorderAlertBodyFiltered();
+}
+
 // Kartu "Belum Terdaftar di Master Data" — jumlah barang yang PUNYA stock
 // (belumTerdaftarCount, dari hitungStockHealth_ di Code.gs) tapi belum
 // terdaftar resmi (baik barang baru yang belum pernah didaftarkan SAMA
@@ -366,7 +457,12 @@ function openReorderAlertModal() {
   dashReorderSlocSelected = '';
   renderSumberFilterChipsInto('reorderAlertModalSumberFilter', dashReorderSumberSelected);
   renderKategoriFilterChipsInto('reorderAlertModalKategoriFilter', dashReorderKategoriSelected);
-  renderReorderAlertBodyFiltered(); // ini juga yang render chip Plant/S.Loc (lihat renderDashPlantFilterChipsFor/renderDashSlocFilterChipsFor)
+  // Section filter default KETUTUP tiap modal dibuka — biar daftar barang
+  // langsung keliatan, terutama di HP (lihat hasil cek UI/UX: 4 baris chip
+  // numpuk bikin daftar ketutupan kalau langsung kebuka semua).
+  document.getElementById('reorderAlertModalFilterSection').hidden = true;
+  document.getElementById('reorderAlertModalFilterToggle').classList.remove('expanded');
+  renderReorderAlertBodyFiltered(); // ini juga yang render chip Plant/S.Loc & refresh tombol Filter/Reset (lihat refreshReorderFilterChrome_)
   document.getElementById('reorderAlertModalBackdrop').hidden = false;
   document.getElementById('reorderAlertModal').hidden = false;
 }
@@ -526,6 +622,12 @@ async function openDashStatModal(filterKey) {
   // ada filter per sumbernya" (Kategori nyusul pola yang sama).
   renderSumberFilterChipsInto('dashListModalSumberFilter', dashSumberSelected);
   renderKategoriFilterChipsInto('dashListModalKategoriFilter', dashKategoriSelected);
+  // Section filter default KETUTUP tiap popup dibuka — biar daftar barang
+  // langsung keliatan, terutama di HP (lihat hasil cek UI/UX: 4 baris chip
+  // numpuk bikin daftar ketutupan kalau langsung kebuka semua).
+  document.getElementById('dashListModalFilterSection').hidden = true;
+  document.getElementById('dashListModalFilterToggle').classList.remove('expanded');
+  refreshDashFilterChrome_();
   document.getElementById('dashListModalBackdrop').hidden = false;
   document.getElementById('dashListModal').hidden = false;
 
@@ -564,8 +666,9 @@ async function renderDashStatModalBody_(cfg) {
     // Opsi chip Plant/S.Loc dikirim server dari SEMUA baris bulan berjalan
     // (SEBELUM filter Plant/S.Loc diterapkan di server) — lihat
     // plantOptions/slocOptions di handleGetReceivingDetail/handleGetPemakaianDetail.
-    renderDynamicChipOptionsFor_('dashListModalPlantFilter', res.plantOptions, dashPlantSelected, 'plant', 'Semua Plant', (v) => 'Plant ' + v);
-    renderDynamicChipOptionsFor_('dashListModalSlocFilter', res.slocOptions, dashSlocSelected, 'sloc', 'Semua S.Loc', (v) => v);
+    renderDynamicChipOptionsFor_('dashListModalPlantFilter', res.plantOptions, dashPlantSelected, 'plant', 'Semua Plant', (v) => 'Plant ' + v, 'Plant');
+    renderDynamicChipOptionsFor_('dashListModalSlocFilter', res.slocOptions, dashSlocSelected, 'sloc', 'Semua S.Loc', (v) => v, 'S.Loc');
+    refreshDashFilterChrome_();
     if (cfg.view === 'transaksi') renderDashTransaksiModalBody(items, cfg.emptyText);
     else if (cfg.mode === 'receiving') renderDashReceivingModalBody(items, cfg.emptyText);
     else renderDashPemakaianModalBody(items, cfg.emptyText);
@@ -617,6 +720,18 @@ function selectDashSlocFilter(value) {
   reapplyDashStatModalFilter_();
 }
 
+// Tombol "Reset Filter" — balikin Plant/Sumber/Kategori/S.Loc ke "Semua"
+// sekaligus, biar nggak perlu klik "Semua" 1-1 di 4 baris chip.
+function resetDashStatModalFilters() {
+  dashPlantSelected = '';
+  dashSumberSelected = '';
+  dashKategoriSelected = '';
+  dashSlocSelected = '';
+  renderSumberFilterChipsInto('dashListModalSumberFilter', dashSumberSelected);
+  renderKategoriFilterChipsInto('dashListModalKategoriFilter', dashKategoriSelected);
+  reapplyDashStatModalFilter_();
+}
+
 // Dipanggil dari SEMUA selectDash*Filter di atas — mode 'receiving'/
 // 'pemakaian' perlu fetch ulang ke server (qty-nya hasil agregasi server),
 // mode 'stock' cukup filter ulang dashStockModalItems yang sudah ada di memori.
@@ -637,6 +752,7 @@ function reapplyDashStatModalFilter_() {
 
 function renderDashListModalBody(items) {
   const body = document.getElementById('dashListModalBody');
+  refreshDashFilterChrome_();
   if (!items.length) {
     body.innerHTML = '<div class="empty-state">Tidak ada barang yang cocok dengan filter ini.</div>';
     return;
