@@ -92,6 +92,10 @@ async function loadDashboard() {
     renderKategoriChart(res.kategoriDist || { A: 0, B: 0, C: 0 });
     renderRiwayat(res.riwayatTerbaru || []);
     dashboardLoadedOnce = true;
+    const now = new Date();
+    const jam = String(now.getHours()).padStart(2, '0');
+    const menit = String(now.getMinutes()).padStart(2, '0');
+    document.getElementById('dashUpdatedAt').textContent = `Update terakhir ${jam}.${menit}`;
   } catch (err) {
     showToast(err.message, 'error');
   }
