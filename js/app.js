@@ -544,6 +544,17 @@ document.addEventListener('DOMContentLoaded', () => {
     if (chip) selectReorderAlertSlocFilter(chip.dataset.sloc);
   });
 
+  // Chip filter Kondisi Stock (Over Max/Normal/Under Min) — cuma di popup
+  // kartu statistik Dashboard (dashListModal), TIDAK ada di popup Reorder
+  // Alert (item di situ sudah pasti "perlu tindakan", filter ini kurang
+  // relevan) — lihat selectDashKondisiFilter/KONDISI_STOCK_FILTER_OPTIONS di
+  // dashboard.js. Permintaan user: "tambahkan juga filter over max, normal,
+  // sama under min".
+  document.getElementById('dashListModalKondisiFilter').addEventListener('click', (e) => {
+    const chip = e.target.closest('[data-kondisi]');
+    if (chip) selectDashKondisiFilter(chip.dataset.kondisi);
+  });
+
   // Tombol "Filter (N aktif) ▾" (buka/tutup 4 baris chip di atas, default
   // ketutup — lihat toggleDashFilterSection/toggleReorderFilterSection di
   // dashboard.js) & tombol "Reset Filter" (balikin semua ke "Semua" sekaligus,
