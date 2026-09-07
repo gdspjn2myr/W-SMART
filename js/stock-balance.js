@@ -27,6 +27,7 @@ function initStockBalancePage() {
     document.getElementById('sbTglAkhir').valueAsDate = today;
 
     document.getElementById('btnApplySbFilter').addEventListener('click', applySbFilter);
+    document.getElementById('btnResetSbFilter').addEventListener('click', resetSbFilter);
     // Halaman ini sebenarnya SUDAH narik data ulang tiap kali dikunjungi (lihat
     // applySbFilter() di bawah initStockBalancePage), tapi tombol Refresh ini
     // tetap dikasih (konsisten sama pola di Riwayat Transaksi/Alert Order) buat
@@ -37,7 +38,7 @@ function initStockBalancePage() {
       document.getElementById('sbTableWrap').classList.toggle('detail-off', !e.target.checked);
     });
     // Enter di salah satu field filter langsung apply, biar nggak wajib klik tombol.
-    ['sbTglMulai', 'sbTglAkhir', 'sbPlant', 'sbStorage', 'sbMaterial', 'sbSumber'].forEach((id) => {
+    ['sbTglMulai', 'sbTglAkhir', 'sbPlant', 'sbStorage', 'sbMaterial', 'sbSumber', 'sbKategori'].forEach((id) => {
       document.getElementById(id).addEventListener('keydown', (e) => {
         if (e.key === 'Enter') { e.preventDefault(); applySbFilter(); }
       });
@@ -62,7 +63,30 @@ function initStockBalancePage() {
   applySbFilter();
 }
 
+// Tombol "Reset Filter" — balikin Plant/Storage/Material/Sumber/Kategori ke
+// kosong sekaligus (Periode TETAP dipakai, biar nggak perlu isi ulang
+// tanggal) lalu langsung tampilin ulang — hasil cek UI/UX: biar konsisten
+// sama tombol "Reset Filter" yang sudah ada di popup Dashboard/Reorder Alert.
+function resetSbFilter() {
+  document.getElementById('sbPlant').value = '';
+  document.getElementById('sbStorage').value = '';
+  document.getElementById('sbMaterial').value = '';
+  document.getElementById('sbSumber').value = '';
+  document.getElementById('sbKategori').value = '';
+  applySbFilter();
+}
+
+function updateSbResetButtonVisibility_() {
+  const active = document.getElementById('sbPlant').value.trim()
+    || document.getElementById('sbStorage').value.trim()
+    || document.getElementById('sbMaterial').value.trim()
+    || document.getElementById('sbSumber').value
+    || document.getElementById('sbKategori').value;
+  document.getElementById('btnResetSbFilter').hidden = !active;
+}
+
 async function applySbFilter() {
+  updateSbResetButtonVisibility_();
   const tglMulai = document.getElementById('sbTglMulai').value;
   const tglAkhir = document.getElementById('sbTglAkhir').value;
   const body = document.getElementById('sbTableBody');
@@ -93,7 +117,11 @@ async function applySbFilter() {
     // sumberFilter di handleGetStockMutasi/Code.gs), BUKAN angka total semua
     // sumber — permintaan user: "di stock balance harus ada filter per
     // sumbernya, obs, fast moving, dan user".
-    sumberTipe: document.getElementById('sbSumber').value
+    sumberTipe: document.getElementById('sbSumber').value,
+    // Kategori (A/B/C, dari Master Data) — opsional, filter equality biasa
+    // (bukan recompute kayak Sumber) — permintaan user: "per KATEGORI juga yg
+    // A B C itu".
+    kategori: document.getElementById('sbKategori').value
   };
 
   try {
@@ -102,8 +130,9 @@ async function applySbFilter() {
     renderSbTable(res.items || []);
     document.getElementById('sbCount').textContent = (res.items || []).length + ' SKU';
     const sumberSuffix = payload.sumberTipe ? ` · Sumber: ${escapeHtml(sumberFilterLabel(payload.sumberTipe))}` : '';
+    const kategoriSuffix = payload.kategori ? ` · Kategori ${escapeHtml(payload.kategori)}` : '';
     document.getElementById('sbUpdatedAt').textContent =
-      `Periode ${escapeHtml(res.tanggalMulai)} s/d ${escapeHtml(res.tanggalAkhir)}${sumberSuffix}`;
+      `Periode ${escapeHtml(res.tanggalMulai)} s/d ${escapeHtml(res.tanggalAkhir)}${sumberSuffix}${kategoriSuffix}`;
   } catch (err) {
     body.innerHTML = `<tr><td colspan="14" class="empty-state">Gagal memuat: ${escapeHtml(err.message)}</td></tr>`;
     document.getElementById('sbCount').textContent = '0 SKU';
