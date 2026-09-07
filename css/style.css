@@ -958,7 +958,7 @@ body {
 /* Filter chip Plant di popup "Total SKU Terdaftar" (lihat renderDashPlantFilterChips
    & selectDashPlantFilter di dashboard.js) — dipakai supaya user bisa langsung
    loncat ke 1 Plant tertentu, tanpa harus scroll ngelewatin Plant lain. */
-.dm-plant-filter {
+.dm-plant-filter:not([hidden]) {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
@@ -981,6 +981,91 @@ body {
   border-color: var(--navy);
   color: #fff;
 }
+
+/* Label kecil di atas TIAP baris chip (Plant/Sumber/Kategori/S.Loc) — biar
+   langsung jelas baris mana isinya apa tanpa perlu baca teliti satu-satu.
+   Dirender sebagai bagian dari innerHTML .dm-plant-filter (lihat
+   renderChipFilterInto di dashboard.js), flex-basis:100% bikin dia otomatis
+   makan 1 baris penuh & majang chip-nya ke baris berikutnya (parent-nya
+   sudah flex-wrap, lihat .dm-plant-filter di atas). */
+.dm-filter-label {
+  flex-basis: 100%;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--text-muted);
+  margin: 2px 0 -2px;
+}
+
+/* Tombol "Filter (N aktif) ▾" — permintaan user: filter Plant/Sumber/Kategori/
+   S.Loc yang sekarang numpuk 4 baris di popup Dashboard/Reorder Alert bikin
+   daftar barang ketutupan, apalagi di HP (lihat .dm-filter-section di bawah).
+   Defaultnya KETUTUP (lihat openDashStatModal/openReorderAlertModal di
+   dashboard.js), user tinggal ketuk buat buka kalau memang mau filter. */
+.dm-filter-toggle:not([hidden]) {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  margin-bottom: 12px;
+}
+.dm-filter-toggle:hover { border-color: var(--navy-light); }
+/* .has-active: minimal 1 filter lagi dipilih — dikasih warna beda biar user
+   yang balik ke popup ini INGET masih ada filter aktif, walau section-nya
+   lagi ketutup (jadi nggak bingung "kok datanya dikit/aneh"). */
+.dm-filter-toggle.has-active { border-color: var(--navy); color: var(--navy); }
+.dm-filter-chevron { display: inline-block; transition: transform .15s ease; font-size: 10px; }
+.dm-filter-toggle.expanded .dm-filter-chevron { transform: rotate(180deg); }
+
+/* PENTING: pakai :not([hidden]) di sini, BUKAN ".dm-filter-section { display:
+   flex }" polos — kalau polos, aturan CSS penulis (author) ini bakal MENANG
+   ketimbang default browser "[hidden] { display: none }" walau specificity-nya
+   sama-sama 1 class, karena origin CSS penulis selalu menang atas origin User
+   Agent. Akibatnya section.hidden = true (dipakai buat collapse default,
+   lihat toggleDashFilterSection/openDashStatModal di dashboard.js) NGGAK
+   BENERAN nyembunyiin section-nya (ketauan pas dicek computed style: hidden
+   attr true tapi display tetap "flex"). Bug ini kejadian beneran waktu ditest. */
+.dm-filter-section:not([hidden]) {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 8px;
+}
+
+/* Catatan kalau Sumber & S.Loc saling kunci (pilih satu, yang lain otomatis
+   balik ke "Semua") — cuma muncul kalau KEDUANYA lagi ada opsinya (lihat
+   refreshFilterChrome_ di dashboard.js), biar nggak nongol percuma di popup
+   yang cuma punya salah satu. */
+.dm-filter-hint {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  font-style: italic;
+  margin: -2px 0 10px;
+}
+
+.dm-filter-reset {
+  background: none;
+  border: none;
+  color: var(--navy);
+  font-size: 12.5px;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 2px 4px;
+}
+.dm-filter-reset:hover { color: var(--navy-light); }
+/* Di dalam .dm-filter-section (popup Dashboard/Reorder Alert), tombol ini
+   berdiri sendiri di baris terakhir — beda konteks dari .sb-filter-actions
+   (Stock Balance) yang baris flex horizontal bareng tombol "Tampilkan". */
+.dm-filter-section .dm-filter-reset { align-self: flex-start; padding: 2px 0 10px; }
 
 .tp-list { display: flex; flex-direction: column; gap: 12px; }
 .tp-item-label {
