@@ -99,6 +99,7 @@ const Api = {
   getOpnameItemDetail: (payload) => callApi('getOpnameItemDetail', payload),
   getOpnameBinDetail: (payload) => callApi('getOpnameBinDetail', payload),
   saveStockOpname: (payload) => callApi('saveStockOpname', payload),
+  getLaporanOpname: (payload) => callApi('getLaporanOpname', payload),
   saveKoreksiStock: (payload) => callApi('saveKoreksiStock', payload),
   pindahBin: (payload) => callApi('pindahBin', payload),
   getAlertOrder: () => callApi('getAlertOrder'),
