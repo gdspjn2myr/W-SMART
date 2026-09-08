@@ -2200,6 +2200,14 @@ body {
    mungkin sama format Excel resmi perusahaan — selalu hidden di layar,
    ditampilkan lagi khusus di @media print (lihat body.printing-pr di bawah). */
 .pr-print-card { display: none; }
+/* 1 dokumen PR bisa jadi LEBIH dari 1 halaman cetak — kalau item-nya nyebar
+   di lebih dari 1 kelompok Plant (tanda tangannya beda per kelompok, lihat
+   PR_SIGNATURE_GROUPS di alert-order.js), tiap kelompok dapat halamannya
+   sendiri (.pr-print-page), dipaksa ganti halaman fisik pas print/PDF lewat
+   break-after (page-break-after buat browser lama). Halaman TERAKHIR sengaja
+   tidak, biar nggak nyisain 1 halaman kosong nganggur di ujung dokumen. */
+.pr-print-page { page-break-after: always; break-after: page; }
+.pr-print-page:last-child { page-break-after: auto; break-after: auto; }
 .pr-print-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 6px; }
 .pr-print-logo { height: 42px; width: auto; flex-shrink: 0; }
 .pr-print-doc-code { text-align: right; font-weight: 700; font-size: 13px; padding-top: 4px; }
