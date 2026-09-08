@@ -30,6 +30,32 @@ let opPindahExpandedLokasi = null; // lokasi bin yang lagi kebuka form "Pindah B
 let opSesiItems = [];
 let opManualRowSeq = 0; // id unik tiap baris tabel Opname Manual (buat data-row-id, bukan index array — biar aman walau baris ditambah/dihapus)
 
+// ID anti-dobel-simpan (lihat js/api.js dekat generateClientRequestId) — di
+// halaman ini ada 4 aksi simpan yang beda-beda, jadi 4 mekanisme terpisah:
+// - opSesiRequestId: buat "Simpan Hasil Opname" (bulk dari Sesi Opname). ID
+//   diganti tiap isi sesi BERUBAH (tambah/hapus item lewat addToSesi/
+//   removeSesiItem) — karena itu artinya batch yang mau disimpan sudah beda,
+//   bukan retry dari batch yang sama. Kalau simpan gagal & user klik Simpan
+//   lagi TANPA ubah sesi, ID-nya tetap sama -> aman dari dobel.
+// - opManualRequestId: buat "Simpan" di panel Opname Manual. Tabelnya punya
+//   banyak input per baris yang berubah tiap ketikan, jadi (beda dari
+//   opSesiRequestId) SENGAJA cuma diganti setelah SUKSES, bukan tiap
+//   ketikan/tambah-baris — supaya sederhana & tetap cover skenario utama
+//   (retry data yang sama setelah respons hilang). Keterbatasan yang
+//   diketahui: kalau user diam-diam sudah "sukses" (respons hilang) lalu
+//   EDIT tabel sebelum retry, retry itu masih pakai ID lama & bisa saja
+//   dianggap sama oleh cache server walau isinya sudah beda — kasus ini
+//   jarang terjadi & belum ditemukan laporannya, jadi belum ditangani khusus.
+// - opPindahRequestId: buat "Konfirmasi Pindah" (Pindah Bin dari breakdown
+//   per-bin). Dibuat ulang tiap kali form Pindah dibuka (cuma bisa 1 yang
+//   kebuka dalam satu waktu, lihat opPindahExpandedLokasi).
+// - it.requestId (per-item, di opSesiItems): buat "Konfirmasi & Ubah Stock"
+//   (Koreksi Langsung). Dibuat ulang tiap kali form koreksi item itu dibuka
+//   (toggleKoreksiLangsung).
+let opSesiRequestId = generateClientRequestId();
+let opManualRequestId = generateClientRequestId();
+let opPindahRequestId = generateClientRequestId();
+
 // Bikin id DOM yang aman dari Kode Barang + Plant (buat input Alasan per-item
 // di Sesi Opname, karena bisa lebih dari satu item expanded form koreksinya —
 // TERMASUK kode yang sama tapi Plant beda, lihat opItemKey).
@@ -369,6 +395,7 @@ function renderOpDetailCard(item, riwayatKedatangan) {
   card.querySelectorAll('.op-btn-pindah-bin').forEach((btn) => {
     btn.addEventListener('click', () => {
       opPindahExpandedLokasi = opPindahExpandedLokasi === btn.dataset.lokasi ? null : btn.dataset.lokasi;
+      if (opPindahExpandedLokasi) opPindahRequestId = generateClientRequestId(); // form baru dibuka -> transaksi baru
       renderOpDetailCard(item, riwayatKedatangan); // re-render in place (breakdown bin belum berubah, cuma toggle form)
       if (opPindahExpandedLokasi) {
         const tujuanEl = document.getElementById('opPindahTujuan-' + opSafeId(item.kode, opPindahExpandedLokasi));
@@ -441,10 +468,12 @@ async function handlePindahBinConfirm(item, lokasiAsal) {
       lokasiTujuan,
       qty: Number(qtyRaw),
       alasan,
-      user
+      user,
+      clientRequestId: opPindahRequestId
     });
     showToast(`${res.qty} ${item.satuan || ''} dipindah: ${res.lokasiAsal} → ${res.lokasiTujuan}.`, 'success');
     opPindahExpandedLokasi = null;
+    opPindahRequestId = generateClientRequestId(); // sukses -> transaksi berikutnya dianggap baru
     dashboardLoadedOnce = false; // supaya Dashboard/Stock Balance refresh breakdown bin terbaru saat dibuka lagi
     await fetchAndRenderOpnameItem(item.kode, item.plant); // ambil ulang breakdown bin yang sudah ter-update dari server
   } catch (err) {
@@ -498,6 +527,7 @@ function addToSesi() {
   // opItemKey) — itu 2 pool stock yang independen.
   const idx = opSesiItems.findIndex((it) => opItemKey(it) === opItemKey(item));
   if (idx !== -1) opSesiItems[idx] = item; else opSesiItems.push(item);
+  opSesiRequestId = generateClientRequestId(); // isi sesi berubah -> batch baru, ID baru
 
   renderOpSesiList();
   showToast(`${item.kode} ditambahkan ke sesi (selisih ${item.selisih > 0 ? '+' : ''}${item.selisih}).`, 'success');
@@ -512,6 +542,7 @@ function addToSesi() {
 function removeSesiItem(kode, plant) {
   const key = kode + '|' + (plant || '');
   opSesiItems = opSesiItems.filter((it) => opItemKey(it) !== key);
+  opSesiRequestId = generateClientRequestId(); // isi sesi berubah -> batch baru, ID baru
   renderOpSesiList();
 }
 
@@ -593,6 +624,7 @@ function toggleKoreksiLangsung(kode, plant, expand) {
   const it = opSesiItems.find((x) => opItemKey(x) === key);
   if (!it) return;
   it.koreksiExpanded = expand;
+  if (expand) it.requestId = generateClientRequestId(); // form baru dibuka -> transaksi baru
   renderOpSesiList();
   if (expand) {
     const el = document.getElementById('opKsAlasan-' + opSafeId(kode, plant));
@@ -634,10 +666,12 @@ async function handleKoreksiLangsungConfirm(kode, plant) {
       plant: it.plant,
       alasan,
       user,
-      sumber: 'Opname'
+      sumber: 'Opname',
+      clientRequestId: it.requestId
     });
     it.dikoreksi = true;
     it.koreksiExpanded = false;
+    it.requestId = null;
     const labelLokasi = res.lokasi ? ` di ${res.lokasi}` : ' (total)';
     showToast(`Stock ${it.kode}${labelLokasi} dikoreksi: ${res.qtySebelum} → ${res.qtyBaru}.`, 'success');
     dashboardLoadedOnce = false; // supaya Dashboard refresh angka onHand terbaru saat dibuka lagi
@@ -663,9 +697,10 @@ async function handleSimpanOpname() {
   btn.disabled = true;
   btn.textContent = 'Menyimpan...';
   try {
-    const res = await Api.saveStockOpname({ user, items: opSesiItems });
+    const res = await Api.saveStockOpname({ user, items: opSesiItems, clientRequestId: opSesiRequestId });
     showToast(`Hasil opname tersimpan (${res.jumlahItem} item, total selisih ${res.totalSelisih > 0 ? '+' : ''}${res.totalSelisih}).`, 'success');
     opSesiItems = [];
+    opSesiRequestId = generateClientRequestId();
     renderOpSesiList();
   } catch (err) {
     showToast('Gagal menyimpan: ' + err.message, 'error');
@@ -855,8 +890,9 @@ async function handleSimpanOpnameManual() {
   btn.disabled = true;
   btn.textContent = 'Menyimpan...';
   try {
-    const res = await Api.saveStockOpname({ user, items });
+    const res = await Api.saveStockOpname({ user, items, clientRequestId: opManualRequestId });
     showToast(`Opname manual tersimpan (${res.jumlahItem} item, total selisih ${res.totalSelisih > 0 ? '+' : ''}${res.totalSelisih}).`, 'success');
+    opManualRequestId = generateClientRequestId(); // sukses -> batch berikutnya dianggap baru
     document.getElementById('opManualTbody').innerHTML = '';
     addOpManualRow();
     dashboardLoadedOnce = false; // supaya Dashboard refresh angka onHand terbaru saat dibuka lagi
