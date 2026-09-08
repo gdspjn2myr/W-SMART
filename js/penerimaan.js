@@ -10,6 +10,12 @@ let selectedImage = null; // { imageBase64, mimeType } — hanya di memori, tida
 let pnLastSavedItems = []; // item terakhir yang berhasil disimpan (buat opsi "Cetak Label QR Dulu" di popup)
 let pemesanDirectoryCache = []; // { nama, nik, email } user AKTIF terdaftar — dipakai buat autocomplete & auto-match Pemesan tipe USER (lihat updatePemesanMatchState)
 
+// ID anti-dobel-simpan (lihat penjelasan lengkap di js/api.js dekat
+// generateClientRequestId) — dibuat sekali per transaksi baru, ikut dikirim
+// di payload, dan CUMA diganti lagi setelah submit sukses (resetForm) supaya
+// retry gara-gara respons hilang (mis. sinyal lemah) tetap pakai ID yang sama.
+let pnRequestId = generateClientRequestId();
+
 function initPenerimaanPage() {
   loadMasterData(); // dipanggil tiap kali halaman ini dibuka — no-op kalau sudah pernah & belum di-invalidate
   Auth.prefillUserField('fUser'); // identitas selalu dari akun yang login (lihat js/auth.js)
@@ -454,7 +460,8 @@ async function handleSubmit(e) {
     plant: document.getElementById('fPlant').value.trim(),
     sloc: slocVal,
     keterangan: document.getElementById('fKeterangan').value.trim(),
-    items
+    items,
+    clientRequestId: pnRequestId
   };
 
   const submitBtn = e.target.querySelector('button[type="submit"]');
@@ -478,6 +485,7 @@ async function handleSubmit(e) {
 
 function resetForm() {
   document.getElementById('formPenerimaan').reset();
+  pnRequestId = generateClientRequestId(); // transaksi baru -> ID baru
   setKedatanganDisplay();
   updatePemesanNamaVisibility(); // form.reset() balikin <select> ke default, tapi hidden-nya harus disamain manual
   clearItemRows();
