@@ -241,6 +241,78 @@ function printAlertOrderPdf() {
 // yang dikirim user) — tetap/konstan, bukan sesuatu yang berubah per PR.
 const PR_DOC_CODE = 'MAY/PRC/PRO/SBU/MBR/IMDGSP/19/004-03-00';
 
+// ---------------------------------------------------------------------------
+// KOP TANDA TANGAN DOKUMEN PR — BEDA per kelompok Plant (permintaan user:
+// Plant 1111 satu susunan, Plant 1112 & 1113 susunan lain — Planner & DH
+// Teknik orangnya beda, DH Produksi dihapus di 1112/1113). Karena itu 1
+// dokumen PR yang item-nya nyebar di lebih dari 1 kelompok TIDAK BISA
+// digabung jadi 1 halaman/lembar — harus dipecah per kelompok (lihat
+// prGroupItemsByPlantGroup, dipakai bareng oleh printPRDocument &
+// downloadPRExcel supaya PDF & Excel selalu konsisten satu sama lain).
+//
+// Plant yang belum terdaftar di sini (kode Plant baru di masa depan) fallback
+// ke susunan Plant 1111 (lihat prSignatureGroupFor) — bukan berarti itu tanda
+// tangan yang benar buat Plant itu, cuma jaga2 supaya tidak error. Tambahkan
+// mapping-nya begitu Plant baru itu punya susunan tanda tangan resmi sendiri.
+const PR_PLANT_GROUP_OF = { '1111': 'grp1111', '1112': 'grp1112_1113', '1113': 'grp1112_1113' };
+const PR_SIGNATURE_GROUPS = {
+  grp1111: {
+    label: '1111',
+    dibuatOleh: { nama: 'M Iqbal', jabatan: 'GDSP' },
+    mengetahui: [
+      { nama: 'Rizal N', jabatan: 'Planner' },
+      { nama: 'Agus H', jabatan: 'DH Warehouse' },
+      { nama: 'Sarjono', jabatan: 'DH Teknik Wafer' },
+      { nama: 'Oka Kurnia Adhy', jabatan: 'DH Produksi Wafer' }
+    ],
+    disetujui: { nama: 'Endar Purnomo', jabatan: 'Factory Manager' }
+  },
+  grp1112_1113: {
+    label: '1112 & 1113',
+    dibuatOleh: { nama: 'M Iqbal', jabatan: 'GDSP' },
+    mengetahui: [
+      { nama: 'Imam P', jabatan: 'Planner' },
+      { nama: 'Agus H', jabatan: 'DH Warehouse' },
+      { nama: 'Totok', jabatan: 'DH Teknik' }
+    ],
+    disetujui: { nama: 'Endar Purnomo', jabatan: 'Factory Manager' }
+  }
+};
+
+function prSignatureGroupFor(plant) {
+  const key = PR_PLANT_GROUP_OF[plant];
+  if (!key) {
+    console.warn('Plant "' + plant + '" belum terdaftar di PR_PLANT_GROUP_OF — dipakaikan tanda tangan default Plant 1111. Tambahkan mapping-nya di js/alert-order.js kalau Plant ini sudah punya susunan tanda tangan resmi sendiri.');
+  }
+  return PR_SIGNATURE_GROUPS[key || 'grp1111'];
+}
+
+// Pecah items PR (bisa nyebar berbagai Plant) jadi kelompok2 SESUAI urutan
+// kemunculan pertama tiap kelompok di tabel — bukan diurutkan ulang semena2 —
+// supaya urutan halaman cetak/lembar Excel tetap mengikuti urutan baris asli
+// di tabel Buat PR, cuma dikelompokkan.
+function prGroupItemsByPlantGroup(items) {
+  const order = [];
+  const map = {};
+  items.forEach((it) => {
+    const key = PR_PLANT_GROUP_OF[it.plant] || 'grp1111';
+    if (!map[key]) { map[key] = []; order.push(key); }
+    map[key].push(it);
+  });
+  return order.map((key) => ({ groupKey: key, signature: PR_SIGNATURE_GROUPS[key], items: map[key] }));
+}
+
+// Judul tiap halaman/lembar — kalau dokumennya CUMA 1 kelompok Plant (kasus
+// paling umum: filter Plant spesifik, atau kebetulan semua item 1 kelompok),
+// judulnya PERSIS sama seperti yang diketik user (termasuk kalau dia sudah
+// nulis sendiri label Plant-nya di situ). Suffix "— Plant ..." CUMA
+// ditambahkan begitu dokumen beneran kepecah jadi >1 halaman, biar user yang
+// buka tiap halaman/lembar langsung tahu itu punya Plant mana.
+function prJudulForGroup(baseJudul, group, totalGroups) {
+  if (totalGroups <= 1) return baseJudul;
+  return baseJudul + ' — Plant ' + group.label;
+}
+
 const PR_BULAN_ID = ['JANUARI', 'FEBRUARI', 'MARET', 'APRIL', 'MEI', 'JUNI', 'JULI', 'AGUSTUS', 'SEPTEMBER', 'OKTOBER', 'NOVEMBER', 'DESEMBER'];
 function prFormatTanggalIndo(d) {
   return d.getDate() + ' ' + PR_BULAN_ID[d.getMonth()] + ' ' + d.getFullYear();
@@ -522,17 +594,45 @@ async function handleSimpanPR() {
 // sudah tercatat di server). Formatnya mengikuti contoh Excel yang dikirim
 // user ("FORM PENGADAAN SPARE PART FAST MOVING & CRITICAL...").
 // ---------------------------------------------------------------------------
-function downloadPRExcel() {
-  if (!prSaved || !prSaved.items || !prSaved.items.length) {
-    showToast('Belum ada PR tersimpan untuk didownload.', 'error');
-    return;
-  }
-  const items = prSaved.items;
-  const judul = xmlEscape(prSaved.judul || '');
-  const docCode = xmlEscape(PR_DOC_CODE);
-  const stockPerLabel = xmlEscape('Stock Per ' + prTanggalPRToSlash(prSaved.tanggalPR));
+// Nama sheet Excel per kelompok Plant — dijaga pendek (limit Excel 31 char)
+// & bebas dari karakter yang dilarang di nama sheet (\ / ? * [ ] :).
+const PR_EXCEL_SHEET_NAME = { grp1111: 'PR 1111', grp1112_1113: 'PR 1112-1113' };
 
-  const dataRows = items.map((it, i) => `
+// 4 baris "Dibuat oleh / Mengetahui / Disetujui" — Mengetahui dipecah 2
+// nama per sel (pola yang sama seperti template Excel resmi asal user),
+// dibangun GENERIK dari sig.mengetahui (bukan di-hardcode 4 orang) supaya
+// otomatis menyesuaikan kalau suatu kelompok cuma py 3 orang (atau nanti
+// nambah lagi) tanpa perlu tulis ulang XML-nya.
+function prExcelSignatureRowsXml(sig) {
+  const pairs = [];
+  for (let i = 0; i < sig.mengetahui.length; i += 2) pairs.push(sig.mengetahui.slice(i, i + 2));
+  const namaCell = (pair) => (pair || []).map((p) => '( ' + p.nama + ' )').join('        ');
+  const roleCell = (pair) => (pair || []).map((p) => p.jabatan).join('        ');
+  return `
+   <Row>
+    <Cell ss:Index="2" ss:StyleID="SignLabel"><Data ss:Type="String">Dibuat oleh:</Data></Cell>
+    <Cell ss:Index="4" ss:StyleID="SignLabel"><Data ss:Type="String">Mengetahui:</Data></Cell>
+    <Cell ss:Index="9" ss:StyleID="SignLabel"><Data ss:Type="String">Disetujui:</Data></Cell>
+   </Row>
+   <Row ss:Height="40"></Row>
+   <Row ss:Height="40"></Row>
+   <Row>
+    <Cell ss:Index="2" ss:StyleID="SignName"><Data ss:Type="String">( ${xmlEscape(sig.dibuatOleh.nama)} )</Data></Cell>
+    <Cell ss:Index="3" ss:StyleID="SignName"><Data ss:Type="String">${xmlEscape(namaCell(pairs[0]))}</Data></Cell>
+    <Cell ss:Index="4" ss:MergeAcross="3" ss:StyleID="SignName"><Data ss:Type="String">${xmlEscape(namaCell(pairs[1]))}</Data></Cell>
+    <Cell ss:Index="9" ss:StyleID="SignName"><Data ss:Type="String">( ${xmlEscape(sig.disetujui.nama)} )</Data></Cell>
+   </Row>
+   <Row>
+    <Cell ss:Index="2" ss:StyleID="SignRole"><Data ss:Type="String">${xmlEscape(sig.dibuatOleh.jabatan)}</Data></Cell>
+    <Cell ss:Index="3" ss:StyleID="SignRole"><Data ss:Type="String">${xmlEscape(roleCell(pairs[0]))}</Data></Cell>
+    <Cell ss:Index="4" ss:MergeAcross="3" ss:StyleID="SignRole"><Data ss:Type="String">${xmlEscape(roleCell(pairs[1]))}</Data></Cell>
+    <Cell ss:Index="9" ss:StyleID="SignRole"><Data ss:Type="String">${xmlEscape(sig.disetujui.jabatan)}</Data></Cell>
+   </Row>`;
+}
+
+// 1 lembar (<Worksheet>) lengkap buat 1 kelompok Plant.
+function prExcelWorksheetXml(group, judul, docCode, stockPerLabel) {
+  const dataRows = group.items.map((it, i) => `
    <Row>
     <Cell ss:StyleID="Data"><Data ss:Type="Number">${i + 1}</Data></Cell>
     <Cell ss:StyleID="DataLeft"><Data ss:Type="String">${xmlEscape(it.kode)}</Data></Cell>
@@ -548,39 +648,8 @@ function downloadPRExcel() {
     <Cell ss:StyleID="Data"><Data ss:Type="Number">${Number(it.qtyDisarankan) || 0}</Data></Cell>
    </Row>`).join('');
 
-  const borderXml = `
-    <Borders>
-     <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/>
-     <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/>
-     <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/>
-     <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/>
-    </Borders>`;
-
-  const xml = `<?xml version="1.0"?>
-<?mso-application progid="Excel.Sheet"?>
-<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
- xmlns:o="urn:schemas-microsoft-com:office:office"
- xmlns:x="urn:schemas-microsoft-com:office:excel"
- xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
- <Styles>
-  <Style ss:ID="DocCode"><Font ss:Bold="1" ss:Size="14"/><Alignment ss:Horizontal="Right" ss:Vertical="Center"/></Style>
-  <Style ss:ID="Title"><Font ss:Bold="1" ss:Size="14"/><Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/></Style>
-  <Style ss:ID="Header">
-   <Font ss:Bold="1" ss:Size="10"/>
-   <Interior ss:Color="#FFFF00" ss:Pattern="Solid"/>
-   <Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/>${borderXml}
-  </Style>
-  <Style ss:ID="Data">
-   <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>${borderXml}
-  </Style>
-  <Style ss:ID="DataLeft">
-   <Alignment ss:Horizontal="Left" ss:Vertical="Center"/>${borderXml}
-  </Style>
-  <Style ss:ID="SignName"><Font ss:Bold="1"/><Alignment ss:Horizontal="Center"/></Style>
-  <Style ss:ID="SignLabel"><Alignment ss:Horizontal="Left"/></Style>
-  <Style ss:ID="SignRole"><Alignment ss:Horizontal="Center"/></Style>
- </Styles>
- <Worksheet ss:Name="PR">
+  return `
+ <Worksheet ss:Name="${xmlEscape(PR_EXCEL_SHEET_NAME[group.groupKey] || 'PR')}">
   <Table>
    <Column ss:Width="28"/>
    <Column ss:Width="90"/>
@@ -599,7 +668,7 @@ function downloadPRExcel() {
     <Cell ss:Index="3" ss:MergeAcross="9" ss:StyleID="DocCode"><Data ss:Type="String">${docCode}</Data></Cell>
    </Row>
    <Row ss:Height="60">
-    <Cell ss:Index="3" ss:MergeAcross="9" ss:MergeDown="3" ss:StyleID="Title"><Data ss:Type="String">${judul}</Data></Cell>
+    <Cell ss:Index="3" ss:MergeAcross="9" ss:MergeDown="3" ss:StyleID="Title"><Data ss:Type="String">${xmlEscape(judul)}</Data></Cell>
    </Row>
    <Row></Row>
    <Row></Row>
@@ -625,41 +694,71 @@ function downloadPRExcel() {
    ${dataRows}
    <Row></Row>
    <Row></Row>
-   <Row>
-    <Cell ss:Index="2" ss:StyleID="SignLabel"><Data ss:Type="String">Dibuat oleh:</Data></Cell>
-    <Cell ss:Index="4" ss:StyleID="SignLabel"><Data ss:Type="String">Mengetahui:</Data></Cell>
-    <Cell ss:Index="9" ss:StyleID="SignLabel"><Data ss:Type="String">Disetujui:</Data></Cell>
-   </Row>
-   <Row ss:Height="40"></Row>
-   <Row ss:Height="40"></Row>
-   <Row>
-    <Cell ss:Index="2" ss:StyleID="SignName"><Data ss:Type="String">( M Iqbal )</Data></Cell>
-    <Cell ss:Index="3" ss:StyleID="SignName"><Data ss:Type="String">( Rizal N )        ( Agus H )</Data></Cell>
-    <Cell ss:Index="4" ss:MergeAcross="3" ss:StyleID="SignName"><Data ss:Type="String">( Sarjono )        ( Oka Kurnia Adhy )</Data></Cell>
-    <Cell ss:Index="9" ss:StyleID="SignName"><Data ss:Type="String">( Endar Purnomo )</Data></Cell>
-   </Row>
-   <Row>
-    <Cell ss:Index="2" ss:StyleID="SignRole"><Data ss:Type="String">GDSP</Data></Cell>
-    <Cell ss:Index="3" ss:StyleID="SignRole"><Data ss:Type="String">Planner              DH Warehouse</Data></Cell>
-    <Cell ss:Index="4" ss:MergeAcross="3" ss:StyleID="SignRole"><Data ss:Type="String">DH Teknik Wafer         DH Produksi Wafer</Data></Cell>
-    <Cell ss:Index="9" ss:StyleID="SignRole"><Data ss:Type="String">Factory Manager</Data></Cell>
-   </Row>
+   ${prExcelSignatureRowsXml(group.signature)}
   </Table>
- </Worksheet>
+ </Worksheet>`;
+}
+
+function downloadPRExcel() {
+  if (!prSaved || !prSaved.items || !prSaved.items.length) {
+    showToast('Belum ada PR tersimpan untuk didownload.', 'error');
+    return;
+  }
+  const groups = prGroupItemsByPlantGroup(prSaved.items);
+  const docCode = xmlEscape(PR_DOC_CODE);
+  const stockPerLabel = xmlEscape('Stock Per ' + prTanggalPRToSlash(prSaved.tanggalPR));
+
+  const borderXml = `
+    <Borders>
+     <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/>
+     <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/>
+     <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/>
+     <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/>
+    </Borders>`;
+
+  // Tiap kelompok Plant jadi SATU sheet/tab sendiri dalam 1 file .xls yang
+  // sama (bukan file terpisah) — biar tetap 1 download tapi tanda tangannya
+  // benar per kelompok (lihat PR_SIGNATURE_GROUPS/prGroupItemsByPlantGroup).
+  const worksheetsXml = groups.map((group) =>
+    prExcelWorksheetXml(group, prJudulForGroup(prSaved.judul || '', group.signature, groups.length), docCode, stockPerLabel)
+  ).join('');
+
+  const xml = `<?xml version="1.0"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:o="urn:schemas-microsoft-com:office:office"
+ xmlns:x="urn:schemas-microsoft-com:office:excel"
+ xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
+ <Styles>
+  <Style ss:ID="DocCode"><Font ss:Bold="1" ss:Size="14"/><Alignment ss:Horizontal="Right" ss:Vertical="Center"/></Style>
+  <Style ss:ID="Title"><Font ss:Bold="1" ss:Size="14"/><Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/></Style>
+  <Style ss:ID="Header">
+   <Font ss:Bold="1" ss:Size="10"/>
+   <Interior ss:Color="#FFFF00" ss:Pattern="Solid"/>
+   <Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/>${borderXml}
+  </Style>
+  <Style ss:ID="Data">
+   <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>${borderXml}
+  </Style>
+  <Style ss:ID="DataLeft">
+   <Alignment ss:Horizontal="Left" ss:Vertical="Center"/>${borderXml}
+  </Style>
+  <Style ss:ID="SignName"><Font ss:Bold="1"/><Alignment ss:Horizontal="Center"/></Style>
+  <Style ss:ID="SignLabel"><Alignment ss:Horizontal="Left"/></Style>
+  <Style ss:ID="SignRole"><Alignment ss:Horizontal="Center"/></Style>
+ </Styles>${worksheetsXml}
 </Workbook>`;
 
   triggerDownload(new Blob([xml], { type: 'application/vnd.ms-excel;charset=utf-8;' }), prSaved.noDokumen + '.xls');
 }
 
-function printPRDocument() {
-  if (!prSaved || !prSaved.items || !prSaved.items.length) {
-    showToast('Belum ada PR tersimpan untuk dicetak.', 'error');
-    return;
-  }
-  document.getElementById('prPrintDocCode').textContent = PR_DOC_CODE;
-  document.getElementById('prPrintTitle').textContent = prSaved.judul || '';
-  document.getElementById('prPrintStockPerHeader').textContent = 'Stock Per ' + prTanggalPRToSlash(prSaved.tanggalPR);
-  document.getElementById('prPrintTbody').innerHTML = prSaved.items.map((it, i) => `
+// Markup 1 "halaman" dokumen PR (kop + tabel + tanda tangan) buat 1 kelompok
+// Plant — dipakai bareng oleh printPRDocument (isi #prPrintPages) & bisa jadi
+// lebih dari 1 kali kalau item-nya nyebar >1 kelompok (lihat
+// prGroupItemsByPlantGroup/PR_SIGNATURE_GROUPS di atas).
+function prPrintPageHtml(group, judul, stockPerLabel) {
+  const sig = group.signature;
+  const rowsHtml = group.items.map((it, i) => `
       <tr>
         <td>${i + 1}</td>
         <td class="pr-print-left">${escapeHtml(it.kode)}</td>
@@ -675,6 +774,74 @@ function printPRDocument() {
         <td>${Number(it.qtyDisarankan) || 0}</td>
       </tr>
     `).join('');
+
+  const mengetahuiHtml = sig.mengetahui.map((p) => `
+          <div class="pr-print-sign-item">
+            <div class="pr-print-sign-space"></div>
+            <strong>( ${escapeHtml(p.nama)} )</strong>
+            <span>${escapeHtml(p.jabatan)}</span>
+          </div>
+        `).join('');
+
+  return `
+    <div class="pr-print-page">
+      <div class="pr-print-header">
+        <img src="icons/logo-pt-mars.png" alt="Logo PT Mars Indonesia" class="pr-print-logo">
+        <div class="pr-print-doc-code">${escapeHtml(PR_DOC_CODE)}</div>
+      </div>
+      <div class="pr-print-title">${escapeHtml(judul)}</div>
+      <table class="pr-print-table">
+        <thead>
+          <tr>
+            <th rowspan="2">NO</th>
+            <th rowspan="2">Kode Barang</th>
+            <th rowspan="2">Nama Barang</th>
+            <th rowspan="2">Unit Mesin</th>
+            <th colspan="2">Buffer Stock</th>
+            <th rowspan="2">Satuan</th>
+            <th rowspan="2">Status</th>
+            <th rowspan="2">${escapeHtml(stockPerLabel)}</th>
+            <th colspan="2">Proses</th>
+            <th rowspan="2">Order</th>
+          </tr>
+          <tr>
+            <th>MIN</th><th>MAX</th><th>PO</th><th>PR</th>
+          </tr>
+        </thead>
+        <tbody>${rowsHtml}</tbody>
+      </table>
+      <div class="pr-print-signature">
+        <div class="pr-print-sign-col">
+          <span>Dibuat oleh:</span>
+          <div class="pr-print-sign-space"></div>
+          <strong>( ${escapeHtml(sig.dibuatOleh.nama)} )</strong>
+          <span>${escapeHtml(sig.dibuatOleh.jabatan)}</span>
+        </div>
+        <div class="pr-print-sign-col pr-print-sign-col-wide">
+          <span>Mengetahui:</span>
+          <div class="pr-print-sign-row">${mengetahuiHtml}</div>
+        </div>
+        <div class="pr-print-sign-col">
+          <span>Disetujui:</span>
+          <div class="pr-print-sign-space"></div>
+          <strong>( ${escapeHtml(sig.disetujui.nama)} )</strong>
+          <span>${escapeHtml(sig.disetujui.jabatan)}</span>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function printPRDocument() {
+  if (!prSaved || !prSaved.items || !prSaved.items.length) {
+    showToast('Belum ada PR tersimpan untuk dicetak.', 'error');
+    return;
+  }
+  const groups = prGroupItemsByPlantGroup(prSaved.items);
+  const stockPerLabel = 'Stock Per ' + prTanggalPRToSlash(prSaved.tanggalPR);
+  document.getElementById('prPrintPages').innerHTML = groups.map((group) =>
+    prPrintPageHtml(group, prJudulForGroup(prSaved.judul || '', group.signature, groups.length), stockPerLabel)
+  ).join('');
 
   // Kunci eksplisit ke A4 Landscape KHUSUS buat print/PDF dokumen PR ini —
   // sebelumnya nggak ada aturan ukuran halaman sama sekali, jadi orientasinya
