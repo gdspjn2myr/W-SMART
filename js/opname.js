@@ -22,7 +22,8 @@
 // ============================================================================
 
 let opInitialized = false;
-let opMode = 'barang'; // 'barang' | 'bin' | 'manual'
+let opMode = 'barang'; // 'barang' | 'bin' | 'manual' | 'laporan'
+let opLapResult = null; // hasil terakhir Api.getLaporanOpname (dipakai lagi buat Download Excel biar nggak fetch ulang)
 let opContextLokasi = ''; // keisi kalau item dibuka dari hasil scan Bin (prefill Lokasi di form hitung)
 let opCurrentItemBins = []; // breakdown per-bin item yang lagi dibuka (buat baseline selisih per-bin)
 let opPindahExpandedLokasi = null; // lokasi bin yang lagi kebuka form "Pindah Bin"-nya di #opDetailCard (null = semua tertutup)
@@ -71,6 +72,7 @@ function initOpnamePage() {
   document.getElementById('btnOpModeBarang').addEventListener('click', () => setOpMode('barang'));
   document.getElementById('btnOpModeBin').addEventListener('click', () => setOpMode('bin'));
   document.getElementById('btnOpModeManual').addEventListener('click', () => setOpMode('manual'));
+  document.getElementById('btnOpModeLaporan').addEventListener('click', () => setOpMode('laporan'));
 
   document.getElementById('btnOpCariBarang').addEventListener('click', handleCariBarang);
   document.getElementById('opKodeBarang').addEventListener('keydown', (e) => {
@@ -106,6 +108,7 @@ function initOpnamePage() {
   document.getElementById('btnSimpanOpname').addEventListener('click', handleSimpanOpname);
 
   initOpManualPanel();
+  initOpLaporanPanel();
   renderOpSesiList();
 }
 
@@ -114,20 +117,22 @@ function setOpMode(mode) {
   document.getElementById('btnOpModeBarang').classList.toggle('active', mode === 'barang');
   document.getElementById('btnOpModeBin').classList.toggle('active', mode === 'bin');
   document.getElementById('btnOpModeManual').classList.toggle('active', mode === 'manual');
+  document.getElementById('btnOpModeLaporan').classList.toggle('active', mode === 'laporan');
   document.getElementById('opPanelBarang').hidden = mode !== 'barang';
   document.getElementById('opPanelBin').hidden = mode !== 'bin';
-  document.getElementById('opScanHint').hidden = mode === 'manual';
+  document.getElementById('opScanHint').hidden = mode === 'manual' || mode === 'laporan';
   // "Sesi Opname Ini" (di bawah, punya alur staging-lalu-simpan sendiri) cuma
-  // relevan buat mode Cari Barang/Cari Lokasi — panel Opname Manual sengaja
-  // berdiri sendiri (tabelnya sendiri SUDAH jadi tempat review, makanya
-  // tombol Simpan-nya langsung di pojok kanan atas panel itu, bukan numpang
-  // ke Sesi Opname Ini di bawah).
-  document.getElementById('opSesiCard').hidden = mode === 'manual';
+  // relevan buat mode Cari Barang/Cari Lokasi — panel Opname Manual & Laporan
+  // sengaja berdiri sendiri (Opname Manual: tabelnya sendiri SUDAH jadi tempat
+  // review, tombol Simpan-nya langsung di pojok kanan atas panel itu. Laporan:
+  // cuma baca data, tidak ada yang perlu "disimpan").
+  document.getElementById('opSesiCard').hidden = mode === 'manual' || mode === 'laporan';
   document.getElementById('opManualPanel').hidden = mode !== 'manual';
-  if (mode === 'manual') {
+  document.getElementById('opLaporanPanel').hidden = mode !== 'laporan';
+  if (mode === 'manual' || mode === 'laporan') {
     // Hasil scan/cari dari mode sebelumnya (kalau ada) disembunyikan biar
-    // nggak nyampur bingung sama tabel manual — perilaku toggle 'barang' <->
-    // 'bin' yang SUDAH ADA (di atas) sengaja TIDAK diubah/disentuh.
+    // nggak nyampur bingung sama tabel manual/laporan — perilaku toggle
+    // 'barang' <-> 'bin' yang SUDAH ADA (di atas) sengaja TIDAK diubah/disentuh.
     document.getElementById('opBinResultCard').hidden = true;
     document.getElementById('opDetailCard').hidden = true;
   }
@@ -861,4 +866,166 @@ async function handleSimpanOpnameManual() {
     btn.disabled = false;
     btn.textContent = 'Simpan';
   }
+}
+
+// ---------------------------------------------------------------------------
+// LAPORAN OPNAME — rekap hasil Stock Opname per tanggal (jumlah item
+// di-opname, berapa yang selisih, siapa aja yang opname) PLUS daftar barang
+// yang PUNYA stock di tanggal itu (dihitung ulang dari histori Penerimaan/
+// Pemakaian/Koreksi SAMPAI tanggal itu — lihat hitungOnHandAsOfDate_ di
+// Code.gs, BUKAN stock hari ini) tapi belum ketemu baris StockOpname-nya di
+// tanggal yang sama. Murni baca data (laporan) — nggak ada yang disimpan dari
+// panel ini, jadi nggak numpang ke Sesi Opname/opSesiItems di atas sama sekali.
+// ---------------------------------------------------------------------------
+
+function opTodayLocalDateStr() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+function initOpLaporanPanel() {
+  document.getElementById('opLapTanggal').value = opTodayLocalDateStr();
+  document.getElementById('btnTampilLaporanOpname').addEventListener('click', handleTampilLaporanOpname);
+  document.getElementById('btnDownloadLaporanOpnameExcel').addEventListener('click', downloadLaporanOpnameExcel);
+}
+
+async function handleTampilLaporanOpname() {
+  const tanggal = document.getElementById('opLapTanggal').value;
+  if (!tanggal) { showToast('Pilih tanggal dulu.', 'error'); return; }
+  const plant = document.getElementById('opLapPlant').value;
+
+  const btn = document.getElementById('btnTampilLaporanOpname');
+  btn.disabled = true;
+  btn.textContent = 'Memuat...';
+  try {
+    const res = await Api.getLaporanOpname({ tanggal, plant });
+    opLapResult = res;
+    renderOpLaporan(res);
+  } catch (err) {
+    showToast('Gagal memuat laporan: ' + err.message, 'error');
+    document.getElementById('opLapResult').hidden = true;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Tampilkan Laporan';
+  }
+}
+
+function renderOpLaporan(res) {
+  document.getElementById('opLapStatDiopname').textContent = res.ringkasan.jumlahItemDiOpname;
+  document.getElementById('opLapStatSelisih').textContent = res.ringkasan.jumlahSelisih;
+  document.getElementById('opLapStatBelum').textContent = res.ringkasan.jumlahBelumOpname;
+  document.getElementById('opLapStatUser').textContent = res.ringkasan.userList.length ? res.ringkasan.userList.join(', ') : '-';
+
+  const opnameTbody = document.getElementById('opLapOpnameTbody');
+  opnameTbody.innerHTML = res.itemsOpname.length
+    ? res.itemsOpname.map((it) => {
+        const selisihClass = it.selisihAkhir === 0 ? 'op-selisih-zero' : it.selisihAkhir < 0 ? 'op-selisih-minus' : 'op-selisih-plus';
+        const selisihText = it.selisihAkhir > 0 ? '+' + it.selisihAkhir : String(it.selisihAkhir);
+        return `
+          <tr>
+            <td>${escapeHtml(it.kode)}</td>
+            <td>${escapeHtml(it.namaBarang || '-')}</td>
+            <td>${escapeHtml(it.plant || '-')}</td>
+            <td>${escapeHtml(it.lokasi || '-')}</td>
+            <td class="sb-num">${it.qtySistem}</td>
+            <td class="sb-num">${it.qtyFisik}</td>
+            <td class="sb-num"><span class="op-selisih-badge ${selisihClass}">${selisihText}</span></td>
+            <td>${escapeHtml(it.user || '-')}</td>
+            <td>${escapeHtml(it.catatan || '-')}</td>
+          </tr>
+        `;
+      }).join('')
+    : '<tr><td colspan="9" class="empty-state">Belum ada item yang di-opname di tanggal ini.</td></tr>';
+
+  const belumTbody = document.getElementById('opLapBelumTbody');
+  belumTbody.innerHTML = res.itemsBelumOpname.length
+    ? res.itemsBelumOpname.map((it) => `
+        <tr>
+          <td>${escapeHtml(it.kode)}</td>
+          <td>${escapeHtml(it.namaBarang || '-')}</td>
+          <td>${escapeHtml(it.plant || '-')}</td>
+          <td class="sb-num">${it.stockTanggal} ${escapeHtml(it.satuan || '')}</td>
+        </tr>
+      `).join('')
+    : '<tr><td colspan="4" class="empty-state">Semua barang yang ada stock-nya di tanggal ini sudah di-opname.</td></tr>';
+
+  document.getElementById('opLapResult').hidden = false;
+}
+
+// EXCEL — pola SpreadsheetML yang sama dengan downloadPRExcel/downloadAlertOrderExcel
+// (js/alert-order.js), tapi didefinisikan LOKAL di sini (bukan numpang fungsi
+// global punya alert-order.js) supaya file ini tetap berdiri sendiri & tidak
+// bergantung urutan <script> di index.html.
+function opLapXmlEscape(v) {
+  const s = String(v === null || v === undefined ? '' : v);
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function opLapTriggerDownload(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function opLapExcelRow(cells) {
+  return '<Row>' + cells.map((c) => {
+    if (c.numeric) return `<Cell><Data ss:Type="Number">${c.value}</Data></Cell>`;
+    return `<Cell><Data ss:Type="String">${opLapXmlEscape(c.value)}</Data></Cell>`;
+  }).join('') + '</Row>';
+}
+
+function downloadLaporanOpnameExcel() {
+  if (!opLapResult) {
+    showToast('Tampilkan laporan dulu sebelum download.', 'error');
+    return;
+  }
+  const res = opLapResult;
+
+  const opnameHeader = ['Kode Barang', 'Nama Barang', 'Plant', 'Lokasi', 'Qty Sistem', 'Qty Fisik', 'Selisih Akhir', 'User', 'Catatan'];
+  const opnameHeaderXml = '<Row>' + opnameHeader.map((h) => `<Cell ss:StyleID="Header"><Data ss:Type="String">${opLapXmlEscape(h)}</Data></Cell>`).join('') + '</Row>';
+  const opnameRowsXml = res.itemsOpname.map((it) => opLapExcelRow([
+    { value: it.kode }, { value: it.namaBarang }, { value: it.plant }, { value: it.lokasi },
+    { value: it.qtySistem, numeric: true }, { value: it.qtyFisik, numeric: true },
+    { value: it.selisihAkhir, numeric: true }, { value: it.user }, { value: it.catatan }
+  ])).join('');
+
+  const belumHeader = ['Kode Barang', 'Nama Barang', 'Plant', 'Stock per Tanggal Ini'];
+  const belumHeaderXml = '<Row>' + belumHeader.map((h) => `<Cell ss:StyleID="Header"><Data ss:Type="String">${opLapXmlEscape(h)}</Data></Cell>`).join('') + '</Row>';
+  const belumRowsXml = res.itemsBelumOpname.map((it) => opLapExcelRow([
+    { value: it.kode }, { value: it.namaBarang }, { value: it.plant },
+    { value: it.stockTanggal, numeric: true }
+  ])).join('');
+
+  const xml = `<?xml version="1.0"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:o="urn:schemas-microsoft-com:office:office"
+ xmlns:x="urn:schemas-microsoft-com:office:excel"
+ xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
+ <Styles>
+  <Style ss:ID="Header">
+   <Font ss:Bold="1" ss:Color="#FFFFFF"/>
+   <Interior ss:Color="#0F2A5C" ss:Pattern="Solid"/>
+  </Style>
+ </Styles>
+ <Worksheet ss:Name="Hasil Opname">
+  <Table>
+   ${opnameHeaderXml}
+   ${opnameRowsXml}
+  </Table>
+ </Worksheet>
+ <Worksheet ss:Name="Belum Opname">
+  <Table>
+   ${belumHeaderXml}
+   ${belumRowsXml}
+  </Table>
+ </Worksheet>
+</Workbook>`;
+
+  opLapTriggerDownload(new Blob([xml], { type: 'application/vnd.ms-excel;charset=utf-8;' }), 'laporan-opname-' + res.tanggal + '.xls');
 }
