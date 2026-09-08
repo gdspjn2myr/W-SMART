@@ -15,6 +15,10 @@ let pmStockHintTimer = null;
 let pmStockHintSeq = 0; // dipakai buang jawaban getStockHint yang basi (kalau user ngetik cepat & respons datang gak berurutan)
 let pmSumberOptions = []; // opsi Sumber (OBS/Fast Moving/User+nama) terakhir dari server buat Kode+Plant yang lagi dipilih — lihat renderPmSumberField
 
+// ID anti-dobel-simpan (lihat js/api.js dekat generateClientRequestId) —
+// diganti lagi cuma setelah submit sukses (resetPmForm).
+let pmRequestId = generateClientRequestId();
+
 function initPemakaianPage() {
   loadMasterData(); // pastikan datalist #listMasterBarang & masterBarangCache terisi
   Auth.prefillUserField('pmTeknisi'); // identitas selalu dari akun yang login (lihat js/auth.js)
@@ -257,7 +261,8 @@ async function handlePmSubmit(e) {
     plant,
     sloc,
     sumberTipe,
-    sumberNama
+    sumberNama,
+    clientRequestId: pmRequestId
   };
 
   const submitBtn = e.target.querySelector('button[type="submit"]');
@@ -279,6 +284,7 @@ async function handlePmSubmit(e) {
 
 function resetPmForm() {
   document.getElementById('formPemakaian').reset();
+  pmRequestId = generateClientRequestId(); // transaksi baru -> ID baru
   setPmTanggalDisplay();
   document.getElementById('pmNamaHint').hidden = true;
   document.getElementById('pmStockHint').hidden = true;
