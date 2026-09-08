@@ -2200,7 +2200,9 @@ body {
    mungkin sama format Excel resmi perusahaan — selalu hidden di layar,
    ditampilkan lagi khusus di @media print (lihat body.printing-pr di bawah). */
 .pr-print-card { display: none; }
-.pr-print-doc-code { text-align: right; font-weight: 700; font-size: 13px; margin-bottom: 6px; }
+.pr-print-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 6px; }
+.pr-print-logo { height: 42px; width: auto; flex-shrink: 0; }
+.pr-print-doc-code { text-align: right; font-weight: 700; font-size: 13px; padding-top: 4px; }
 .pr-print-title { text-align: center; font-weight: 700; font-size: 15px; margin-bottom: 12px; text-transform: uppercase; }
 .pr-print-table { width: 100%; border-collapse: collapse; font-size: 10.5px; }
 .pr-print-table th, .pr-print-table td {
