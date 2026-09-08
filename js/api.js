@@ -20,6 +20,22 @@ const API_TIMEOUT_MS_LONG = { scanSPB: 60000 };
 // nambahin sendiri-sendiri.
 const API_ACTIONS_NO_SESSION = { login: true, register: true };
 
+// ID unik per "percobaan simpan" (BUKAN per klik) — dipakai fitur anti-dobel-
+// simpan (lihat withIdempotency_ di Code.gs). Skenario yang mau dicegah: user
+// klik Simpan pas sinyal lemah -> request SEBENARNYA sudah nyampe & kesimpan
+// di server, tapi balasannya nggak sempat balik ke HP (timeout/koneksi putus)
+// -> user cuma lihat "Gagal menyimpan", klik Simpan LAGI dengan data yang
+// sama -> tanpa mekanisme ini, itu kesimpan 2x padahal user cuma niat 1x.
+// Tiap halaman input (Barang Masuk/Keluar/Put Away/Opname/Koreksi/Pindah Bin)
+// generate 1 ID ini SEKALI per transaksi baru, ikut dikirim di payload sebagai
+// clientRequestId, dan TIDAK diganti selama transaksi itu masih "pending"
+// (baru diganti/di-generate ulang setelah SUKSES atau form-nya di-reset) —
+// jadi kalau user retry klik Simpan tanpa ubah apa-apa, ID-nya PERSIS SAMA,
+// dan server cukup balikin hasil yang sama tanpa nulis baris baru lagi.
+function generateClientRequestId() {
+  return 'req_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 10);
+}
+
 async function callApi(action, payload) {
   const cfg = window.WSMART_CONFIG;
   if (!cfg.WORKER_URL || cfg.WORKER_URL.indexOf('PASTE_CLOUDFLARE_WORKER_URL') !== -1) {
