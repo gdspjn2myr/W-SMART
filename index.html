@@ -1083,72 +1083,14 @@
   <!-- Kartu ini CUMA dipakai buat sumber cetak PDF dokumen PR (window.print),
        dibuat semirip mungkin sama format Excel resmi perusahaan yang dikirim
        user ("FORM PENGADAAN SPARE PART...") — nggak pernah ditampilkan di
-       layar, lihat CSS .pr-print-card & @media print. -->
+       layar, lihat CSS .pr-print-card & @media print. Isinya (1 atau lebih
+       "halaman", tergantung item-nya nyebar di berapa kelompok Plant — lihat
+       PR_SIGNATURE_GROUPS & printPRDocument di js/alert-order.js) di-generate
+       full lewat JS ke #prPrintPages, BUKAN markup statis di sini — soalnya
+       kop tanda tangan beda per kelompok Plant (1111 vs 1112/1113) & jumlah
+       halamannya sendiri baru ketahuan pas dokumennya sudah tersimpan. -->
   <div class="card pr-print-card" id="prPrintCard" hidden>
-    <div class="pr-print-header">
-      <img src="icons/logo-pt-mars.png" alt="Logo PT Mars Indonesia" class="pr-print-logo">
-      <div class="pr-print-doc-code" id="prPrintDocCode"></div>
-    </div>
-    <div class="pr-print-title" id="prPrintTitle"></div>
-    <table class="pr-print-table">
-      <thead>
-        <tr>
-          <th rowspan="2">NO</th>
-          <th rowspan="2">Kode Barang</th>
-          <th rowspan="2">Nama Barang</th>
-          <th rowspan="2">Unit Mesin</th>
-          <th colspan="2">Buffer Stock</th>
-          <th rowspan="2">Satuan</th>
-          <th rowspan="2">Status</th>
-          <th rowspan="2" id="prPrintStockPerHeader">Stock Per</th>
-          <th colspan="2">Proses</th>
-          <th rowspan="2">Order</th>
-        </tr>
-        <tr>
-          <th>MIN</th><th>MAX</th><th>PO</th><th>PR</th>
-        </tr>
-      </thead>
-      <tbody id="prPrintTbody"></tbody>
-    </table>
-    <div class="pr-print-signature">
-      <div class="pr-print-sign-col">
-        <span>Dibuat oleh:</span>
-        <div class="pr-print-sign-space"></div>
-        <strong>( M Iqbal )</strong>
-        <span>GDSP</span>
-      </div>
-      <div class="pr-print-sign-col pr-print-sign-col-wide">
-        <span>Mengetahui:</span>
-        <div class="pr-print-sign-row">
-          <div class="pr-print-sign-item">
-            <div class="pr-print-sign-space"></div>
-            <strong>( Rizal N )</strong>
-            <span>Planner</span>
-          </div>
-          <div class="pr-print-sign-item">
-            <div class="pr-print-sign-space"></div>
-            <strong>( Agus H )</strong>
-            <span>DH Warehouse</span>
-          </div>
-          <div class="pr-print-sign-item">
-            <div class="pr-print-sign-space"></div>
-            <strong>( Sarjono )</strong>
-            <span>DH Teknik Wafer</span>
-          </div>
-          <div class="pr-print-sign-item">
-            <div class="pr-print-sign-space"></div>
-            <strong>( Oka Kurnia Adhy )</strong>
-            <span>DH Produksi Wafer</span>
-          </div>
-        </div>
-      </div>
-      <div class="pr-print-sign-col">
-        <span>Disetujui:</span>
-        <div class="pr-print-sign-space"></div>
-        <strong>( Endar Purnomo )</strong>
-        <span>Factory Manager</span>
-      </div>
-    </div>
+    <div id="prPrintPages"></div>
   </div>
 
   <!-- ============================= KELOLA USER ============================= -->
