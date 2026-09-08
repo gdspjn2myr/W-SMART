@@ -676,8 +676,24 @@ function printPRDocument() {
       </tr>
     `).join('');
 
+  // Kunci eksplisit ke A4 Landscape KHUSUS buat print/PDF dokumen PR ini —
+  // sebelumnya nggak ada aturan ukuran halaman sama sekali, jadi orientasinya
+  // cuma "kebetulan" ngikut setting print terakhir di browser user (keluhan
+  // user: "otomatis A4 landscape, kok bisa"). Tabelnya emang lebar (12 kolom)
+  // jadi Landscape memang paling pas. Style-nya di-inject SEMENTARA (bukan
+  // taruh permanen di style.css) supaya cuma ngaruh ke print job ini doang —
+  // print QR Labels / daftar Alert Order (ao-print-card) yang lain TETAP ikut
+  // orientasi masing2 tanpa kepengaruh, dilepas lagi begitu selesai.
+  const pageStyle = document.createElement('style');
+  pageStyle.id = 'prPrintPageStyle';
+  pageStyle.textContent = '@page { size: A4 landscape; margin: 12mm 10mm; }';
+  document.head.appendChild(pageStyle);
+
   document.body.classList.add('printing-pr');
-  const cleanup = () => document.body.classList.remove('printing-pr');
+  const cleanup = () => {
+    document.body.classList.remove('printing-pr');
+    pageStyle.remove();
+  };
   window.addEventListener('afterprint', cleanup, { once: true });
   window.print();
   setTimeout(cleanup, 5000); // jaga2 kalau browser lama nggak fire 'afterprint'
