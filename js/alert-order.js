@@ -843,27 +843,42 @@ function printPRDocument() {
     prPrintPageHtml(group, prJudulForGroup(prSaved.judul || '', group.signature, groups.length), stockPerLabel)
   ).join('');
 
-  // Kunci eksplisit ke A4 Landscape KHUSUS buat print/PDF dokumen PR ini —
-  // sebelumnya nggak ada aturan ukuran halaman sama sekali, jadi orientasinya
-  // cuma "kebetulan" ngikut setting print terakhir di browser user (keluhan
-  // user: "otomatis A4 landscape, kok bisa"). Tabelnya emang lebar (12 kolom)
-  // jadi Landscape memang paling pas. Style-nya di-inject SEMENTARA (bukan
-  // taruh permanen di style.css) supaya cuma ngaruh ke print job ini doang —
-  // print QR Labels / daftar Alert Order (ao-print-card) yang lain TETAP ikut
-  // orientasi masing2 tanpa kepengaruh, dilepas lagi begitu selesai.
-  const pageStyle = document.createElement('style');
-  pageStyle.id = 'prPrintPageStyle';
-  pageStyle.textContent = '@page { size: A4 landscape; margin: 12mm 10mm; }';
-  document.head.appendChild(pageStyle);
-
+  // CATATAN soal orientasi: sempat dicoba kunci paksa ke A4 Landscape lewat
+  // CSS "@page { size: A4 landscape }" di sini, TAPI itu malah bikin hasil
+  // PDF berantakan di sebagian device user (konten ke-render lebar buat
+  // Landscape tapi kertas fisiknya somehow tetap Portrait — printer/driver-nya
+  // yang nggak nurut CSS ini, bukan Chrome/CSS-nya, tapi tetap harus dihindari
+  // dari sisi app). Makanya SENGAJA DIBALIKIN ke apa adanya (ikut Layout yang
+  // dipilih user sendiri di dialog print/Save as PDF) — user tinggal pilih
+  // "Landscape" manual di situ sebelum Save, karena tabelnya emang lebar.
   document.body.classList.add('printing-pr');
-  const cleanup = () => {
-    document.body.classList.remove('printing-pr');
-    pageStyle.remove();
-  };
+  const cleanup = () => document.body.classList.remove('printing-pr');
   window.addEventListener('afterprint', cleanup, { once: true });
-  window.print();
-  setTimeout(cleanup, 5000); // jaga2 kalau browser lama nggak fire 'afterprint'
+
+  // Logo baru di-insert ke DOM barusan (innerHTML di atas) — gambarnya masih
+  // proses load ASYNC di background. Kalau window.print() langsung dipanggil
+  // tanpa nunggu, browser bisa keburu render/cetak SEBELUM gambarnya selesai
+  // dimuat, hasilnya logo kosong/hilang di PDF (keluhan user: "logo tidak
+  // ada" — padahal sudah diupload). Makanya print BARU dipanggil setelah
+  // SEMUA <img> di halaman cetak ini selesai load (atau gagal load — tetap
+  // lanjut print daripada macet nunggu selamanya kalau gambarnya somehow
+  // 404/gagal).
+  const imgs = Array.from(document.querySelectorAll('#prPrintPages img'));
+  const pending = imgs.filter((img) => !img.complete);
+  const doPrint = () => {
+    window.print();
+    setTimeout(cleanup, 5000); // jaga2 kalau browser lama nggak fire 'afterprint'
+  };
+  if (!pending.length) {
+    doPrint();
+  } else {
+    let remaining = pending.length;
+    const onOneDone = () => { remaining -= 1; if (remaining <= 0) doPrint(); };
+    pending.forEach((img) => {
+      img.addEventListener('load', onOneDone, { once: true });
+      img.addEventListener('error', onOneDone, { once: true });
+    });
+  }
 }
 
 function wireBuatPRModal() {
