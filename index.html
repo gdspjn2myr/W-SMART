@@ -860,10 +860,11 @@
       <div class="card-header">Stock Opname — Cari / Scan Barang atau Bin</div>
       <p class="md-preview-hint" id="opScanHint">Scan atau cari Kode Barang buat lihat data lengkapnya (qty tercatat sistem + riwayat kedatangan: kapan, dari vendor mana, No PO). Atau scan/cari Kode Lokasi/Bin buat lihat semua barang yang ada di situ. Scan di sini cuma buat lihat data referensi — hasil hitung fisik tetap diisi manual di bawah.</p>
 
-      <div class="mode-switch">
+      <div class="mode-switch mode-switch-wrap">
         <button type="button" class="mode-btn active" id="btnOpModeBarang">Cari Barang</button>
         <button type="button" class="mode-btn" id="btnOpModeBin">Cari Lokasi/Bin</button>
         <button type="button" class="mode-btn" id="btnOpModeManual">Opname Manual</button>
+        <button type="button" class="mode-btn" id="btnOpModeLaporan">Laporan</button>
       </div>
 
       <div id="opPanelBarang">
@@ -977,6 +978,98 @@
       <div class="form-row op-manual-user-row">
         <label>Nama User (yang opname)</label>
         <input type="text" id="opManualUser" placeholder="Otomatis terisi dari akun yang login" readonly>
+      </div>
+    </div>
+
+    <!-- LAPORAN OPNAME — rekap hasil Stock Opname per tanggal (jumlah item
+         di-opname, berapa yang selisih, siapa aja yang opname) PLUS daftar
+         barang yang punya stock di tanggal itu (dihitung ulang dari histori
+         Penerimaan/Pemakaian/Koreksi SAMPAI tanggal itu, lihat
+         hitungOnHandAsOfDate_ di Code.gs) tapi belum ketemu baris StockOpname-
+         nya di tanggal yang sama — jawaban atas permintaan user "list barang
+         yg belum teropname pada suatu tanggal ... disesuaikan dengan stock yg
+         ada pada tanggal tersebut" (BUKAN sekadar semua Master Data, supaya
+         barang yang emang lagi kosong/belum ada stock-nya waktu itu tidak
+         ikut dianggap "belum di-opname"). -->
+    <div class="card" id="opLaporanPanel" hidden>
+      <div class="card-header">Laporan Opname Harian</div>
+      <p class="md-preview-hint">Pilih tanggal buat lihat rekap hasil opname hari itu, plus daftar barang yang harusnya di-opname (masih ada stock-nya per tanggal itu) tapi belum sempat dicatat.</p>
+
+      <div class="form-row-pair">
+        <div class="form-row">
+          <label>Tanggal *</label>
+          <input type="date" id="opLapTanggal">
+        </div>
+        <div class="form-row">
+          <label>Plant</label>
+          <select id="opLapPlant">
+            <option value="">Semua Plant</option>
+            <option value="1111">1111</option>
+            <option value="1112">1112</option>
+            <option value="1113">1113</option>
+          </select>
+        </div>
+      </div>
+      <button type="button" id="btnTampilLaporanOpname" class="btn btn-primary btn-small">Tampilkan Laporan</button>
+
+      <div id="opLapResult" hidden>
+        <div class="stat-grid op-lap-stat-grid">
+          <div class="stat-card">
+            <div class="stat-body">
+              <div class="stat-label">Item Di-opname</div>
+              <div class="stat-value" id="opLapStatDiopname">0</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-body">
+              <div class="stat-label">Ada Selisih</div>
+              <div class="stat-value" id="opLapStatSelisih">0</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-body">
+              <div class="stat-label">Belum Di-opname</div>
+              <div class="stat-value" id="opLapStatBelum">0</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-body">
+              <div class="stat-label">User Opname</div>
+              <div class="stat-value op-lap-stat-user" id="opLapStatUser">-</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-header ao-header op-lap-subheader">
+          <span>Hasil Opname Tanggal Ini</span>
+          <div class="ao-header-actions">
+            <button type="button" id="btnDownloadLaporanOpnameExcel" class="btn btn-small">Download Excel</button>
+          </div>
+        </div>
+        <div class="sb-table-wrap">
+          <table class="sb-table">
+            <thead>
+              <tr>
+                <th>Kode Barang</th><th>Nama Barang</th><th>Plant</th><th>Lokasi</th>
+                <th class="sb-num">Qty Sistem</th><th class="sb-num">Qty Fisik</th>
+                <th class="sb-num">Selisih Akhir</th><th>User</th><th>Catatan</th>
+              </tr>
+            </thead>
+            <tbody id="opLapOpnameTbody"></tbody>
+          </table>
+        </div>
+
+        <div class="op-section-title">Belum Di-opname (Punya Stock di Tanggal Ini)</div>
+        <div class="sb-table-wrap">
+          <table class="sb-table">
+            <thead>
+              <tr>
+                <th>Kode Barang</th><th>Nama Barang</th><th>Plant</th><th class="sb-num">Stock per Tanggal Ini</th>
+              </tr>
+            </thead>
+            <tbody id="opLapBelumTbody"></tbody>
+          </table>
+        </div>
       </div>
     </div>
 
