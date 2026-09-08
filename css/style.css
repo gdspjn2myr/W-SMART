@@ -2212,9 +2212,9 @@ body {
 .pr-print-logo { height: 42px; width: auto; flex-shrink: 0; }
 .pr-print-doc-code { text-align: right; font-weight: 700; font-size: 13px; padding-top: 4px; }
 .pr-print-title { text-align: center; font-weight: 700; font-size: 15px; margin-bottom: 12px; text-transform: uppercase; }
-.pr-print-table { width: 100%; border-collapse: collapse; font-size: 10.5px; }
+.pr-print-table { width: auto; margin: 0 auto; border-collapse: collapse; font-size: 10.5px; }
 .pr-print-table th, .pr-print-table td {
-  border: 1px solid #999; padding: 4px 5px; text-align: center; vertical-align: middle;
+  border: 1px solid #999; padding: 4px 5px; text-align: center; vertical-align: middle; white-space: nowrap;
 }
 .pr-print-table th { background: #ffff00; font-weight: 700; }
 .pr-print-table td.pr-print-left { text-align: left; }
