@@ -4,7 +4,7 @@
 // DAN supaya user dapat notif "Versi baru tersedia" di aplikasi.
 // ============================================================================
 
-const APP_VERSION = '1.9.4';
+const APP_VERSION = '1.9.5';
 const CACHE_NAME = 'wsmart-shell-v' + APP_VERSION;
 const APP_SHELL = [
   './',
@@ -32,7 +32,8 @@ const APP_SHELL = [
   './js/pengaturan.js',
   './js/app.js',
   './icons/icon-192.png',
-  './icons/icon-512.png'
+  './icons/icon-512.png',
+  './icons/logo-pt-mars.png'
 ];
 
 self.addEventListener('install', (event) => {
