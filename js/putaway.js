@@ -16,6 +16,10 @@ let pwBelumMapping = [];
 // bikin Put Away bisa "nyedot" belum-ter-mapping dari Plant yang salah).
 let pwSelectedPlant = '';
 
+// ID anti-dobel-simpan (lihat js/api.js dekat generateClientRequestId) —
+// diganti lagi cuma setelah submit sukses (resetPwItemFields).
+let pwRequestId = generateClientRequestId();
+
 function initPutawayPage() {
   Auth.prefillUserField('pwUser'); // identitas selalu dari akun yang login (lihat js/auth.js)
 
@@ -215,7 +219,8 @@ async function handlePwSubmit(e) {
       lokasi,
       sloc,
       user,
-      plant: item.plant || ''
+      plant: item.plant || '',
+      clientRequestId: pwRequestId
     });
     showToast('Put away tersimpan.', 'success');
     resetPwItemFields();
@@ -230,6 +235,7 @@ async function handlePwSubmit(e) {
 }
 
 function resetPwItemFields() {
+  pwRequestId = generateClientRequestId(); // transaksi baru -> ID baru
   document.getElementById('pwKode').value = '';
   document.getElementById('pwQty').value = '';
   document.getElementById('pwSatuan').value = '';
