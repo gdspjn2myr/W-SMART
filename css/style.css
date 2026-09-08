@@ -2338,7 +2338,12 @@ body {
   .page:not(#page-qr-labels):not(#page-alert-order) {
     display: none !important;
   }
-  body, .app-content { background: #fff; padding: 0; margin: 0; }
+  /* "html" DIIKUTKAN sengaja (bukan cuma body) — kalau nggak, pas halaman
+     cetak lebih pendek dari tinggi kertas fisik (misal halaman Plant 1112/1113
+     yang itemnya dikit), sisa area di bawah konten itu nampilin background
+     <html> yang masih var(--bg) (abu-abu kebiruan bawaan app) alih-alih putih
+     bersih — kelihatan kayak ada "kotak abu-abu" aneh pas di-print/Save PDF. */
+  html, body, .app-content { background: #fff; padding: 0; margin: 0; }
   #page-qr-labels { display: block !important; }
   #qrLabelResultCard {
     box-shadow: none;
