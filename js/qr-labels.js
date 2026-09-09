@@ -5,6 +5,20 @@
 // yang dibaca fitur scan yang sudah ada (Put Away & Barang Keluar, lihat
 // qr-scan.js): hasil scan langsung dipakai sebagai kode/lokasi tanpa parsing
 // tambahan. QR digambar pakai qrcode-lib.js (vendored, lihat file itu).
+//
+// DETAIL TAMBAHAN DI LABEL (No PO, Vendor, Sumber/Pemesan, Plant, S.Loc, Qty,
+// Tanggal, Diterima oleh) — permintaan user supaya label barang selengkap
+// mungkin, bukan cuma Kode+Nama. QR-nya SENDIRI tetap cuma Kode Barang polos
+// (jangan diutak-atik, lihat paragraf di atas) — field2 tambahan ini CUMA
+// teks yang dicetak DI SAMPING QR-nya, buat dibaca manusia. Sumbernya beda2:
+// - Cetak langsung setelah submit Penerimaan Barang -> otomatis lengkap dari
+//   transaksi yang baru disimpan (lihat penerimaan.js, openPutawayPrompt).
+// - Mode Manual (cari barang dari Master Data) -> field2 ini nggak nempel ke
+//   Master Data (No PO/Vendor/dst itu per-transaksi, bukan properti barang),
+//   jadi disediakan sebagai isian OPSIONAL "Detail Tambahan" yang berlaku
+//   sama buat semua barang yang dipilih di 1x generate itu (lihat
+//   generateQrBarangLabels & field qrManual* di index.html).
+// Field yang kosong TIDAK ditampilkan di label (biar nggak penuh baris "-").
 // ============================================================================
 
 let qrLabelsInitialized = false;
@@ -49,16 +63,65 @@ function initQrLabelsPage() {
     document.getElementById('btnGenerateQrBarang').addEventListener('click', generateQrBarangLabels);
     document.getElementById('btnGenerateQrBin').addEventListener('click', generateQrBinLabels);
     document.getElementById('btnPrintQrLabels').addEventListener('click', () => window.print());
+
+    // "Detail Tambahan (opsional)" khusus mode Manual — Sumber/Pemesan cuma
+    // butuh Nama kalau tipenya USER (sama polanya kayak fPemesanTipe di
+    // Penerimaan, lihat js/penerimaan.js updatePemesanNamaVisibility).
+    const sumberTipeEl = document.getElementById('qrManualSumberTipe');
+    if (sumberTipeEl) {
+      sumberTipeEl.addEventListener('change', () => {
+        document.getElementById('qrManualSumberNamaWrap').hidden = sumberTipeEl.value !== 'USER';
+      });
+    }
+    wireUppercaseInput('qrManualSLoc');
   }
 
   if (qrLabelsPendingItems && qrLabelsPendingItems.length) {
     const items = qrLabelsPendingItems;
     qrLabelsPendingItems = null;
     setQrMode('barang');
-    renderQrLabels(items.map((it) => ({ code: it.kode, title: it.kode, sub: it.namaBarang || '' })));
+    renderQrLabels(items.map((it) => buildBarangLabel(it)));
   }
 
   loadQrBarangItems();
+}
+
+// Label QR selalu "cetak Kode Barang polos" (lihat komentar header) — fungsi
+// ini yang nyusun bagian TEKS-nya (bukan QR-nya) dari 1 item, apa pun bentuk
+// asal datanya (dari Penerimaan yang baru disimpan, dari daftar Put Away
+// belum-ter-mapping, atau dari Master Data pas mode Manual) — field yang
+// nggak ada di sumbernya otomatis nggak ditampilkan (lihat renderQrLabels).
+function buildBarangLabel(it) {
+  return {
+    code: it.kode || it.kodeBarang || '',
+    namaBarang: it.namaBarang || '',
+    noPO: it.noPO || '',
+    vendor: it.vendor || '',
+    sumber: it.sumber || '',
+    plant: it.plant || '',
+    sloc: it.sloc || '',
+    qty: it.qty || '',
+    satuan: it.satuan || '',
+    tanggal: it.tanggal || null,
+    user: it.user || ''
+  };
+}
+
+// 'yyyy-mm-dd' (dari <input type="date">) ATAU objek Date -> 'DD/MM/YYYY'
+// buat dicetak di label. Kalau formatnya nggak dikenal, tampilin apa adanya
+// (lebih baik daripada label kosong/nge-error).
+function qrFormatTanggal(v) {
+  if (!v) return '';
+  let d = v;
+  if (typeof v === 'string') {
+    const m = v.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (m) return m[3] + '/' + m[2] + '/' + m[1];
+    d = new Date(v);
+  }
+  if (d instanceof Date && !isNaN(d.getTime())) {
+    return String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear();
+  }
+  return String(v);
 }
 
 /**
@@ -66,7 +129,9 @@ function initQrLabelsPage() {
  * item tertentu tanpa harus pilih manual dari daftar Master Data — berguna
  * juga untuk barang yang belum terdaftar di Master Data (belumAdaMaster),
  * karena di sini nggak bergantung pada daftar Api.getMasterBarang().
- * items = [{ kode, namaBarang }]
+ * items = [{ kode, namaBarang, ...detail opsional (noPO/vendor/sumber/plant/
+ *   sloc/qty/satuan/tanggal/user) }] — lihat buildBarangLabel. Field yang
+ * nggak dikasih otomatis nggak ditampilkan di label (bukan wajib semua ada).
  */
 function goToQrLabelsForItems(items) {
   qrLabelsPendingItems = items;
@@ -180,17 +245,39 @@ function renderQrBarangSelected() {
   wrap.innerHTML = `<div class="qr-pick-selected-count">${qrBarangSelected.size} barang dipilih</div><div class="qr-pick-chip-list">${chips}</div>`;
 }
 
+// Baca "Detail Tambahan (opsional)" di mode Manual — berlaku SAMA buat semua
+// barang yang dipilih di 1x generate ini (No PO/Vendor/dst emang biasanya 1
+// dokumen/1 sumber yang sama buat sekumpulan barang yang lagi dicetak
+// labelnya bareng). Field yang dikosongin -> tidak ditampilkan di label.
+function readQrManualDetail() {
+  const noPO = (document.getElementById('qrManualNoPO') || {}).value || '';
+  const vendor = (document.getElementById('qrManualVendor') || {}).value || '';
+  const sloc = (document.getElementById('qrManualSLoc') || {}).value || '';
+  const tanggal = (document.getElementById('qrManualTanggal') || {}).value || '';
+  const sumberTipe = (document.getElementById('qrManualSumberTipe') || {}).value || '';
+  const sumberNama = (document.getElementById('qrManualSumberNama') || {}).value || '';
+
+  let sumber = '';
+  if (sumberTipe === 'USER') sumber = sumberNama.trim() ? 'User: ' + sumberNama.trim() : 'User';
+  else if (sumberTipe === 'OBS') sumber = 'OBS';
+  else if (sumberTipe === 'FAST MOVING') sumber = 'Fast Moving';
+
+  return { noPO: noPO.trim(), vendor: vendor.trim(), sloc: sloc.trim(), tanggal: tanggal.trim(), sumber };
+}
+
 async function generateQrBarangLabels() {
   const items = qrBarangItems.filter((it) => qrBarangSelected.has(it.kodeBarang));
   if (!items.length) {
     showToast('Pilih minimal 1 barang dulu.', 'error');
     return;
   }
-  const labels = items.map((it) => ({
-    code: it.kodeBarang,
-    title: it.kodeBarang,
-    sub: it.namaBarang || ''
-  }));
+  const manualDetail = readQrManualDetail();
+  const labels = items.map((it) => buildBarangLabel(Object.assign({
+    kode: it.kodeBarang,
+    namaBarang: it.namaBarang,
+    plant: it.plant,
+    satuan: it.satuan
+  }, manualDetail)));
   await renderQrLabels(labels);
 }
 
@@ -203,20 +290,56 @@ async function generateQrBinLabels() {
     showToast('Isi minimal 1 kode bin dulu (satu per baris).', 'error');
     return;
   }
-  const labels = codes.map((code) => ({ code, title: code, sub: '' }));
+  const labels = codes.map((code) => ({ code, isBin: true }));
   await renderQrLabels(labels);
+}
+
+// Urutan & label singkat tiap baris detail — dipakai konsisten di semua
+// sumber (Penerimaan otomatis maupun Manual).
+const QR_DETAIL_FIELD_DEFS = [
+  ['noPO', 'No PO'],
+  ['vendor', 'Vendor'],
+  ['sumber', 'Sumber'],
+  ['plant', 'Plant'],
+  ['sloc', 'S.Loc'],
+  ['qty', 'Qty'],
+  ['user', 'Diterima']
+];
+
+function qrLabelDetailRowsHtml(lbl) {
+  const rows = QR_DETAIL_FIELD_DEFS
+    .filter(([key]) => lbl[key])
+    .map(([key, label]) => {
+      let value = lbl[key];
+      if (key === 'qty') value = value + (lbl.satuan ? ' ' + lbl.satuan : '');
+      return `<div class="qr-label-detail-row"><span class="qr-label-detail-label">${escapeHtml(label)}</span><span class="qr-label-detail-value">${escapeHtml(value)}</span></div>`;
+    });
+  if (lbl.tanggal) {
+    rows.push(`<div class="qr-label-detail-row"><span class="qr-label-detail-label">Tgl Terima</span><span class="qr-label-detail-value">${escapeHtml(qrFormatTanggal(lbl.tanggal))}</span></div>`);
+  }
+  return rows.join('');
 }
 
 async function renderQrLabels(labels) {
   const grid = document.getElementById('qrLabelGrid');
   const card = document.getElementById('qrLabelResultCard');
-  grid.innerHTML = labels.map((lbl, i) => `
-      <div class="qr-label">
+  const anyDetailed = labels.some((lbl) => !lbl.isBin && (lbl.noPO || lbl.vendor || lbl.sumber || lbl.plant || lbl.sloc || lbl.qty || lbl.tanggal || lbl.user));
+  grid.classList.toggle('qr-label-grid-detailed', anyDetailed);
+
+  grid.innerHTML = labels.map((lbl, i) => {
+    const detailHtml = lbl.isBin ? '' : qrLabelDetailRowsHtml(lbl);
+    const isDetailed = !lbl.isBin && !!detailHtml;
+    return `
+      <div class="qr-label${isDetailed ? ' qr-label-detailed' : ''}">
         <canvas class="qr-label-canvas" data-idx="${i}"></canvas>
-        <div class="qr-label-code">${escapeHtml(lbl.code)}</div>
-        ${lbl.sub ? `<div class="qr-label-sub">${escapeHtml(lbl.sub)}</div>` : ''}
+        <div class="qr-label-main">
+          <div class="qr-label-code">${escapeHtml(lbl.code)}</div>
+          ${lbl.namaBarang ? `<div class="qr-label-sub">${escapeHtml(lbl.namaBarang)}</div>` : ''}
+          ${detailHtml ? `<div class="qr-label-detail">${detailHtml}</div>` : ''}
+        </div>
       </div>
-    `).join('');
+    `;
+  }).join('');
   card.hidden = false;
   document.getElementById('qrLabelCount').textContent = labels.length;
 
