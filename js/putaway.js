@@ -87,7 +87,7 @@ function renderPwBelumMappingList() {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
       const item = findPwItem(btn.dataset.kode);
-      if (item) goToQrLabelsForItems([{ kode: item.kode, namaBarang: item.namaBarang }]);
+      if (item) goToQrLabelsForItems([{ kode: item.kode, namaBarang: item.namaBarang, plant: item.plant || '', satuan: item.satuan || '' }]);
     });
   });
 }
