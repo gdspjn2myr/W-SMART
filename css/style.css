@@ -1873,6 +1873,26 @@ body {
   cursor: pointer;
 }
 .qr-pick-chip-remove:hover { background: var(--red); color: #fff; }
+
+/* "Detail Tambahan (opsional)" mode Manual — No PO/Vendor/Sumber/S.Loc/
+   Tanggal, berlaku sama buat semua barang yang dipilih (lihat
+   readQrManualDetail di js/qr-labels.js). */
+.qr-manual-detail {
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 14px;
+}
+.qr-manual-detail-header {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--navy);
+  text-transform: uppercase;
+  letter-spacing: .3px;
+  margin-bottom: 4px;
+}
+.qr-manual-detail .form-row-pair:last-child { margin-bottom: 0; }
+
 .qr-label-result-header {
   display: flex;
   justify-content: space-between;
@@ -1883,6 +1903,13 @@ body {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
   gap: 12px;
+}
+/* Label "lengkap" (ada No PO/Vendor/Sumber/dst, lihat qr-label-detailed di
+   bawah) butuh lebih lebar dari label polos supaya baris detailnya nggak
+   sempit banget — grid ini dipasang JS (renderQrLabels) begitu ADA minimal 1
+   label yang detailnya kepakai. */
+.qr-label-grid.qr-label-grid-detailed {
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
 }
 .qr-label {
   border: 1px solid var(--border);
@@ -1908,6 +1935,51 @@ body {
   color: var(--text-muted);
   margin-top: 2px;
   word-break: break-word;
+}
+
+/* Label lengkap (No PO/Vendor/Sumber/Plant/S.Loc/Qty/Tgl/Diterima) — QR di
+   kiri (lebih kecil, cukup buat di-scan), detailnya di kanan sebagai daftar
+   baris rapat biar muat banyak info tanpa bikin labelnya jadi kegedean.
+   Label POLOS (Bin/Lokasi, atau barang tanpa detail sama sekali) TETAP pakai
+   tampilan lama (center, QR gede) — lihat aturan .qr-label di atas. */
+.qr-label-detailed {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  text-align: left;
+}
+.qr-label-detailed .qr-label-canvas {
+  max-width: 76px;
+  margin: 0;
+  flex-shrink: 0;
+}
+.qr-label-detailed .qr-label-main { flex: 1; min-width: 0; }
+.qr-label-detail {
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border-top: 1px dashed var(--border);
+  padding-top: 4px;
+}
+.qr-label-detail-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 10px;
+  line-height: 1.4;
+}
+.qr-label-detail-label {
+  color: var(--text-muted);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .2px;
+  flex-shrink: 0;
+}
+.qr-label-detail-value {
+  text-align: right;
+  word-break: break-word;
+  font-weight: 600;
 }
 
 /* ---------- Riwayat Transaksi ---------- */
@@ -2366,6 +2438,9 @@ body {
     margin: 0;
   }
   .qr-label-grid { grid-template-columns: repeat(4, 1fr); }
+  /* Label lengkap butuh lebih lebar buat baris detailnya, jadi cuma 2 kolom
+     pas dicetak (label polos/Bin tetap 4 kolom, aturan di atas). */
+  .qr-label-grid.qr-label-grid-detailed { grid-template-columns: repeat(2, 1fr); }
   .qr-label { break-inside: avoid; border-color: #ccc; }
 
   /* Alert Order: pas dicetak cuma kartu ringkasan tabel (.ao-print-card) yang
