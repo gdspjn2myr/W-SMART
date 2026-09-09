@@ -474,7 +474,22 @@ async function handleSubmit(e) {
     showToast('Tersimpan (' + res.jumlahItem + ' item).' + emailNote, 'success');
     resetForm();
     dashboardLoadedOnce = false; // supaya dashboard refresh saat dibuka lagi
-    openPutawayPrompt(res.jumlahItem, items);
+
+    // Item buat opsi "Cetak Label QR Dulu" di popup Put Away — dilengkapi
+    // data transaksi yang baru disimpan (No PO/Vendor/Sumber/Plant/S.Loc/
+    // Tanggal/Diterima) supaya kalau user pilih cetak, labelnya langsung
+    // lengkap tanpa perlu isi ulang manual (lihat qr-labels.js buildBarangLabel).
+    const sumberLabel = pemesanTipe === 'USER' ? ('User: ' + pemesanNama) : (pemesanTipe === 'OBS' ? 'OBS' : pemesanTipe === 'FAST MOVING' ? 'Fast Moving' : '');
+    const itemsForLabel = items.map((it) => Object.assign({}, it, {
+      noPO: payload.noPO,
+      vendor: payload.vendor,
+      sumber: sumberLabel,
+      plant: payload.plant,
+      sloc: payload.sloc,
+      tanggal: new Date(), // Kedatangan SELALU hari ini (lihat setKedatanganDisplay/server), sama kayak yang beneran dicatat
+      user: userVal
+    }));
+    openPutawayPrompt(res.jumlahItem, itemsForLabel);
   } catch (err) {
     showToast('Gagal menyimpan: ' + err.message, 'error');
   } finally {
