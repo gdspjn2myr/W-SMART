@@ -785,6 +785,47 @@
       <div id="qrBarangSelected" class="qr-pick-selected">
         <div class="qr-pick-selected-empty">Belum ada barang dipilih — cari & klik dari saran di atas.</div>
       </div>
+
+      <div class="qr-manual-detail">
+        <div class="qr-manual-detail-header">Detail Tambahan (opsional)</div>
+        <p class="hint-text">Nggak wajib diisi — kalau diisi, berlaku sama buat SEMUA barang yang dipilih di atas (biasanya memang 1 dokumen/sumber yang sama). Plant otomatis ikut dari Master Data tiap barang, nggak perlu diisi di sini.</p>
+        <div class="form-row-pair">
+          <div class="form-row">
+            <label>No PO</label>
+            <input type="text" id="qrManualNoPO" placeholder="Opsional">
+          </div>
+          <div class="form-row">
+            <label>Vendor</label>
+            <input type="text" id="qrManualVendor" list="listSupplier" placeholder="Opsional" autocomplete="off">
+          </div>
+        </div>
+        <div class="form-row-pair">
+          <div class="form-row">
+            <label>Sumber / Pemesan</label>
+            <select id="qrManualSumberTipe">
+              <option value="">— Kosongkan —</option>
+              <option value="OBS">OBS</option>
+              <option value="FAST MOVING">Fast Moving</option>
+              <option value="USER">User (isi nama)</option>
+            </select>
+          </div>
+          <div class="form-row" id="qrManualSumberNamaWrap" hidden>
+            <label>Nama Pemesan</label>
+            <input type="text" id="qrManualSumberNama" placeholder="Nama user pemesan">
+          </div>
+        </div>
+        <div class="form-row-pair">
+          <div class="form-row">
+            <label>S.Loc</label>
+            <input type="text" id="qrManualSLoc" class="input-uppercase" placeholder="Opsional">
+          </div>
+          <div class="form-row">
+            <label>Tanggal Terima</label>
+            <input type="date" id="qrManualTanggal">
+          </div>
+        </div>
+      </div>
+
       <button type="button" id="btnGenerateQrBarang" class="btn btn-primary btn-block">Buat Label QR</button>
     </div>
 
