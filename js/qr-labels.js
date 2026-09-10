@@ -1,16 +1,29 @@
 // ============================================================================
 // QR LABELS — generate & cetak label QR untuk Barang (Kode Barang) dan
-// Bin/Lokasi. QR yang dihasilkan berisi TEKS POLOS (bukan JSON) — cuma Kode
-// Barang apa adanya, atau Kode Bin apa adanya — supaya persis cocok dengan
-// yang dibaca fitur scan yang sudah ada (Put Away & Barang Keluar, lihat
-// qr-scan.js): hasil scan langsung dipakai sebagai kode/lokasi tanpa parsing
-// tambahan. QR digambar pakai qrcode-lib.js (vendored, lihat file itu).
+// Bin/Lokasi. QR digambar pakai qrcode-lib.js (vendored, lihat file itu).
+//
+// ISI QR — BEDA antara Barang & Bin (per keputusan user, lihat riwayat chat:
+// awalnya QR Barang cuma Kode polos, user minta diubah jadi "manampilkan
+// semuanya"):
+// - Barang: QR sekarang encode SEMUA detail label (kode, nama, No PO, Vendor,
+//   Sumber, Plant, S.Loc, Qty, Satuan, Tanggal, User) pakai format ringkas
+//   "WSB1|..." — lihat encodeBarangQrPayload/parseQrPayload di js/qr-payload.js
+//   buat format persisnya & alasan desainnya (termasuk kenapa BUKAN JSON).
+//   Field yang kosong tetap disertakan (posisinya kosong) supaya urutan field
+//   lain tidak geser.
+// - Bin/Lokasi: TETAP TEKS POLOS apa adanya (TIDAK diubah) — bin tidak punya
+//   "riwayat/detail transaksi" yang perlu nempel, cuma butuh dikenali sebagai
+//   1 kode lokasi. Lihat generateQrBinLabels di bawah.
+// Konsumen scan yang SUDAH ADA (Put Away, Barang Keluar, Stock Opname, Pindah
+// Bin) TIDAK PERLU DIUBAH SAMA SEKALI walau format QR Barang berubah — parsing
+// dipusatkan di openQrScanner (qr-scan.js), yang selalu mengekstrak Kode
+// Barang polos dari label WSB1 sebelum diteruskan ke pemanggil manapun.
 //
 // DETAIL TAMBAHAN DI LABEL (No PO, Vendor, Sumber/Pemesan, Plant, S.Loc, Qty,
 // Tanggal, Diterima oleh) — permintaan user supaya label barang selengkap
-// mungkin, bukan cuma Kode+Nama. QR-nya SENDIRI tetap cuma Kode Barang polos
-// (jangan diutak-atik, lihat paragraf di atas) — field2 tambahan ini CUMA
-// teks yang dicetak DI SAMPING QR-nya, buat dibaca manusia. Sumbernya beda2:
+// mungkin, bukan cuma Kode+Nama. Field2 ini dicetak DI SAMPING QR-nya (buat
+// dibaca manusia langsung dari label fisik) DAN ikut di-encode ke DALAM QR-nya
+// (buat dibaca scanner/app lain). Sumbernya beda2:
 // - Cetak langsung setelah submit Penerimaan Barang -> otomatis lengkap dari
 //   transaksi yang baru disimpan (lihat penerimaan.js, openPutawayPrompt).
 // - Mode Manual (cari barang dari Master Data) -> field2 ini nggak nempel ke
@@ -346,7 +359,32 @@ async function renderQrLabels(labels) {
   const canvases = grid.querySelectorAll('.qr-label-canvas');
   for (let i = 0; i < labels.length; i++) {
     try {
-      await QRCode.toCanvas(canvases[i], labels[i].code, { width: 160, margin: 1, errorCorrectionLevel: 'M' });
+      // Isi QR: Barang -> payload "kaya data" (WSB1|..., lihat qr-payload.js);
+      // Bin -> tetap teks polos apa adanya (lbl.isBin, TIDAK PERNAH diubah).
+      const qrContent = labels[i].isBin ? labels[i].code : encodeBarangQrPayload(labels[i]);
+      // errorCorrectionLevel dinaikkan ke 'Q' (25% toleransi rusak/kotor,
+      // dari sebelumnya 'M' 15%) KHUSUS sekarang karena payload Barang jauh
+      // lebih panjang dari sebelumnya (dulu cuma Kode ~10 digit, sekarang
+      // bisa >80 karakter) -> makin banyak modul QR -> makin gampang gagal
+      // scan di kondisi gudang (label kecil, print biasa, jarak/sudut kurang
+      // ideal). Level lebih tinggi = QR jadi TAMBAH padat lagi (trade-off),
+      // tapi lebih tahan noise/kerusakan cetak yang justru makin krusial pas
+      // datanya makin panjang begini. Kode Bin (selalu pendek & polos) tidak
+      // butuh ini, tapi dipakaikan level yang sama biar konsisten 1 setting.
+      await QRCode.toCanvas(canvases[i], qrContent, { width: 160, margin: 1, errorCorrectionLevel: 'Q' });
+      // qrcode-lib SELALU nulis inline style width/height (piksel tetap, mis.
+      // "160px") langsung ke canvas-nya sendiri begitu selesai gambar — itu
+      // NIMPA aturan CSS kita (.qr-label-canvas: width:100%; height:auto),
+      // soalnya inline style menang dari stylesheet manapun. Di label
+      // "lengkap" (QR-nya diperkecil ke 76px lewat max-width, lihat
+      // css/style.css .qr-label-detailed .qr-label-canvas), ini bikin
+      // LEBAR-nya kepotong CSS jadi 76px tapi TINGGI-nya tetap kepaku 160px
+      // dari inline style-nya library — hasilnya QR kelihatan gepeng/
+      // distorsi, bukan persegi. Dihapus di sini biar width:100%/height:auto
+      // dari CSS kita yang berlaku sepenuhnya (rasio-nya tetap 1:1 karena
+      // atribut canvas.width/height, BUKAN style-nya, yang dipakai buat
+      // ngitung intrinsic ratio).
+      canvases[i].removeAttribute('style');
     } catch (err) {
       // Kode terlalu panjang/aneh untuk di-encode — jarang terjadi untuk kode barang/bin biasa.
       showToast(`Gagal buat QR untuk "${labels[i].code}": ${err.message}`, 'error');
