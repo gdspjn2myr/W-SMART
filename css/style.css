@@ -1937,23 +1937,27 @@ body {
   word-break: break-word;
 }
 
-/* Label lengkap (No PO/Vendor/Sumber/Plant/S.Loc/Qty/Tgl/Diterima) — QR di
-   kiri (lebih kecil, cukup buat di-scan), detailnya di kanan sebagai daftar
-   baris rapat biar muat banyak info tanpa bikin labelnya jadi kegedean.
+/* Label lengkap (No PO/Vendor/Sumber/Plant/S.Loc/Qty/Tgl/Diterima) — QR-nya
+   sekarang encode SEMUA field itu (bukan cuma Kode Barang polos lagi, lihat
+   js/qr-payload.js), jadi modulnya jauh lebih rapat/banyak dari QR Bin/Lokasi
+   yang tetap polos. QR ditaruh DI ATAS (bukan di samping seperti sebelumnya)
+   & diperbesar signifikan (76px -> 150px) supaya tetap gampang di-scan HP di
+   kondisi gudang walau lebih padat — user sempat laporan QR label lengkap
+   "kurang gede jadi susah di-scan" pas ukurannya masih kecil+di-samping.
+   Detail (No PO/Vendor/dst) ditaruh DI BAWAH sebagai daftar baris rapat.
    Label POLOS (Bin/Lokasi, atau barang tanpa detail sama sekali) TETAP pakai
    tampilan lama (center, QR gede) — lihat aturan .qr-label di atas. */
 .qr-label-detailed {
   display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  text-align: left;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
 }
 .qr-label-detailed .qr-label-canvas {
-  max-width: 76px;
-  margin: 0;
-  flex-shrink: 0;
+  max-width: 150px;
+  margin: 0 auto 6px;
 }
-.qr-label-detailed .qr-label-main { flex: 1; min-width: 0; }
+.qr-label-detailed .qr-label-main { width: 100%; text-align: left; }
 .qr-label-detail {
   margin-top: 6px;
   display: flex;
@@ -2098,6 +2102,10 @@ body {
 .op-riwayat-main { min-width: 0; }
 .op-riwayat-main strong { color: var(--navy); }
 .op-riwayat-qty { font-weight: 700; color: var(--green); flex-shrink: 0; white-space: nowrap; }
+/* Baris kecil Plant/S.Loc/Sumber per baris riwayat (Opname & Cek Barang) —
+   permintaan user supaya data lebih lengkap di riwayat, bukan cuma
+   tanggal/No PO/Vendor/qty. */
+.op-riwayat-sub { margin-top: 2px; color: var(--text-muted); font-size: 11.5px; }
 
 .op-count-form { margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--border); }
 
@@ -2430,11 +2438,27 @@ body {
 .role-badge-staff { background: #fff3d6; color: #a06a00; }
 .role-badge-viewer { background: #e6f7ee; color: var(--green); }
 
-/* Cetak: cuma grid label yang tampil, satu label nggak boleh kepotong 2 halaman. */
+/* Cetak: cuma 1 alur cetak yang tampil per print, satu label nggak boleh
+   kepotong 2 halaman.
+   ---------------------------------------------------------------------
+   SEBELUMNYA aturan hide-nya statis per HALAMAN AKTIF ("#page-qr-labels &
+   #page-alert-order sama2 dikecualikan dari hide, halaman lain disembunyikan")
+   — bukan per ALUR CETAK. Akibatnya kalau Alert Order pernah dibuka
+   sebelumnya di sesi yang sama (datanya masih ke-render di DOM walau
+   halamannya lagi nggak aktif/hidden), terus user pindah ke Cetak Label QR &
+   nge-print DI SITU, sisa konten Alert Order (tabel "Barang Perlu Diorder")
+   ikut kebawa cetak di bawah label QR-nya — dilaporkan user (foto label QR
+   yang di bawahnya ada kepala tabel "Alert Order — Barang Perlu Diorder").
+   Sekarang: default-nya SEMUA .page disembunyikan, dan tiap alur cetak
+   (QR Label / ringkasan Alert Order / dokumen PR) WAJIB nandain body-nya
+   pakai class printing-qr/printing-ao/printing-pr masing2 SEBELUM manggil
+   window.print() (lihat printQrLabels di js/qr-labels.js & printAlertOrderPdf/
+   printPRDocument di js/alert-order.js) — cuma konten punya alur itu yang
+   dipaksa kelihatan, sisanya (termasuk .page manapun) TETAP disembunyikan
+   apa pun histori halaman yang pernah dibuka di sesi itu. */
 @media print {
   .topbar, .sidebar, .sidebar-backdrop, .toast, .qr-scan-overlay, .update-banner, .login-screen,
-  .mode-switch, #qrPanelBarang, #qrPanelBin, .qr-label-result-header,
-  .page:not(#page-qr-labels):not(#page-alert-order) {
+  .modal, .modal-backdrop {
     display: none !important;
   }
   /* "html" DIIKUTKAN sengaja (bukan cuma body) — kalau nggak, pas halaman
@@ -2443,39 +2467,43 @@ body {
      <html> yang masih var(--bg) (abu-abu kebiruan bawaan app) alih-alih putih
      bersih — kelihatan kayak ada "kotak abu-abu" aneh pas di-print/Save PDF. */
   html, body, .app-content { background: #fff; padding: 0; margin: 0; }
-  #page-qr-labels { display: block !important; }
-  #qrLabelResultCard {
+
+  /* Default: semua halaman disembunyikan. Tiap blok printing-* di bawah yang
+     nentuin apa yang dimunculin balik, khusus buat alur cetak itu doang. */
+  .page { display: none !important; }
+
+  /* ---------------- Cetak Label QR (lihat printQrLabels) ---------------- */
+  body.printing-qr #page-qr-labels { display: block !important; }
+  body.printing-qr .mode-switch,
+  body.printing-qr #qrPanelBarang,
+  body.printing-qr #qrPanelBin,
+  body.printing-qr .qr-label-result-header {
+    display: none !important;
+  }
+  body.printing-qr #qrLabelResultCard {
     box-shadow: none;
     border: none;
     padding: 0;
     margin: 0;
   }
-  .qr-label-grid { grid-template-columns: repeat(4, 1fr); }
+  body.printing-qr .qr-label-grid { grid-template-columns: repeat(4, 1fr); }
   /* Label lengkap butuh lebih lebar buat baris detailnya, jadi cuma 2 kolom
      pas dicetak (label polos/Bin tetap 4 kolom, aturan di atas). */
-  .qr-label-grid.qr-label-grid-detailed { grid-template-columns: repeat(2, 1fr); }
-  .qr-label { break-inside: avoid; border-color: #ccc; }
+  body.printing-qr .qr-label-grid.qr-label-grid-detailed { grid-template-columns: repeat(2, 1fr); }
+  body.printing-qr .qr-label { break-inside: avoid; border-color: #ccc; }
 
-  /* Alert Order: pas dicetak cuma kartu ringkasan tabel (.ao-print-card) yang
-     kelihatan — kartu daftar interaktif (badge/tombol) disembunyikan. */
-  #page-alert-order { display: block !important; }
-  #page-alert-order > .card:not(.ao-print-card) { display: none !important; }
-  .ao-print-card[hidden] { display: block !important; }
-  .ao-print-card { box-shadow: none; border: none; padding: 0; margin: 0; }
+  /* ------- Alert Order: ringkasan tabel (lihat printAlertOrderPdf) ------- */
+  /* Pas dicetak cuma kartu ringkasan tabel (.ao-print-card) yang kelihatan —
+     kartu daftar interaktif (badge/tombol) disembunyikan. */
+  body.printing-ao #page-alert-order { display: block !important; }
+  body.printing-ao #page-alert-order > .card:not(.ao-print-card) { display: none !important; }
+  body.printing-ao .ao-print-card[hidden] { display: block !important; }
+  body.printing-ao .ao-print-card { box-shadow: none; border: none; padding: 0; margin: 0; }
 
-  /* Dokumen PR (lihat printPRDocument di js/alert-order.js) — modal builder-nya
-     ditutup dulu di JS SEBELUM window.print(), tapi ini jaga2 kalau ada modal
-     lain yang somehow masih ke-print. body.printing-pr ditambahkan tepat
-     sebelum window.print() khusus buat print ini, supaya cuma #prPrintCard
-     yang kelihatan (bukan .ao-print-card atau halaman lain). */
-  .modal, .modal-backdrop { display: none !important; }
-  .pr-print-card { display: none; }
-  body.printing-pr #page-alert-order,
-  body.printing-pr .ao-print-card {
-    display: none !important;
-  }
-  body.printing-pr #prPrintCard[hidden] {
-    display: block !important;
-  }
+  /* ------- Alert Order: dokumen PR (lihat printPRDocument) --------------- */
+  /* #prPrintCard di luar <section id="page-alert-order"> (lihat index.html),
+     jadi nggak kena aturan ".page { display:none }" di atas — cukup dipaksa
+     kelihatan begitu body.printing-pr aktif. */
+  body.printing-pr #prPrintCard[hidden] { display: block !important; }
   #prPrintCard { box-shadow: none; border: none; padding: 0; margin: 0; }
 }
