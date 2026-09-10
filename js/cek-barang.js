@@ -113,6 +113,13 @@ function renderCbResult(res) {
         `).join('')}</div>`
       : '<div class="empty-state">Belum ada barang tercatat di bin manapun untuk Plant ini.</div>';
 
+    // "Sisa saat ini per Sumber" per Plant — helper bareng sama dipakai popup
+    // Riwayat Stock Balance & kartu detail Opname (sumberBreakdownChipsHtml,
+    // js/dashboard.js). p.sumberBreakdown dibalikin handleGetCekBarang (Code.gs).
+    const sumberBreakdownHtml = (p.sumberBreakdown && p.sumberBreakdown.length)
+      ? `<div class="sb-sumber-breakdown">${sumberBreakdownChipsHtml(p.sumberBreakdown)}</div>`
+      : '';
+
     return `
       <div class="cb-plant-block">
         <div class="cb-plant-header">
@@ -124,6 +131,7 @@ function renderCbResult(res) {
           <div><span>Jumlah Bin</span><strong>${(p.bins || []).length}</strong></div>
         </div>
         ${slocMeta ? `<div class="item-meta-line">${slocMeta}</div>` : ''}
+        ${sumberBreakdownHtml}
         <div class="op-section-title">Breakdown per Bin</div>
         ${binsHtml}
       </div>
@@ -142,15 +150,26 @@ function renderCbResult(res) {
 
 function cbRiwayatHtml(riwayatKedatangan) {
   const list = riwayatKedatangan || [];
+  // Sama seperti Opname (js/opname.js renderOpDetailCard): tiap baris riwayat
+  // dikasih baris kecil Plant/S.Loc/Sumber kalau ada datanya — permintaan
+  // user: "di riwayat, kurang data yg ditampilkannya".
   const rows = list.length
-    ? list.map((r) => `
+    ? list.map((r) => {
+        const subParts = [];
+        if (r.plant) subParts.push('Plant ' + escapeHtml(r.plant));
+        if (r.sloc) subParts.push('S.Loc ' + escapeHtml(r.sloc));
+        if (r.sumber) subParts.push('Sumber ' + escapeHtml(r.sumber));
+        const subLine = subParts.length ? `<div class="op-riwayat-sub">${subParts.join(' · ')}</div>` : '';
+        return `
         <div class="op-riwayat-item">
           <div class="op-riwayat-main">
             <strong>${escapeHtml(r.kedatangan || '-')}</strong> · No PO ${escapeHtml(r.noPO || '-')} · Vendor ${escapeHtml(r.vendor || '-')}
+            ${subLine}
           </div>
           <div class="op-riwayat-qty">+${r.qty} ${escapeHtml(r.satuan || '')}</div>
         </div>
-      `).join('')
+      `;
+      }).join('')
     : '<div class="empty-state">Belum ada riwayat Penerimaan tercatat untuk item ini.</div>';
   return `<div class="op-section-title">Riwayat Kedatangan Terakhir</div><div class="op-riwayat-list">${rows}</div>`;
 }
