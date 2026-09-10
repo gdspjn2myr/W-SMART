@@ -571,6 +571,9 @@ document.addEventListener('DOMContentLoaded', () => {
   Router.register('opname', () => {
     initOpnamePage();
   });
+  Router.register('cek-barang', () => {
+    initCekBarangPage();
+  });
   Router.register('alert-order', () => {
     initAlertOrderPage();
   });
