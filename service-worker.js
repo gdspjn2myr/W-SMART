@@ -4,7 +4,7 @@
 // DAN supaya user dapat notif "Versi baru tersedia" di aplikasi.
 // ============================================================================
 
-const APP_VERSION = '1.3.0';
+const APP_VERSION = '2.0.0';
 const CACHE_NAME = 'wsmart-shell-v' + APP_VERSION;
 const APP_SHELL = [
   './',
@@ -16,6 +16,7 @@ const APP_SHELL = [
   './js/auth.js',
   './js/api.js',
   './js/router.js',
+  './js/qr-payload.js',
   './js/qr-scan.js',
   './js/dashboard.js',
   './js/penerimaan.js',
@@ -27,6 +28,7 @@ const APP_SHELL = [
   './js/qr-labels.js',
   './js/riwayat.js',
   './js/opname.js',
+  './js/cek-barang.js',
   './js/alert-order.js',
   './js/users.js',
   './js/pengaturan.js',
