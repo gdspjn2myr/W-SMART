@@ -75,7 +75,7 @@ function initQrLabelsPage() {
 
     document.getElementById('btnGenerateQrBarang').addEventListener('click', generateQrBarangLabels);
     document.getElementById('btnGenerateQrBin').addEventListener('click', generateQrBinLabels);
-    document.getElementById('btnPrintQrLabels').addEventListener('click', () => window.print());
+    document.getElementById('btnPrintQrLabels').addEventListener('click', printQrLabels);
 
     // "Detail Tambahan (opsional)" khusus mode Manual — Sumber/Pemesan cuma
     // butuh Nama kalau tipenya USER (sama polanya kayak fPemesanTipe di
@@ -376,33 +376,60 @@ async function renderQrLabels(labels) {
       // Isi QR: Barang -> payload "kaya data" (WSB1|..., lihat qr-payload.js);
       // Bin -> tetap teks polos apa adanya (lbl.isBin, TIDAK PERNAH diubah).
       const qrContent = labels[i].isBin ? labels[i].code : encodeBarangQrPayload(labels[i]);
-      // errorCorrectionLevel dinaikkan ke 'Q' (25% toleransi rusak/kotor,
-      // dari sebelumnya 'M' 15%) KHUSUS sekarang karena payload Barang jauh
-      // lebih panjang dari sebelumnya (dulu cuma Kode ~10 digit, sekarang
-      // bisa >80 karakter) -> makin banyak modul QR -> makin gampang gagal
-      // scan di kondisi gudang (label kecil, print biasa, jarak/sudut kurang
-      // ideal). Level lebih tinggi = QR jadi TAMBAH padat lagi (trade-off),
-      // tapi lebih tahan noise/kerusakan cetak yang justru makin krusial pas
-      // datanya makin panjang begini. Kode Bin (selalu pendek & polos) tidak
-      // butuh ini, tapi dipakaikan level yang sama biar konsisten 1 setting.
-      await QRCode.toCanvas(canvases[i], qrContent, { width: 160, margin: 1, errorCorrectionLevel: 'Q' });
-      // qrcode-lib SELALU nulis inline style width/height (piksel tetap, mis.
-      // "160px") langsung ke canvas-nya sendiri begitu selesai gambar — itu
-      // NIMPA aturan CSS kita (.qr-label-canvas: width:100%; height:auto),
-      // soalnya inline style menang dari stylesheet manapun. Di label
-      // "lengkap" (QR-nya diperkecil ke 76px lewat max-width, lihat
-      // css/style.css .qr-label-detailed .qr-label-canvas), ini bikin
-      // LEBAR-nya kepotong CSS jadi 76px tapi TINGGI-nya tetap kepaku 160px
-      // dari inline style-nya library — hasilnya QR kelihatan gepeng/
-      // distorsi, bukan persegi. Dihapus di sini biar width:100%/height:auto
-      // dari CSS kita yang berlaku sepenuhnya (rasio-nya tetap 1:1 karena
-      // atribut canvas.width/height, BUKAN style-nya, yang dipakai buat
-      // ngitung intrinsic ratio).
-      canvases[i].removeAttribute('style');
+      // errorCorrectionLevel 'M' (15% toleransi rusak/kotor) — SEMPAT dicoba
+      // dinaikkan ke 'Q' (25%), tapi dibalikin lagi: user laporan QR-nya jadi
+      // "kurang gede/susah discan" pas label lengkap dicetak beneran. ECC
+      // lebih tinggi = QR JADI TAMBAH PADAT (lebih banyak modul buat data
+      // redundan) — di kondisi gudang, itu justru LEBIH BURUK buat scan
+      // reliability daripada bantu, karena label fisiknya kecil (modul jadi
+      // makin rapat/susah kebaca kamera HP dari jarak wajar) — bukan masalah
+      // ketahanan-rusak. 'M' + ukuran cetak yang diperbesar (lihat CSS
+      // .qr-label-detailed .qr-label-canvas) lebih pas buat kasus ini.
+      const qrModuleWidth = 240; // resolusi render internal (BUKAN ukuran cetak, itu diatur CSS) — dinaikkan dari 160 biar tepian modul tetap tajam pas discale/dicetak gede, nggak buram.
+      await QRCode.toCanvas(canvases[i], qrContent, { width: qrModuleWidth, margin: 1, errorCorrectionLevel: 'M' });
+
+      // Kanvas hasil qrcode-lib DIGANTI jadi <img> (data URL) di sini, BUKAN
+      // dibiarkan sebagai <canvas> hidup — user laporan QR "kadang muncul
+      // kadang enggak" pas Cetak/Simpan PDF (khususnya dari Chrome Android).
+      // Ini pola umum: rendering <canvas> ke output print/PDF itu nggak
+      // konsisten di semua browser/versi (kadang butuh repaint tepat pas
+      // snapshot print diambil, kadang di-skip) — <img> jauh lebih andal
+      // karena isinya sudah jadi bitmap statis biasa, sama kayak gambar
+      // manapun, jadi selalu ikut ke-print. Class CSS-nya (qr-label-canvas)
+      // SENGAJA dipertahankan di elemen img biar aturan ukuran yang sama
+      // (width:100%; height:auto; max-width) tetap berlaku tanpa nulis CSS
+      // baru — dan karena ini elemen BARU (bukan canvas bawaan qrcode-lib),
+      // nggak ada inline style bawaan yang perlu dibuang lagi (beda dari
+      // sebelumnya, lihat riwayat: dulu ada langkah removeAttribute('style')
+      // di sini buat itu — sekarang nggak perlu sama sekali).
+      const dataUrl = canvases[i].toDataURL('image/png');
+      const img = document.createElement('img');
+      img.className = 'qr-label-canvas';
+      img.src = dataUrl;
+      img.alt = 'QR ' + labels[i].code;
+      canvases[i].replaceWith(img);
     } catch (err) {
       // Kode terlalu panjang/aneh untuk di-encode — jarang terjadi untuk kode barang/bin biasa.
       showToast(`Gagal buat QR untuk "${labels[i].code}": ${err.message}`, 'error');
     }
   }
   card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// Cetak/Simpan PDF label QR — pola SAMA dengan printPRDocument di
+// js/alert-order.js (body.printing-qr ditambahin SEBELUM window.print(),
+// dicopot lagi lewat event 'afterprint' + fallback setTimeout buat browser/
+// device yang nggak fire 'afterprint' dengan andal, mis. sebagian Chrome
+// Android). class ini yang dipakai @media print (css/style.css) buat mastiin
+// CUMA #page-qr-labels yang kecetak — SEBELUMNYA nggak ada penanda body kayak
+// gini, aturan print cuma ngecek "halaman mana yang lagi aktif" secara
+// statis (#page-qr-labels & #page-alert-order sama2 dikecualikan dari hide),
+// yang bikin sisa konten halaman Alert Order (kalau pernah dibuka sebelumnya
+// di sesi yang sama) ikut kebawa cetak di bawah label QR (dilaporkan user).
+function printQrLabels() {
+  document.body.classList.add('printing-qr');
+  const cleanup = () => document.body.classList.remove('printing-qr');
+  window.addEventListener('afterprint', cleanup, { once: true });
+  window.print();
+  setTimeout(cleanup, 5000);
 }
