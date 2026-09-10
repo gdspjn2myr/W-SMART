@@ -25,6 +25,7 @@ const PAGE_ROLES = {
   'qr-labels': ['Admin', 'Staff'],
   riwayat: ['Admin', 'Staff', 'Viewer'],
   opname: ['Admin', 'Staff'],
+  'cek-barang': ['Admin', 'Staff', 'Viewer'],
   'alert-order': ['Admin', 'Staff', 'Viewer'],
   users: ['Admin'],
   pengaturan: ['Admin']
