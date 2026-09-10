@@ -1255,3 +1255,35 @@ function itemMetaLine(it) {
 
   return parts.join(' · ');
 }
+
+// ---------------------------------------------------------------------------
+// "Sisa saat ini per Sumber" — chip breakdown OBS/Fast Moving/User(+nama),
+// dari field `sumberBreakdown` ([{tipe, nama, sisa}], lihat
+// hitungSumberBreakdownTampilan_ / buildSumberBreakdownForBaris_ di Code.gs).
+// DIPINDAH ke sini (dashboard.js, di-load paling awal, lihat catatan
+// itemMetaLine di atas) supaya dipakai BARENG di semua halaman yang nampilin
+// detail 1 SKU — awalnya cuma ada di popup Riwayat Stock Balance
+// (renderSbSumberBreakdown, js/stock-balance.js), sekarang dipakai juga di
+// Stock Opname (renderOpDetailCard) & Cek Barang — permintaan user: "boleh
+// kalau di klik muncul popup juga boleh...pokonya lengkap", field Sumber
+// jangan cuma ada di 1 halaman doang. sumberOptionLabel (js/pemakaian.js,
+// di-load SEBELUM dashboard.js dipakai — tapi karena ini cuma dipanggil
+// belakangan dari event, bukan pas load, urutan file tidak masalah) yang
+// nentuin teks tampilannya (mis. "Budi (User)", "OBS", "Fast Moving").
+// Return string HTML kosong kalau breakdown-nya kosong — pemanggil TINGGAL
+// cek truthy-nya buat mutusin nampilin wrapper section atau nggak sama sekali.
+// SENGAJA cuma balikin ISI-nya (label + chip), TANPA div pembungkus
+// ".sb-sumber-breakdown" sendiri — beberapa pemanggil (popup Stock Balance)
+// sudah punya elemen persisten dengan class itu di index.html yang tinggal
+// di-toggle hidden-nya, pemanggil lain (Opname/Cek Barang, nge-generate ulang
+// seluruh HTML kartunya tiap render) yang nambahin div pembungkusnya sendiri
+// pas dipakai. Kalau helper ini ikut nyisipin div pembungkus juga, 2 pemanggil
+// itu bakal numpuk jadi wrapper dobel (box di dalam box).
+function sumberBreakdownChipsHtml(sumberBreakdown) {
+  if (!sumberBreakdown || !sumberBreakdown.length) return '';
+  const chips = sumberBreakdown.map((s) => {
+    const deficitClass = s.sisa < 0 ? ' sb-sumber-chip-deficit' : '';
+    return `<span class="sb-sumber-chip${deficitClass}">${escapeHtml(sumberOptionLabel(s))} <span class="sb-sumber-chip-qty">${s.sisa}</span></span>`;
+  }).join('');
+  return `<span class="sb-sumber-breakdown-label">Sisa saat ini per Sumber:</span>${chips}`;
+}
