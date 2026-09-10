@@ -2101,6 +2101,19 @@ body {
 
 .op-count-form { margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--border); }
 
+/* ---------------------------- CEK BARANG --------------------------------- */
+/* Kartu per-Plant di halaman Cek Barang (js/cek-barang.js) — kode bisa
+   terdaftar di lebih dari 1 Plant sekaligus, jadi tiap Plant dapat blok
+   sendiri yang jelas batasnya (beda dari Opname yang maksa pilih 1 Plant). */
+.cb-plant-block {
+  border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px;
+  margin-top: 12px;
+}
+.cb-plant-header {
+  display: flex; justify-content: space-between; align-items: center; gap: 10px;
+  font-weight: 700; color: var(--navy); font-size: 14px;
+}
+
 .op-item-wrap { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
 .op-item {
   display: flex; justify-content: space-between; align-items: center; gap: 10px;
