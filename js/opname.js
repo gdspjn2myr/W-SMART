@@ -330,16 +330,38 @@ function renderOpDetailCard(item, riwayatKedatangan) {
         }).join('')}</div>`
     : '';
 
+  // Tiap baris riwayat kedatangan juga dikasih baris kecil Plant/S.Loc/Sumber
+  // (data-nya sudah dibalikin getRiwayatKedatanganByKode_, Code.gs — cuma
+  // belum pernah dirender di sini) — permintaan user: "di riwayat, kurang
+  // data yg ditampilkannya". Cuma bagian yang keisi aja yang ditampilkan,
+  // biar baris lama/tanpa Plant (sebelum field ini ada) tetap rapi.
   const riwayatHtml = riwayatKedatangan.length
-    ? riwayatKedatangan.map((r) => `
+    ? riwayatKedatangan.map((r) => {
+        const subParts = [];
+        if (r.plant) subParts.push('Plant ' + escapeHtml(r.plant));
+        if (r.sloc) subParts.push('S.Loc ' + escapeHtml(r.sloc));
+        if (r.sumber) subParts.push('Sumber ' + escapeHtml(r.sumber));
+        const subLine = subParts.length ? `<div class="op-riwayat-sub">${subParts.join(' · ')}</div>` : '';
+        return `
         <div class="op-riwayat-item">
           <div class="op-riwayat-main">
             <strong>${escapeHtml(r.kedatangan || '-')}</strong> · No PO ${escapeHtml(r.noPO || '-')} · Vendor ${escapeHtml(r.vendor || '-')}
+            ${subLine}
           </div>
           <div class="op-riwayat-qty">+${r.qty} ${escapeHtml(r.satuan || '')}</div>
         </div>
-      `).join('')
+      `;
+      }).join('')
     : '<div class="empty-state">Belum ada riwayat Penerimaan tercatat untuk item ini.</div>';
+
+  // "Sisa saat ini per Sumber" — helper bareng (sumberBreakdownChipsHtml,
+  // js/dashboard.js) yang SAMA dipakai popup Riwayat Stock Balance, supaya
+  // tampilannya konsisten. item.sumberBreakdown sebenarnya sudah dihitung
+  // bareng field lain (onHand/bins/dst) di hitungBalances_ — Code.gs — cuma
+  // belum pernah dirender di kartu detail Opname ini sebelumnya.
+  const sumberBreakdownHtml = (item.sumberBreakdown && item.sumberBreakdown.length)
+    ? `<div class="sb-sumber-breakdown">${sumberBreakdownChipsHtml(item.sumberBreakdown)}</div>`
+    : '';
 
   const detailMeta = itemMetaLine({ plant: item.plant, slocBreakdown: item.slocBreakdown, jenis: item.jenis });
   card.innerHTML = `
@@ -354,6 +376,7 @@ function renderOpDetailCard(item, riwayatKedatangan) {
       <div><span>Lokasi Default</span><strong>${escapeHtml(item.lokasiDefault || '-')}</strong></div>
       <div><span>Status</span><strong><span class="ra-badge ${statusClass}">${escapeHtml(statusLabel)}</span></strong></div>
     </div>
+    ${sumberBreakdownHtml}
     ${binsHtml}
     <div class="op-section-title">Riwayat Kedatangan Terakhir</div>
     <div class="op-riwayat-list">${riwayatHtml}</div>
