@@ -1,13 +1,26 @@
 // ============================================================================
 // QR SCAN HELPER — baca QR code pakai kamera device, langsung pakai API
 // bawaan browser (BarcodeDetector), TANPA library eksternal (biar PWA tetap
-// ringan & bisa jalan offline). Dipakai di Put Away & Barang Keluar buat baca
-// kode lokasi/bin.
+// ringan & bisa jalan offline). Dipakai di Put Away, Barang Keluar, Stock
+// Opname, Pindah Bin, & Cek Barang buat baca kode barang/lokasi-bin.
 //
 // PENTING: scan itu PERCEPATAN, bukan keharusan — kalau browser/device tidak
 // dukung (atau user tolak izin kamera), form tetap bisa diisi manual. Ini
-// dipanggil lewat openQrScanner(onResult, onError) — onResult(text) dipanggil
-// begitu QR kebaca, onError(pesan) dipanggil kalau gagal/tidak didukung.
+// dipanggil lewat openQrScanner(onResult, onError) — onError(pesan) dipanggil
+// kalau gagal/tidak didukung. onResult(kode, rawText) dipanggil begitu QR
+// kebaca:
+//  - kode: teks POLOS siap pakai (Kode Barang atau Kode Lokasi/Bin) — SAMA
+//    PERSIS perilakunya kayak sebelum QR Barang "kaya data" (format WSB1,
+//    lihat js/qr-payload.js) ada. Diekstrak PUSAT di sini (parseQrPayload)
+//    supaya SEMUA pemanggil yang sudah ada (Put Away, Barang Keluar, Stock
+//    Opname, Pindah Bin) TIDAK PERLU DIUBAH SAMA SEKALI — cukup pakai
+//    argumen pertama seperti biasa, walau yang di-scan sekarang label WSB1
+//    yang isinya jauh lebih panjang dari Kode Barang polos.
+//  - rawText: teks HASIL SCAN ASLI, apa adanya (belum diproses) — dipakai
+//    konsumen yang butuh detail lengkap label WSB1 (mis. Cek Barang, lihat
+//    js/cek-barang.js), lewat parseQrPayload(rawText) sendiri. Pemanggil
+//    lama yang cuma pakai argumen pertama otomatis aman (argumen ekstra di
+//    JS diabaikan begitu saja kalau tidak dipakai).
 // ============================================================================
 
 let qrScanState = null; // { stream, video, active }
@@ -57,7 +70,13 @@ function openQrScanner(onResult, onError) {
             if (codes && codes.length) {
               const value = codes[0].rawValue;
               closeQrScanner();
-              onResult(value);
+              // parseQrPayload (js/qr-payload.js) yang nentuin: label WSB1
+              // (Barang "kaya data") -> kode-nya diekstrak; teks polos (label
+              // lama, ATAU QR Bin yang memang selalu polos) -> apa adanya.
+              // onResult SELALU dapat kode polos di argumen 1, berapa pun
+              // panjang/formatnya isi asli yang ke-scan.
+              const parsed = parseQrPayload(value);
+              onResult(parsed.kode, value);
             } else {
               requestAnimationFrame(tick);
             }
