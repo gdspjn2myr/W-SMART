@@ -262,9 +262,14 @@ function renderQrBarangSelected() {
 // barang yang dipilih di 1x generate ini (No PO/Vendor/dst emang biasanya 1
 // dokumen/1 sumber yang sama buat sekumpulan barang yang lagi dicetak
 // labelnya bareng). Field yang dikosongin -> tidak ditampilkan di label.
+// `plant` di sini SENGAJA cuma FALLBACK MANUAL (dipakai di generateQrBarangLabels
+// kalau baris Master Data barangnya sendiri nggak punya Plant) — lihat catatan
+// di generateQrBarangLabels soal kenapa Object.assign biasa TIDAK dipakai
+// buat field ini.
 function readQrManualDetail() {
   const noPO = (document.getElementById('qrManualNoPO') || {}).value || '';
   const vendor = (document.getElementById('qrManualVendor') || {}).value || '';
+  const plant = (document.getElementById('qrManualPlant') || {}).value || '';
   const sloc = (document.getElementById('qrManualSLoc') || {}).value || '';
   const tanggal = (document.getElementById('qrManualTanggal') || {}).value || '';
   const sumberTipe = (document.getElementById('qrManualSumberTipe') || {}).value || '';
@@ -275,7 +280,7 @@ function readQrManualDetail() {
   else if (sumberTipe === 'OBS') sumber = 'OBS';
   else if (sumberTipe === 'FAST MOVING') sumber = 'Fast Moving';
 
-  return { noPO: noPO.trim(), vendor: vendor.trim(), sloc: sloc.trim(), tanggal: tanggal.trim(), sumber };
+  return { noPO: noPO.trim(), vendor: vendor.trim(), plant: plant.trim(), sloc: sloc.trim(), tanggal: tanggal.trim(), sumber };
 }
 
 async function generateQrBarangLabels() {
@@ -288,9 +293,18 @@ async function generateQrBarangLabels() {
   const labels = items.map((it) => buildBarangLabel(Object.assign({
     kode: it.kodeBarang,
     namaBarang: it.namaBarang,
-    plant: it.plant,
     satuan: it.satuan
-  }, manualDetail)));
+  }, manualDetail, {
+    // Plant: utamakan isian manual "Detail Tambahan" (buat barang yang
+    // Plant-nya belum kedaftar/kosong di baris Master Data-nya, atau kalau
+    // memang mau di-override) — fallback ke Plant dari Master Data (it.plant)
+    // kalau field manual dikosongin. Field ini SENGAJA ditulis TERPISAH
+    // setelah manualDetail (bukan ikut disebar polos lewat Object.assign di
+    // atas): manualDetail.plant yang KOSONG ('') itu falsy tapi tetap bakal
+    // NIMPA it.plant kalau ikut disebar biasa lewat Object.assign — jadi
+    // fallback-nya harus dihitung eksplisit di sini.
+    plant: manualDetail.plant || it.plant
+  })));
   await renderQrLabels(labels);
 }
 
