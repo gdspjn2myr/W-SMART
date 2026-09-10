@@ -237,24 +237,15 @@ async function openSbRiwayatModal(kode, plant, namaBarang) {
 // ---------------------------------------------------------------------------
 function renderSbSumberBreakdown(sumberBreakdown) {
   const wrap = document.getElementById('sbRiwayatModalSumberBreakdown');
-  if (!sumberBreakdown || !sumberBreakdown.length) {
-    wrap.innerHTML = '';
-    wrap.hidden = true;
-    return;
-  }
-  // Chip MINUS (sisa < 0, dari hitungSumberBreakdownTampilan_ di Code.gs) —
-  // artinya ada Pemakaian/Koreksi Stock yang tercatat lebih besar dari
-  // Penerimaan yang pernah masuk ke kantong itu (biasanya baris lama dari
-  // SEBELUM fitur Sumber ada, atau memang penyesuaian Koreksi Stock) —
-  // dikasih style beda (amber, lihat .sb-sumber-chip-deficit di style.css)
-  // biar keliatan itu BUKAN sisa stock yang bisa diambil, tapi bagian dari
-  // kenapa totalnya nggak cuma jumlah kantong yang "sehat".
-  const chips = sumberBreakdown.map((s) => {
-    const deficitClass = s.sisa < 0 ? ' sb-sumber-chip-deficit' : '';
-    return `<span class="sb-sumber-chip${deficitClass}">${escapeHtml(sumberOptionLabel(s))} <span class="sb-sumber-chip-qty">${s.sisa}</span></span>`;
-  }).join('');
-  wrap.innerHTML = `<span class="sb-sumber-breakdown-label">Sisa saat ini per Sumber:</span>${chips}`;
-  wrap.hidden = false;
+  // sumberBreakdownChipsHtml (js/dashboard.js) yang nyusun chip-nya (dipakai
+  // bareng juga oleh Stock Opname & Cek Barang sekarang) — SENGAJA cuma
+  // balikin isi (label + chip), TANPA div pembungkus ".sb-sumber-breakdown"
+  // sendiri, karena elemen #sbRiwayatModalSumberBreakdown ini SUDAH punya
+  // class itu secara statis di index.html — di sini cukup jadi SLOT yang
+  // ganti innerHTML-nya. Kalau helper-nya ikut nyisipin wrapper juga, bakal
+  // numpuk jadi wrapper dobel (box di dalam box).
+  wrap.innerHTML = sumberBreakdownChipsHtml(sumberBreakdown);
+  wrap.hidden = !sumberBreakdown || !sumberBreakdown.length;
 }
 
 function renderSbRiwayatModalBody(riwayat) {
