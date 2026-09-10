@@ -792,7 +792,7 @@
 
       <div class="qr-manual-detail">
         <div class="qr-manual-detail-header">Detail Tambahan (opsional)</div>
-        <p class="hint-text">Nggak wajib diisi — kalau diisi, berlaku sama buat SEMUA barang yang dipilih di atas (biasanya memang 1 dokumen/sumber yang sama). Plant otomatis ikut dari Master Data tiap barang, nggak perlu diisi di sini.</p>
+        <p class="hint-text">Nggak wajib diisi — kalau diisi, berlaku sama buat SEMUA barang yang dipilih di atas (biasanya memang 1 dokumen/sumber yang sama). Plant otomatis dicoba diisi dari Master Data tiap barang dulu — kalau di Master Data-nya kosong (belum kedaftar per-Plant), isi manual di sini biar tetap muncul di label (sama kayak pas cetak setelah Penerimaan Barang).</p>
         <div class="form-row-pair">
           <div class="form-row">
             <label>No PO</label>
@@ -820,9 +820,15 @@
         </div>
         <div class="form-row-pair">
           <div class="form-row">
+            <label>Plant</label>
+            <input type="text" id="qrManualPlant" placeholder="Otomatis dari Master Data (isi kalau kosong)">
+          </div>
+          <div class="form-row">
             <label>S.Loc</label>
             <input type="text" id="qrManualSLoc" class="input-uppercase" placeholder="Opsional">
           </div>
+        </div>
+        <div class="form-row-pair">
           <div class="form-row">
             <label>Tanggal Terima</label>
             <input type="date" id="qrManualTanggal">
