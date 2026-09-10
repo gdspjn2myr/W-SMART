@@ -112,6 +112,7 @@ const Api = {
   getPemesanDirectory: () => callApi('getPemesanDirectory'),
   getEmailTemplate: () => callApi('getEmailTemplate'),
   saveEmailTemplate: (payload) => callApi('saveEmailTemplate', payload),
+  getCekBarang: (payload) => callApi('getCekBarang', payload),
   getOpnameItemDetail: (payload) => callApi('getOpnameItemDetail', payload),
   getOpnameBinDetail: (payload) => callApi('getOpnameBinDetail', payload),
   saveStockOpname: (payload) => callApi('saveStockOpname', payload),
