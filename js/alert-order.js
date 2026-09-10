@@ -230,7 +230,17 @@ function printAlertOrderPdf() {
       <td>${it.cukupData ? (it.minOtomatis + ' / ' + it.maxOtomatis) : '-'}</td>
     </tr>
   `).join('');
+
+  // body.printing-ao menandain @media print (css/style.css) supaya CUMA
+  // #aoPrintCard yang dipaksa kelihatan pas print ini — pola sama persis
+  // dengan printing-pr di printPRDocument di bawah (termasuk fallback
+  // setTimeout, buat jaga2 kalau device/browser-nya nggak fire 'afterprint'
+  // dengan andal, mis. sebagian Chrome Android pas "Simpan PDF").
+  document.body.classList.add('printing-ao');
+  const cleanup = () => document.body.classList.remove('printing-ao');
+  window.addEventListener('afterprint', cleanup, { once: true });
   window.print();
+  setTimeout(cleanup, 5000);
 }
 
 // ============================================================================
