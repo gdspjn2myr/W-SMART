@@ -148,6 +148,10 @@
           <svg viewBox="0 0 24 24" class="nav-icon"><rect x="3.5" y="3.5" width="6" height="6" rx="1" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 6.5h2M6.5 8v2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M14.5 5.5h6M14.5 9.5h6M14.5 13.5h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="m14.5 18.5 2 2 4-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
           <span>Stock Opname</span>
         </a>
+        <a href="#/cek-barang" class="nav-item nav-subitem" data-nav="cek-barang">
+          <svg viewBox="0 0 24 24" class="nav-icon"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="m20 20-4.8-4.8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          <span>Cek Barang</span>
+        </a>
         <a href="#/riwayat" class="nav-item nav-subitem" data-nav="riwayat">
           <svg viewBox="0 0 24 24" class="nav-icon"><path d="M3 12a9 9 0 1 0 2.64-6.36" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 4v5h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 7v5l4 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
           <span>Riwayat Transaksi</span>
@@ -591,7 +595,7 @@
       </div>
       <div class="form-row">
         <label>Kode Barang *</label>
-        <input type="text" id="pmKode" list="listMasterBarang" placeholder="Ketik kode atau pilih dari daftar" required autocomplete="off">
+        <input type="text" id="pmKode" list="listMasterBarangPemakaian" placeholder="Ketik kode atau pilih dari daftar" required autocomplete="off">
         <div id="pmNamaHint" class="hint-text" hidden></div>
       </div>
       <div class="form-row-pair">
@@ -1116,6 +1120,29 @@
 
   </section>
 
+  <!-- ============================= CEK BARANG ============================= -->
+  <section id="page-cek-barang" class="page" hidden>
+
+    <div class="card">
+      <div class="card-header">Cek Barang — Scan atau Cari Kode Barang</div>
+      <p class="md-preview-hint">Scan QR Barang (atau ketik Kode-nya) buat lihat identitas &amp; stock TERKINI-nya — per Plant, per S.Loc, sampai rincian per Bin. Kalau QR yang di-scan format terbaru (sudah berisi No PO/Vendor/dst), data itu ikut ditampilkan sebagai "Info dari Label". Halaman ini cuma buat LIHAT, tidak mencatat/mengubah apa pun.</p>
+
+      <div class="form-row">
+        <label>Kode Barang</label>
+        <div class="scan-lokasi-row">
+          <button type="button" id="btnScanCbBarang" class="btn btn-small btn-scan">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7V5a1 1 0 0 1 1-1h2M17 4h2a1 1 0 0 1 1 1v2M20 17v2a1 1 0 0 1-1 1h-2M7 20H5a1 1 0 0 1-1-1v-2"/><rect x="8" y="8" width="8" height="8" rx="1"/></svg>
+            Scan QR Barang
+          </button>
+        </div>
+        <input type="text" id="cbKode" list="listMasterBarang" placeholder="Ketik atau scan Kode Barang" autocomplete="off">
+      </div>
+      <button type="button" id="btnCbCari" class="btn btn-small">Cari</button>
+    </div>
+
+    <div id="cbResultCard" class="card" hidden></div>
+
+  </section>
 
   <!-- ============================= ALERT ORDER ============================= -->
   <section id="page-alert-order" class="page" hidden>
@@ -1560,7 +1587,7 @@
     <div class="item-row-grid">
       <div class="form-row">
         <label>Kode Barang</label>
-        <input type="text" class="i-kode" list="listMasterBarang">
+        <input type="text" class="i-kode" list="listMasterBarangPenerimaan">
       </div>
       <div class="form-row">
         <label>Nama Barang</label>
@@ -1577,13 +1604,22 @@
     </div>
   </div>
 </template>
+<!-- listMasterBarang: dipakai Stock Opname (Cari Barang & tabel Manual) — semua
+     Plant, cuma di-dedup per Kode Barang (lihat renderMasterBarangDatalist di
+     js/penerimaan.js). listMasterBarangPenerimaan & listMasterBarangPemakaian
+     DIPISAH sendiri-sendiri (bukan numpang yang di atas) supaya bisa
+     di-filter ngikutin Plant yang sudah diisi di form masing-masing halaman,
+     tanpa saling ganggu satu sama lain. -->
 <datalist id="listMasterBarang"></datalist>
+<datalist id="listMasterBarangPenerimaan"></datalist>
+<datalist id="listMasterBarangPemakaian"></datalist>
 
 <script src="js/config.js"></script>
 <script src="js/feedback.js"></script>
 <script src="js/auth.js"></script>
 <script src="js/api.js"></script>
 <script src="js/router.js"></script>
+<script src="js/qr-payload.js"></script>
 <script src="js/qr-scan.js"></script>
 <script src="js/dashboard.js"></script>
 <script src="js/penerimaan.js"></script>
@@ -1595,6 +1631,7 @@
 <script src="js/qr-labels.js"></script>
 <script src="js/riwayat.js"></script>
 <script src="js/opname.js"></script>
+<script src="js/cek-barang.js"></script>
 <script src="js/alert-order.js"></script>
 <script src="js/users.js"></script>
 <script src="js/pengaturan.js"></script>
