@@ -2552,7 +2552,13 @@ body {
   cursor: pointer; transition: border-color .2s ease, background .2s ease; font-size: 13px; color: var(--text-muted);
 }
 .foto-upload-box:hover { border-color: var(--navy-light); background: #f7f9fd; }
-.foto-upload-preview { max-width: 100%; max-height: 200px; border-radius: 10px; margin-top: 10px; display: block; }
+/* PENTING: pakai :not([hidden]), BUKAN ".foto-upload-preview { display: block }"
+   polos — kalau polos, "display:block" di sini MENANG ketimbang default
+   browser "[hidden] { display: none }" walau specificity-nya sama (author
+   style vs UA style), jadi preview foto lama bisa tetap kelihatan walau
+   elemennya sudah di-reset ke hidden=true. Sama pola bug-nya dengan yang
+   ditemukan Bos di repo Reservasi-SP-online. */
+.foto-upload-preview:not([hidden]) { max-width: 100%; max-height: 200px; border-radius: 10px; margin-top: 10px; display: block; }
 
 /* Timeline log SPK (Feedback Kebutuhan / Update Harian) */
 .spk-log-item { border-left: 3px solid var(--navy-light); padding: 4px 0 4px 12px; margin-bottom: 10px; }
