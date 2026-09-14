@@ -2541,8 +2541,13 @@ body {
 .spk-action-btn-row { display: flex; justify-content: flex-end; gap: 10px; align-items: center; margin-top: 10px; }
 .spk-action-btn-row:first-child { margin-top: 0; }
 
-.spk-foto-row { display: flex; gap: 10px; flex-wrap: wrap; margin: 10px 0; }
+.spk-foto-row { display: flex; gap: 14px; flex-wrap: wrap; margin: 10px 0; }
 .spk-foto-row img { max-height: 160px; border-radius: 10px; border: 1px solid var(--border); }
+/* Caption teks di atas tiap foto (Foto Sebelum / Foto Selesai) -- sebelumnya
+   cuma ada di atribut alt yang tidak kelihatan di halaman, jadi user gabisa
+   bedain mana foto sebelum & mana foto selesai. */
+.spk-foto-block { display: flex; flex-direction: column; }
+.spk-foto-caption { font-size: 12.5px; font-weight: 700; color: var(--navy); margin-bottom: 4px; }
 
 .spk-log-list { max-height: 220px; overflow-y: auto; }
 
