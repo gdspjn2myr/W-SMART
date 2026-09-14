@@ -167,6 +167,24 @@
       </div>
     </div>
 
+    <div class="nav-group" data-group="reservasi-spk">
+      <button type="button" class="nav-group-toggle" data-group-toggle="reservasi-spk" aria-expanded="false">
+        <svg viewBox="0 0 24 24" class="nav-icon"><path d="M9 3.5h6a1 1 0 0 1 1 1V6h1.5A1.5 1.5 0 0 1 19 7.5v12A1.5 1.5 0 0 1 17.5 21h-11A1.5 1.5 0 0 1 5 19.5v-12A1.5 1.5 0 0 1 6.5 6H8V4.5a1 1 0 0 1 1-1Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="m9 12.5 2 2 4-4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>Reservasi &amp; SPK</span>
+        <svg viewBox="0 0 24 24" class="nav-chevron"><path d="m8 10 4 4 4-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div class="nav-flyout">
+        <a href="#/reservasi" class="nav-item nav-subitem" data-nav="reservasi">
+          <svg viewBox="0 0 24 24" class="nav-icon"><path d="M3 7.5 12 3l9 4.5v9L12 21l-9-4.5v-9Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M3 7.5 12 12l9-4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+          <span>Reservasi Sparepart</span>
+        </a>
+        <a href="#/spk-online" class="nav-item nav-subitem" data-nav="spk-online">
+          <svg viewBox="0 0 24 24" class="nav-icon"><path d="M9 3.5h6a1 1 0 0 1 1 1V6h1.5A1.5 1.5 0 0 1 19 7.5v12A1.5 1.5 0 0 1 17.5 21h-11A1.5 1.5 0 0 1 5 19.5v-12A1.5 1.5 0 0 1 6.5 6H8V4.5a1 1 0 0 1 1-1Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="m9 12.5 2 2 4-4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span>SPK Online</span>
+        </a>
+      </div>
+    </div>
+
     <a href="#/alert-order" class="nav-item" data-nav="alert-order">
       <svg viewBox="0 0 24 24" class="nav-icon"><path d="M12 3a6 6 0 0 0-6 6c0 4.5-2 6-2 6h16s-2-1.5-2-6a6 6 0 0 0-6-6Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 20a2 2 0 0 0 4 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
       <span>Alert Order</span>
@@ -1150,6 +1168,84 @@
 
   </section>
 
+  <!-- ============================= RESERVASI SPAREPART ============================= -->
+  <section id="page-reservasi" class="page" hidden>
+
+    <div class="card md-hint">
+      Approval GDSP &amp; Issue barang bisa dilakukan <strong>Staff/Admin manapun</strong> (tidak dicek departemen). Reservasi diajukan user dari aplikasi <strong>Reservasi-SP-online</strong> (repo terpisah) — halaman ini cuma buat memproses.
+    </div>
+
+    <div class="md-toolbar">
+      <select id="rsvStatusFilter" class="rw-select">
+        <option value="">Semua Status</option>
+        <option value="Menunggu Approval GDSP">Menunggu Approval GDSP</option>
+        <option value="Barang Ready">Barang Ready</option>
+        <option value="Selesai">Selesai</option>
+        <option value="Ditolak">Ditolak</option>
+      </select>
+    </div>
+
+    <div class="sb-summary">
+      <span id="rsvCount">0 Reservasi</span>
+      <button type="button" id="btnRefreshReservasi" class="btn btn-small" title="Refresh" aria-label="Refresh">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 4v6h-6"/></svg>
+      </button>
+    </div>
+
+    <div id="rsvList" class="md-list">
+      <div class="empty-state">Memuat reservasi...</div>
+    </div>
+
+  </section>
+
+  <!-- ============================= SPK ONLINE ============================= -->
+  <section id="page-spk-online" class="page" hidden>
+
+    <div class="card md-hint">
+      SPK diajukan user dari aplikasi <strong>Reservasi-SP-online</strong> (departemen GDPM/GDSP/GDFG/GDRM). Approval, feedback, Onproses, &amp; Closed dikelola di sini oleh <strong>Staff/Admin manapun</strong>, dari semua departemen. Klik salah satu SPK untuk lihat detail &amp; proses.
+    </div>
+
+    <div class="md-toolbar spk-filter-row">
+      <select id="spkStatusFilter" class="rw-select">
+        <option value="">Semua Status</option>
+        <option value="Menunggu Approval">Menunggu Approval</option>
+        <option value="Open">Open</option>
+        <option value="Hold">Hold</option>
+        <option value="Onproses">Onproses</option>
+        <option value="Closed">Closed</option>
+        <option value="Ditolak">Ditolak</option>
+      </select>
+      <select id="spkDeptFilter" class="rw-select">
+        <option value="">Semua Departemen</option>
+        <option value="GDPM">GDPM</option>
+        <option value="GDSP">GDSP</option>
+        <option value="GDFG">GDFG</option>
+        <option value="GDRM">GDRM</option>
+      </select>
+      <select id="spkJenisFilter" class="rw-select">
+        <option value="">Semua Jenis</option>
+        <option value="Perbaikan Unit">Perbaikan Unit</option>
+        <option value="Fabrikasi">Fabrikasi</option>
+      </select>
+    </div>
+    <label class="spk-telat-toggle">
+      <input type="checkbox" id="spkTelatOnly">
+      <span>Tampilkan yang <strong>Telat</strong> saja (Open, lewat target tanggal, belum Onproses)</span>
+    </label>
+
+    <div class="sb-summary">
+      <span id="spkCount">0 SPK</span>
+      <button type="button" id="btnRefreshSpk" class="btn btn-small" title="Refresh" aria-label="Refresh">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 4v6h-6"/></svg>
+      </button>
+    </div>
+
+    <div id="spkList" class="md-list">
+      <div class="empty-state">Memuat SPK...</div>
+    </div>
+
+  </section>
+
   <!-- ============================= ALERT ORDER ============================= -->
   <section id="page-alert-order" class="page" hidden>
 
@@ -1266,7 +1362,8 @@
     <div class="card md-hint">
       <strong>Admin</strong>: semua akses termasuk Master Data &amp; Kelola User. &nbsp;·&nbsp;
       <strong>Staff</strong>: bisa input transaksi (Barang Masuk/Keluar/Put Away/Koreksi/Opname), tidak bisa ubah Master Data/User. &nbsp;·&nbsp;
-      <strong>Viewer</strong>: cuma bisa lihat Dashboard, Stock Balance, Riwayat Transaksi &amp; Alert Order.
+      <strong>Viewer</strong>: cuma bisa lihat Dashboard, Stock Balance, Riwayat Transaksi &amp; Alert Order. &nbsp;·&nbsp;
+      <strong>User</strong>: akun dari repo Reservasi-SP-online (bukan aplikasi ini) — cuma dipilih pas approve pendaftar dari repo itu; tidak punya akses ke halaman manapun di W-SMART ini.
     </div>
 
     <div class="md-toolbar">
@@ -1457,6 +1554,7 @@
           <option value="Admin">Admin</option>
           <option value="Staff" selected>Staff</option>
           <option value="Viewer">Viewer</option>
+          <option value="User">User</option>
         </select>
       </div>
       <div id="userFormError" class="form-error" hidden></div>
@@ -1567,6 +1665,58 @@
   </div>
 </div>
 
+<!-- Reservasi: Approve/Tolak (Approval GDSP) -->
+<div id="rsvKeputusanModalBackdrop" class="modal-backdrop" hidden></div>
+<div id="rsvKeputusanModal" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="rsvKeputusanModalTitle">
+  <div class="modal-card card">
+    <div class="modal-header">
+      <span id="rsvKeputusanModalTitle">Approval GDSP</span>
+      <button type="button" id="btnCloseRsvKeputusanModal" class="modal-close" aria-label="Tutup">×</button>
+    </div>
+    <p class="hint-text" id="rsvKeputusanModalHint"></p>
+    <form id="rsvKeputusanForm">
+      <div class="form-row">
+        <label id="rsvKeputusanCatatanLabel">Catatan</label>
+        <textarea id="rsvKeputusanCatatan" rows="3" placeholder="Catatan (opsional)"></textarea>
+      </div>
+      <div id="rsvKeputusanFormError" class="form-error" hidden></div>
+      <button type="submit" id="btnRsvKeputusanSubmit" class="btn btn-primary btn-block">Setujui</button>
+    </form>
+  </div>
+</div>
+
+<!-- Reservasi: Issue (barang diambil) -->
+<div id="rsvIssueModalBackdrop" class="modal-backdrop" hidden></div>
+<div id="rsvIssueModal" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="rsvIssueModalTitle">
+  <div class="modal-card card">
+    <div class="modal-header">
+      <span id="rsvIssueModalTitle">Issue Barang</span>
+      <button type="button" id="btnCloseRsvIssueModal" class="modal-close" aria-label="Tutup">×</button>
+    </div>
+    <p class="hint-text" id="rsvIssueModalHint"></p>
+    <form id="rsvIssueForm">
+      <div class="form-row">
+        <label>Qty Diambil *</label>
+        <input type="number" id="rsvIssueQty" min="0.01" step="any" required>
+      </div>
+      <div id="rsvIssueFormError" class="form-error" hidden></div>
+      <button type="submit" id="btnRsvIssueSubmit" class="btn btn-primary btn-block">Selesaikan (Issue)</button>
+    </form>
+  </div>
+</div>
+
+<!-- SPK Online: detail (info + log + aksi, isinya dinamis lewat js/spk-online.js) -->
+<div id="spkDetailModalBackdrop" class="modal-backdrop" hidden></div>
+<div id="spkDetailModal" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="spkDetailModalTitle">
+  <div class="modal-card card spk-detail-card">
+    <div class="modal-header">
+      <span id="spkDetailModalTitle">Detail SPK</span>
+      <button type="button" id="btnCloseSpkDetailModal" class="modal-close" aria-label="Tutup">×</button>
+    </div>
+    <div id="spkDetailBody"></div>
+  </div>
+</div>
+
 <div id="toast" class="toast" hidden></div>
 
 <div id="qrScanOverlay" class="qr-scan-overlay" hidden>
@@ -1639,6 +1789,9 @@
 <script src="js/opname.js"></script>
 <script src="js/cek-barang.js"></script>
 <script src="js/alert-order.js"></script>
+<script src="js/foto-compress.js"></script>
+<script src="js/reservasi.js"></script>
+<script src="js/spk-online.js"></script>
 <script src="js/users.js"></script>
 <script src="js/pengaturan.js"></script>
 <script src="js/app.js"></script>
