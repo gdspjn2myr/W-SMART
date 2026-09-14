@@ -204,8 +204,8 @@ function renderSpkDetailBody() {
       ${it.diprosesOleh ? '<br>Diproses oleh ' + escapeHtml(it.diprosesOleh) + (it.tanggalKeputusan ? ' · ' + escapeHtml(it.tanggalKeputusan) : '') : ''}
     </p>
     <div class="spk-foto-row">
-      ${thumbSebelum ? `<a href="${escapeHtml(zoomSebelum)}" target="_blank" rel="noopener"><img src="${escapeHtml(thumbSebelum)}" class="foto-upload-preview" alt="Foto Sebelum"></a>` : (it.fotoSebelum ? `<a href="${escapeHtml(it.fotoSebelum)}" target="_blank" rel="noopener">Lihat Foto Sebelum</a>` : '')}
-      ${thumbSelesai ? `<a href="${escapeHtml(zoomSelesai)}" target="_blank" rel="noopener"><img src="${escapeHtml(thumbSelesai)}" class="foto-upload-preview" alt="Foto Selesai"></a>` : (it.fotoSelesai ? `<a href="${escapeHtml(it.fotoSelesai)}" target="_blank" rel="noopener">Lihat Foto Selesai</a>` : '')}
+      ${it.fotoSebelum ? `<div class="spk-foto-block"><div class="spk-foto-caption">Foto Sebelum</div>${thumbSebelum ? `<a href="${escapeHtml(zoomSebelum)}" target="_blank" rel="noopener"><img src="${escapeHtml(thumbSebelum)}" class="foto-upload-preview" alt="Foto Sebelum"></a>` : `<a href="${escapeHtml(it.fotoSebelum)}" target="_blank" rel="noopener">Lihat Foto Sebelum</a>`}</div>` : ''}
+      ${it.fotoSelesai ? `<div class="spk-foto-block"><div class="spk-foto-caption">Foto Selesai</div>${thumbSelesai ? `<a href="${escapeHtml(zoomSelesai)}" target="_blank" rel="noopener"><img src="${escapeHtml(thumbSelesai)}" class="foto-upload-preview" alt="Foto Selesai"></a>` : `<a href="${escapeHtml(it.fotoSelesai)}" target="_blank" rel="noopener">Lihat Foto Selesai</a>`}</div>` : ''}
     </div>`;
 
   let actionHtml = '';
