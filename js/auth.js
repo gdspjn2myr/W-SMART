@@ -28,7 +28,9 @@ const PAGE_ROLES = {
   'cek-barang': ['Admin', 'Staff', 'Viewer'],
   'alert-order': ['Admin', 'Staff', 'Viewer'],
   users: ['Admin'],
-  pengaturan: ['Admin']
+  pengaturan: ['Admin'],
+  reservasi: ['Admin', 'Staff'],
+  'spk-online': ['Admin', 'Staff']
 };
 
 let currentSession = null; // { token, nama, username, role }
