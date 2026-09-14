@@ -12,7 +12,7 @@
 // scanSPB dikasih waktu lebih lama karena proses baca gambar (OCR) di server
 // memang bisa makan waktu lebih dari aksi lain yang cuma baca/tulis sheet.
 const API_TIMEOUT_MS = 30000;
-const API_TIMEOUT_MS_LONG = { scanSPB: 60000 };
+const API_TIMEOUT_MS_LONG = { scanSPB: 60000, uploadFotoSpk: 45000 };
 
 // Action yang TIDAK butuh sessionToken (belum tentu ada sesi saat dipanggil —
 // login justru tujuannya BIKIN sesi baru). Semua action lain otomatis disisipi
@@ -125,5 +125,16 @@ const Api = {
   getReceivingDetail: (payload) => callApi('getReceivingDetail', payload),
   getPemakaianDetail: (payload) => callApi('getPemakaianDetail', payload),
   getStockMutasi: (payload) => callApi('getStockMutasi', payload),
-  getItemMutasiRiwayat: (payload) => callApi('getItemMutasiRiwayat', payload)
+  getItemMutasiRiwayat: (payload) => callApi('getItemMutasiRiwayat', payload),
+  // ---- Reservasi Sparepart & SPK Online (Staff/Admin, lihat js/reservasi.js & js/spk-online.js) ----
+  getReservasiList: (payload) => callApi('getReservasiList', payload),
+  approveReservasi: (payload) => callApi('approveReservasi', payload),
+  issueReservasi: (payload) => callApi('issueReservasi', payload),
+  getSpkList: (payload) => callApi('getSpkList', payload),
+  getSpkLog: (payload) => callApi('getSpkLog', payload),
+  decideSpk: (payload) => callApi('decideSpk', payload),
+  addSpkLog: (payload) => callApi('addSpkLog', payload),
+  startSpkOnproses: (payload) => callApi('startSpkOnproses', payload),
+  closeSpk: (payload) => callApi('closeSpk', payload),
+  uploadFotoSpk: (payload) => callApi('uploadFotoSpk', payload)
 };
