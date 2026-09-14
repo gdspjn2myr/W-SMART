@@ -2507,3 +2507,55 @@ body {
   body.printing-pr #prPrintCard[hidden] { display: block !important; }
   #prPrintCard { box-shadow: none; border: none; padding: 0; margin: 0; }
 }
+
+/* ============================================================================
+   RESERVASI SPAREPART & SPK ONLINE (Staff/Admin) — status pill tambahan (nama
+   status yang SAMA PERSIS dipakai juga di repo Reservasi-SP-online, sengaja
+   pakai warna yang sama biar konsisten), + komponen kecil khusus 2 halaman ini.
+   ============================================================================ */
+
+.status-menunggu { background: #eef1f8; color: var(--text-muted); cursor: default; }
+.status-ready, .status-open { background: #e6edfb; color: var(--navy-light); cursor: default; }
+.status-selesai, .status-closed { background: #e6f7ee; color: var(--green); cursor: default; }
+.status-ditolak { background: #fdeaea; color: var(--red); cursor: default; }
+.status-hold { background: #fff4e0; color: #b3701a; cursor: default; }
+.status-onproses { background: #fff3d6; color: #8a5a00; cursor: default; }
+.status-telat { background: #fdeaea; color: var(--red); cursor: default; }
+
+.spk-filter-row { flex-wrap: wrap; }
+.spk-filter-row .rw-select { flex: 1 1 150px; }
+.spk-telat-toggle {
+  display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--text-muted);
+  margin: -6px 0 14px; cursor: pointer;
+}
+.spk-telat-toggle input { width: 16px; height: 16px; accent-color: var(--navy); }
+
+.spk-list-item { cursor: pointer; }
+
+/* Kotak aksi kecil (form inline) di dalam modal detail SPK — dipakai buat
+   OK/Tolak/Hold, tambah feedback/update harian, & tutup SPK (foto selesai). */
+.spk-action-box {
+  background: var(--bg); border: 1px solid var(--border); border-radius: 12px;
+  padding: 14px; margin-top: 10px;
+}
+.spk-action-btn-row { display: flex; justify-content: flex-end; gap: 10px; align-items: center; margin-top: 10px; }
+.spk-action-btn-row:first-child { margin-top: 0; }
+
+.spk-foto-row { display: flex; gap: 10px; flex-wrap: wrap; margin: 10px 0; }
+.spk-foto-row img { max-height: 160px; border-radius: 10px; border: 1px solid var(--border); }
+
+.spk-log-list { max-height: 220px; overflow-y: auto; }
+
+/* Upload foto (dipakai buat "Foto Selesai" pas Tutup SPK) */
+.foto-upload-box {
+  border: 1.5px dashed var(--border); border-radius: 12px; padding: 16px; text-align: center;
+  cursor: pointer; transition: border-color .2s ease, background .2s ease; font-size: 13px; color: var(--text-muted);
+}
+.foto-upload-box:hover { border-color: var(--navy-light); background: #f7f9fd; }
+.foto-upload-preview { max-width: 100%; max-height: 200px; border-radius: 10px; margin-top: 10px; display: block; }
+
+/* Timeline log SPK (Feedback Kebutuhan / Update Harian) */
+.spk-log-item { border-left: 3px solid var(--navy-light); padding: 4px 0 4px 12px; margin-bottom: 10px; }
+.spk-log-item.log-feedback { border-left-color: var(--gold); }
+.spk-log-meta { font-size: 11.5px; color: var(--text-muted); margin-bottom: 2px; }
+.spk-log-isi { font-size: 13.5px; }
