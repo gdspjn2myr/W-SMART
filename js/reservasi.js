@@ -97,11 +97,23 @@ function renderReservasiList() {
             ${escapeHtml(it.idReservasi)}
           </div>
           <div class="md-item-sub">
-            ${escapeHtml(it.namaUser)} · ${escapeHtml(it.departement || '-')}${it.plant ? ' · Plant ' + escapeHtml(it.plant) : ''} · ${escapeHtml(it.tanggal)}
+            ${escapeHtml(it.namaUser)} · ${escapeHtml(it.departement || '-')}${it.plant ? ' · Plant ' + escapeHtml(it.plant) : ''} · ${escapeHtml(it.tanggal)}${it.idPermintaan ? ' · ' + escapeHtml(it.idPermintaan) : ''}
           </div>
           <div class="md-item-sub">
-            ${escapeHtml(it.kode)} — ${escapeHtml(it.namaBarang)} · Qty diminta: ${escapeHtml(it.qtyDiminta)} ${escapeHtml(it.satuan || '')}${it.keterangan ? ' · ' + escapeHtml(it.keterangan) : ''}
+            ${escapeHtml(it.kode)} — ${escapeHtml(it.namaBarang)} · Qty diminta: ${escapeHtml(it.qtyDiminta)} ${escapeHtml(it.satuan || '')}${it.sloc ? ' · S.Loc ' + escapeHtml(it.sloc) : ''}${it.keterangan ? ' · ' + escapeHtml(it.keterangan) : ''}
           </div>
+          ${(it.line || it.group || it.pelaksanaLapangan || it.namaEquipment) ? `
+          <div class="md-item-sub">
+            ${it.line ? 'Line ' + escapeHtml(it.line) : ''}${it.group ? ' · Group ' + escapeHtml(it.group) : ''}${it.pelaksanaLapangan ? ' · ' + escapeHtml(it.pelaksanaLapangan) : ''}${it.namaEquipment ? ' · Equipment: ' + escapeHtml(it.namaEquipment) : ''}${it.nomorEquipment ? ' (' + escapeHtml(it.nomorEquipment) + ')' : ''}
+          </div>` : ''}
+          ${(it.alasanPermintaan || it.uraianPekerjaan) ? `
+          <div class="md-item-sub">
+            ${it.alasanPermintaan ? 'Alasan: ' + escapeHtml(it.alasanPermintaan) : ''}${it.uraianPekerjaan ? ' · Uraian: ' + escapeHtml(it.uraianPekerjaan) : ''}
+          </div>` : ''}
+          ${(it.subEquipment1Nama || it.subEquipment2Nama || it.referency || it.maintenanceOrder) ? `
+          <div class="md-item-sub">
+            ${it.subEquipment1Nama ? 'Sub 1: ' + escapeHtml(it.subEquipment1Nama) + (it.subEquipment1No ? ' (' + escapeHtml(it.subEquipment1No) + ')' : '') : ''}${it.subEquipment2Nama ? ' · Sub 2: ' + escapeHtml(it.subEquipment2Nama) + (it.subEquipment2No ? ' (' + escapeHtml(it.subEquipment2No) + ')' : '') : ''}${it.referency ? ' · Ref: ' + escapeHtml(it.referency) : ''}${it.maintenanceOrder ? ' · MO: ' + escapeHtml(it.maintenanceOrder) : ''}
+          </div>` : ''}
           ${extraInfo}
         </div>
         <div class="md-item-actions">${actions}</div>
