@@ -126,10 +126,13 @@ function renderSpkList() {
 // Ekstrak file ID dari URL Drive (hasil file.getUrl(), format .../d/<id>/view)
 // supaya bisa ditampilkan sebagai <img> thumbnail — kalau formatnya beda/gagal
 // di-parse, fallback ke link biasa (bukan gambar) di renderSpkDetailBody.
-function driveThumbUrl_(url) {
+// `size` dipakai buat bikin versi lebih besar (dipakai pas foto diklik buat
+// "zoom") — TETAP lewat endpoint thumbnail, BUKAN link share Drive asli,
+// supaya klik foto TIDAK minta login/pilih akun Google.
+function driveThumbUrl_(url, size) {
   if (!url) return '';
   const m = String(url).match(/\/d\/([^/]+)/);
-  return m ? `https://drive.google.com/thumbnail?id=${m[1]}&sz=w800` : '';
+  return m ? `https://drive.google.com/thumbnail?id=${m[1]}&sz=w${size || 800}` : '';
 }
 
 function openSpkDetail(idSpk) {
@@ -182,8 +185,10 @@ function renderSpkDetailBody() {
   const it = spkCurrentItem;
   if (!it) return;
   const pillClass = SPK_STATUS_PILL_CLASS[it.status] || 'status-menunggu';
-  const thumbSebelum = driveThumbUrl_(it.fotoSebelum);
-  const thumbSelesai = driveThumbUrl_(it.fotoSelesai);
+  const thumbSebelum = driveThumbUrl_(it.fotoSebelum, 800);
+  const thumbSelesai = driveThumbUrl_(it.fotoSelesai, 800);
+  const zoomSebelum = driveThumbUrl_(it.fotoSebelum, 1600);
+  const zoomSelesai = driveThumbUrl_(it.fotoSelesai, 1600);
 
   let infoHtml = `
     <div class="md-item-title" style="margin-bottom:8px;">
@@ -199,8 +204,8 @@ function renderSpkDetailBody() {
       ${it.diprosesOleh ? '<br>Diproses oleh ' + escapeHtml(it.diprosesOleh) + (it.tanggalKeputusan ? ' · ' + escapeHtml(it.tanggalKeputusan) : '') : ''}
     </p>
     <div class="spk-foto-row">
-      ${thumbSebelum ? `<a href="${escapeHtml(it.fotoSebelum)}" target="_blank" rel="noopener"><img src="${escapeHtml(thumbSebelum)}" class="foto-upload-preview" alt="Foto Sebelum"></a>` : (it.fotoSebelum ? `<a href="${escapeHtml(it.fotoSebelum)}" target="_blank" rel="noopener">Lihat Foto Sebelum</a>` : '')}
-      ${thumbSelesai ? `<a href="${escapeHtml(it.fotoSelesai)}" target="_blank" rel="noopener"><img src="${escapeHtml(thumbSelesai)}" class="foto-upload-preview" alt="Foto Selesai"></a>` : (it.fotoSelesai ? `<a href="${escapeHtml(it.fotoSelesai)}" target="_blank" rel="noopener">Lihat Foto Selesai</a>` : '')}
+      ${thumbSebelum ? `<a href="${escapeHtml(zoomSebelum)}" target="_blank" rel="noopener"><img src="${escapeHtml(thumbSebelum)}" class="foto-upload-preview" alt="Foto Sebelum"></a>` : (it.fotoSebelum ? `<a href="${escapeHtml(it.fotoSebelum)}" target="_blank" rel="noopener">Lihat Foto Sebelum</a>` : '')}
+      ${thumbSelesai ? `<a href="${escapeHtml(zoomSelesai)}" target="_blank" rel="noopener"><img src="${escapeHtml(thumbSelesai)}" class="foto-upload-preview" alt="Foto Selesai"></a>` : (it.fotoSelesai ? `<a href="${escapeHtml(it.fotoSelesai)}" target="_blank" rel="noopener">Lihat Foto Selesai</a>` : '')}
     </div>`;
 
   let actionHtml = '';
@@ -286,11 +291,12 @@ function renderSpkDetailBody() {
         </div>
       </div>`;
   } else if (spkDetailUiState === 'close' && it.status === 'Onproses') {
-    const isFabrikasi = it.jenisPengerjaan === 'Fabrikasi';
+    // Foto Selesai WAJIB buat SEMUA jenis pengerjaan (sebelumnya cuma wajib
+    // buat Fabrikasi, Perbaikan Unit opsional — direvisi atas permintaan Bos).
     actionHtml = `
       <div class="spk-action-box">
         <div class="form-row">
-          <label>Foto Selesai ${isFabrikasi ? '*' : '(opsional)'}</label>
+          <label>Foto Selesai *</label>
           <div class="foto-upload-box" data-action="close-foto-pick">
             <span id="spkCloseFotoStatus">${spkCloseUploading ? 'Mengupload...' : (spkCloseFotoUrl ? 'Foto siap ✓' : 'Klik untuk ambil/pilih foto')}</span>
             ${spkCloseFotoPreview ? `<img src="${spkCloseFotoPreview}" class="foto-upload-preview" alt="Preview foto selesai">` : ''}
@@ -426,8 +432,9 @@ async function handleSpkCloseFotoChange(e) {
 
 async function submitSpkClose() {
   const it = spkCurrentItem;
-  if (it.jenisPengerjaan === 'Fabrikasi' && !spkCloseFotoUrl) {
-    return showSpkInlineError_('spkCloseError', 'Foto selesai wajib diisi untuk menutup SPK Fabrikasi.');
+  // Foto Selesai wajib buat SEMUA jenis pengerjaan (bukan cuma Fabrikasi lagi).
+  if (!spkCloseFotoUrl) {
+    return showSpkInlineError_('spkCloseError', 'Foto selesai wajib diisi untuk menutup SPK.');
   }
   if (spkCloseUploading) {
     return showSpkInlineError_('spkCloseError', 'Tunggu upload foto selesai dulu.');
