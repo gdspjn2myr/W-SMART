@@ -580,6 +580,12 @@ document.addEventListener('DOMContentLoaded', () => {
   Router.register('users', () => {
     initUsersPage();
   });
+  Router.register('reservasi', () => {
+    initReservasiPage();
+  });
+  Router.register('spk-online', () => {
+    initSpkOnlinePage();
+  });
   Router.register('pengaturan', () => {
     initPengaturanPage();
   });
