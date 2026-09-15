@@ -1717,6 +1717,14 @@
   </div>
 </div>
 
+<!-- Zoom foto SPK (Foto Sebelum/Selesai) — SENGAJA buka DI DALAM app (bukan
+     navigasi ke drive.google.com), soalnya link Drive langsung minta "Select
+     an account" walau filenya sudah public/anyone-with-link. -->
+<div id="fotoZoomOverlay" class="foto-zoom-overlay" hidden>
+  <button type="button" id="btnCloseFotoZoom" class="foto-zoom-close" aria-label="Tutup">×</button>
+  <img id="fotoZoomImg" class="foto-zoom-img" src="" alt="Foto">
+</div>
+
 <div id="toast" class="toast" hidden></div>
 
 <div id="qrScanOverlay" class="qr-scan-overlay" hidden>
