@@ -59,6 +59,7 @@ function initSpkOnlinePage() {
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && !document.getElementById('spkDetailModal').hidden) closeSpkDetailModal();
     });
+    wireFotoZoom();
 
     // Event delegation buat SEMUA tombol/aksi di dalam body detail — isinya
     // dibangun ulang tiap render, jadi listener dipasang sekali di container.
@@ -204,8 +205,8 @@ function renderSpkDetailBody() {
       ${it.diprosesOleh ? '<br>Diproses oleh ' + escapeHtml(it.diprosesOleh) + (it.tanggalKeputusan ? ' · ' + escapeHtml(it.tanggalKeputusan) : '') : ''}
     </p>
     <div class="spk-foto-row">
-      ${it.fotoSebelum ? `<div class="spk-foto-block"><div class="spk-foto-caption">Foto Sebelum</div>${thumbSebelum ? `<a href="${escapeHtml(zoomSebelum)}" target="_blank" rel="noopener"><img src="${escapeHtml(thumbSebelum)}" class="foto-upload-preview" alt="Foto Sebelum"></a>` : `<a href="${escapeHtml(it.fotoSebelum)}" target="_blank" rel="noopener">Lihat Foto Sebelum</a>`}</div>` : ''}
-      ${it.fotoSelesai ? `<div class="spk-foto-block"><div class="spk-foto-caption">Foto Selesai</div>${thumbSelesai ? `<a href="${escapeHtml(zoomSelesai)}" target="_blank" rel="noopener"><img src="${escapeHtml(thumbSelesai)}" class="foto-upload-preview" alt="Foto Selesai"></a>` : `<a href="${escapeHtml(it.fotoSelesai)}" target="_blank" rel="noopener">Lihat Foto Selesai</a>`}</div>` : ''}
+      ${it.fotoSebelum ? `<div class="spk-foto-block"><div class="spk-foto-caption">Foto Sebelum</div>${thumbSebelum ? `<img src="${escapeHtml(thumbSebelum)}" class="foto-upload-preview" alt="Foto Sebelum" data-action="zoom-foto" data-zoom="${escapeHtml(zoomSebelum)}">` : `<a href="${escapeHtml(it.fotoSebelum)}" target="_blank" rel="noopener">Lihat Foto Sebelum</a>`}</div>` : ''}
+      ${it.fotoSelesai ? `<div class="spk-foto-block"><div class="spk-foto-caption">Foto Selesai</div>${thumbSelesai ? `<img src="${escapeHtml(thumbSelesai)}" class="foto-upload-preview" alt="Foto Selesai" data-action="zoom-foto" data-zoom="${escapeHtml(zoomSelesai)}">` : `<a href="${escapeHtml(it.fotoSelesai)}" target="_blank" rel="noopener">Lihat Foto Selesai</a>`}</div>` : ''}
     </div>`;
 
   let actionHtml = '';
@@ -347,6 +348,28 @@ function handleSpkDetailClick(e) {
   else if (action === 'close-cancel') { spkDetailUiState = 'view'; renderSpkDetailBody(); }
   else if (action === 'close-foto-pick') { const inp = document.getElementById('spkCloseFotoInput'); if (inp) inp.click(); }
   else if (action === 'close-submit') submitSpkClose();
+  else if (action === 'zoom-foto') openFotoZoom(btn.dataset.zoom);
+}
+
+// Zoom foto SPK (Foto Sebelum/Selesai) DI DALAM app, bukan navigasi ke
+// drive.google.com — link Drive langsung (bahkan yang thumbnail) tetap minta
+// "Select an account" pas dibuka sebagai halaman penuh/tab baru, walau
+// filenya sudah di-share ANYONE_WITH_LINK (beda dgn <img src> yang aman).
+function openFotoZoom(url) {
+  if (!url) return;
+  document.getElementById('fotoZoomImg').src = url;
+  document.getElementById('fotoZoomOverlay').hidden = false;
+}
+function closeFotoZoom() {
+  document.getElementById('fotoZoomOverlay').hidden = true;
+  document.getElementById('fotoZoomImg').src = '';
+}
+function wireFotoZoom() {
+  document.getElementById('fotoZoomOverlay').addEventListener('click', closeFotoZoom);
+  document.getElementById('btnCloseFotoZoom').addEventListener('click', (e) => { e.stopPropagation(); closeFotoZoom(); });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !document.getElementById('fotoZoomOverlay').hidden) closeFotoZoom();
+  });
 }
 
 async function submitSpkDecide(keputusan) {
