@@ -1426,6 +1426,28 @@
       <pre id="pgPreviewBody" class="pg-preview-body"></pre>
     </div>
 
+    <div class="card">
+      <div class="card-header">Target Value Stock (Factory Manager)</div>
+      <div class="hint-text">
+        Target tetap per Plant (bukan per minggu) — dipakai buat itung % pencapaian tiap Plant &amp; Total
+        di grafik Value Stock Dashboard, berlaku terus sampai diubah manual di sini.
+        Kolom <strong>Target Value Stock</strong> bisa langsung di-<em>paste</em> dari Excel: select angka
+        Target di Excel (1 atau beberapa baris sekaligus) → Copy → klik kotak baris <strong>Plant 1111</strong>
+        di bawah → Paste (Ctrl+V), otomatis ngisi baris-baris di bawahnya.
+      </div>
+      <div class="vs-table-wrap">
+        <table class="vs-table" id="pgTargetTable">
+          <thead>
+            <tr><th>Plant</th><th>Target Value Stock (Rp)</th></tr>
+          </thead>
+          <tbody id="pgTargetRowsBody">
+            <tr class="empty-state"><td colspan="2">Memuat data...</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <button type="button" class="btn btn-primary btn-block" id="btnSavePgTarget">Simpan Target</button>
+    </div>
+
   </section>
 
 </main>
