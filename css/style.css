@@ -1227,6 +1227,22 @@ body {
 .vs-target-badge.vs-trend-down { background: #fdeaea; color: var(--red); }
 
 .vs-table-wrap { overflow-x: auto; margin-bottom: 10px; }
+/* Mode "Tabel" grafik Value Stock -- ala Excel Bos: Plant sebagai kolom,
+   Minggu sebagai baris (cuma 2 minggu terakhir) + baris Perubahan (Rp)/(%). */
+.vs-data-table th,
+.vs-data-table td { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.vs-data-table th:first-child,
+.vs-data-table td:first-child { text-align: left; }
+.vs-data-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); color: var(--text); }
+.vs-data-table td:last-child { font-weight: 700; }
+.vs-data-table tbody tr:last-child td { border-bottom: none; }
+.vs-data-table .vs-table-delta-row td { background: #fafbfd; font-size: 12.5px; font-weight: 700; }
+.vs-data-table .vs-table-delta-row td:first-child { font-weight: 400; color: var(--text-muted); }
+/* .vs-data-table td di atas nge-set color:var(--text) yang spesifisitasnya
+   lebih tinggi dari .vs-trend-up/.vs-trend-down (1 class doang) -- di-override
+   lagi di sini spy warna ijo/merahnya beneran kepake di sel tabel. */
+.vs-data-table td.vs-trend-up { color: var(--green); }
+.vs-data-table td.vs-trend-down { color: var(--red); }
 .vs-table { width: 100%; border-collapse: collapse; min-width: 320px; }
 .vs-table th {
   text-align: left;
