@@ -383,6 +383,17 @@
       </div>
     </div>
 
+    <div class="card" id="dashValueStockCard">
+      <div class="card-header">
+        <svg viewBox="0 0 24 24" class="card-header-icon" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l3-4 3 2 4-6"/><circle cx="7" cy="14" r="1.3"/><circle cx="10" cy="10" r="1.3"/><circle cx="13" cy="12" r="1.3"/><circle cx="17" cy="6" r="1.3"/></svg>
+        Value Stock per Plant (Mingguan)
+        <button type="button" id="btnOpenValueStockModal" class="btn btn-small card-header-btn">+ Input Value Stock</button>
+      </div>
+      <div class="dash-updated" id="valueStockTrendHint">Memuat...</div>
+      <canvas id="chartValueStock" height="180"></canvas>
+      <div id="valueStockLegend" class="kt-legend kt-legend-row"></div>
+    </div>
+
     <div class="card" id="dashChartCard">
       <div class="card-header">
         <svg viewBox="0 0 24 24" class="card-header-icon" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/></svg>
@@ -1653,6 +1664,47 @@
     </div>
   </div>
 </div>
+
+<!-- Modal "Input Value Stock" — tabel 2 kolom (Plant/Value Stock) ala Excel,
+     dibuka dari tombol di kartu "Value Stock per Plant" Dashboard. Tanggal &
+     Minggu Ke TIDAK diinput di sini, dihitung otomatis server dari tanggal
+     saat disimpan (lihat handleSaveValueStock, Code.gs). -->
+<div id="valueStockModalBackdrop" class="modal-backdrop" hidden></div>
+<div id="valueStockModal" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="valueStockModalTitle">
+  <div class="modal-card card">
+    <div class="modal-header">
+      <span id="valueStockModalTitle">Input Value Stock</span>
+      <button type="button" id="btnCloseValueStockModal" class="modal-close" aria-label="Tutup">×</button>
+    </div>
+    <p class="md-preview-hint">Tanggal &amp; Minggu (Week) otomatis tercatat sesuai tanggal input ini — tinggal isi Value Stock tiap Plant. Input ulang di minggu yang sama akan menimpa angka sebelumnya (bukan nambah baris baru).</p>
+    <form id="valueStockForm">
+      <div class="vs-table-wrap">
+        <table class="vs-table">
+          <thead>
+            <tr><th>Plant</th><th>Value Stock (Rp)</th><th></th></tr>
+          </thead>
+          <tbody id="valueStockRowsBody"></tbody>
+        </table>
+      </div>
+      <button type="button" id="btnAddValueStockRow" class="btn btn-small">+ Tambah Baris</button>
+      <button type="submit" class="btn btn-primary btn-block">Simpan</button>
+    </form>
+  </div>
+</div>
+<template id="valueStockRowTemplate">
+  <tr class="vs-row">
+    <td>
+      <select class="vs-plant">
+        <option value="">Pilih Plant</option>
+        <option value="1111">1111</option>
+        <option value="1112">1112</option>
+        <option value="1113">1113</option>
+      </select>
+    </td>
+    <td><input type="number" class="vs-value" min="0" step="1" placeholder="0" inputmode="numeric"></td>
+    <td><button type="button" class="vs-row-remove" title="Hapus baris">×</button></td>
+  </tr>
+</template>
 
 <!-- Popup Riwayat Transaksi 1 SKU (klik baris di halaman Stock Balance / Mutasi Stock) -->
 <div id="sbRiwayatModalBackdrop" class="modal-backdrop" hidden></div>
