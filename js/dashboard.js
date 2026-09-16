@@ -91,6 +91,11 @@ async function loadDashboard() {
     renderTopPemakaian(res.topPemakaianBulanIni || []);
     renderKategoriChart(res.kategoriDist || { A: 0, B: 0, C: 0 });
     renderRiwayat(res.riwayatTerbaru || []);
+    // Value Stock: action TERPISAH (lihat komentar handleGetValueStockChart di
+    // Code.gs), sengaja TIDAK di-await bareng data dashboard di atas — kalau
+    // ini lambat/gagal, JANGAN sampai bikin seluruh Dashboard ikut gagal
+    // render (loadValueStockChart_ nangkep error-nya sendiri).
+    loadValueStockChart_();
     dashboardLoadedOnce = true;
     const now = new Date();
     const jam = String(now.getHours()).padStart(2, '0');
@@ -1286,4 +1291,214 @@ function sumberBreakdownChipsHtml(sumberBreakdown) {
     return `<span class="sb-sumber-chip${deficitClass}">${escapeHtml(sumberOptionLabel(s))} <span class="sb-sumber-chip-qty">${s.sisa}</span></span>`;
   }).join('');
   return `<span class="sb-sumber-breakdown-label">Sisa saat ini per Sumber:</span>${chips}`;
+}
+
+// ============================================================================
+// VALUE STOCK — grafik tren mingguan (3 Plant + Total) di Dashboard, permintaan
+// user: dulu dihitung & digambar manual di Excel (total nilai stock per Plant
+// per minggu, dibandingin ke minggu sebelumnya). App ini TIDAK nyimpen harga
+// per item, jadi Value Stock TETAP diinput manual tiap minggu (lewat tombol
+// "+ Input Value Stock") — yang otomatis cuma Tanggal & Minggu Ke-nya (dari
+// tanggal input, lihat handleSaveValueStock di Code.gs) & gambar grafiknya.
+// ============================================================================
+const VALUE_STOCK_PLANTS = ['1111', '1112', '1113'];
+const VALUE_STOCK_COLORS = { '1111': '#0f2a5c', '1112': '#2058a8', '1113': '#ffb703' };
+const VALUE_STOCK_TOTAL_COLOR = '#0a1d40';
+
+function formatRupiahFull_(n) {
+  return 'Rp' + Math.round(Number(n) || 0).toLocaleString('id-ID');
+}
+function formatRupiahCompact_(n) {
+  const num = Number(n) || 0;
+  const abs = Math.abs(num);
+  if (abs >= 1e9) return 'Rp' + (num / 1e9).toFixed(1).replace('.', ',') + ' M';
+  if (abs >= 1e6) return 'Rp' + (num / 1e6).toFixed(1).replace('.', ',') + ' Jt';
+  if (abs >= 1e3) return 'Rp' + Math.round(num / 1e3) + ' Rb';
+  return 'Rp' + num;
+}
+function formatPct_(pct) {
+  if (pct === null || pct === undefined) return '';
+  const sign = pct > 0 ? '+' : '';
+  return sign + pct.toFixed(2).replace('.', ',') + '%';
+}
+
+async function loadValueStockChart_() {
+  try {
+    const res = await Api.getValueStockChart();
+    renderValueStockChart(res);
+  } catch (err) {
+    renderValueStockChart({ hasData: false, weeks: [], error: err.message });
+  }
+}
+
+function renderValueStockChart(data) {
+  const canvas = document.getElementById('chartValueStock');
+  const legend = document.getElementById('valueStockLegend');
+  const hint = document.getElementById('valueStockTrendHint');
+  if (!canvas) return;
+
+  const weeks = (data && data.weeks) || [];
+  if (!weeks.length) {
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    legend.innerHTML = '';
+    hint.textContent = data && data.error
+      ? 'Gagal memuat data Value Stock: ' + data.error
+      : 'Belum ada data Value Stock — ketuk "+ Input Value Stock" buat mulai catat.';
+    return;
+  }
+
+  const latest = weeks[weeks.length - 1];
+  const crossesYear = weeks[0].tahun !== latest.tahun;
+  let trendText;
+  if (latest.totalChangePct === null || latest.totalChangePct === undefined) {
+    trendText = 'minggu pertama tercatat';
+  } else if (latest.totalChangePct > 0) {
+    trendText = 'naik ' + latest.totalChangePct.toFixed(2).replace('.', ',') + '% dari minggu lalu';
+  } else if (latest.totalChangePct < 0) {
+    trendText = 'turun ' + Math.abs(latest.totalChangePct).toFixed(2).replace('.', ',') + '% dari minggu lalu';
+  } else {
+    trendText = 'sama dengan minggu lalu';
+  }
+  hint.textContent = 'Total minggu ' + latest.label + ': ' + formatRupiahFull_(latest.total) + ' (' + trendText + ')';
+
+  // ---- gambar garis tren (line chart) -- pola canvas sama seperti renderChart di atas ----
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const parentEl = canvas.parentElement;
+  const parentPadding = parentEl ? (parseFloat(getComputedStyle(parentEl).paddingLeft) || 0) +
+    (parseFloat(getComputedStyle(parentEl).paddingRight) || 0) : 0;
+  const cssWidth = (parentEl && (parentEl.clientWidth - parentPadding)) || canvas.clientWidth || 320;
+  const cssHeight = 180;
+  canvas.style.width = cssWidth + 'px';
+  canvas.style.height = cssHeight + 'px';
+  canvas.width = Math.round(cssWidth * dpr);
+  canvas.height = Math.round(cssHeight * dpr);
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, cssWidth, cssHeight);
+
+  const series = VALUE_STOCK_PLANTS.map((p) => ({
+    key: p, label: 'Plant ' + p, color: VALUE_STOCK_COLORS[p],
+    values: weeks.map((w) => w.plants[p] || 0)
+  }));
+  series.push({ key: 'total', label: 'Total', color: VALUE_STOCK_TOTAL_COLOR, dashed: true, values: weeks.map((w) => w.total) });
+
+  const allValues = series.reduce((acc, s) => acc.concat(s.values), []);
+  const maxVal = Math.max(1, ...allValues);
+  const padLeft = 6, padRight = 6, padTop = 14, padBottom = 22;
+  const chartW = cssWidth - padLeft - padRight;
+  const chartH = cssHeight - padTop - padBottom;
+  const stepX = weeks.length > 1 ? chartW / (weeks.length - 1) : 0;
+  const xAt = (i) => padLeft + (weeks.length > 1 ? i * stepX : chartW / 2);
+  const yAt = (v) => padTop + (chartH - (v / maxVal) * chartH);
+
+  // Gridline dasar tipis -- cuma acuan, sengaja minimalis (bukan grid penuh).
+  ctx.strokeStyle = '#eef1f8';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(padLeft, padTop + chartH); ctx.lineTo(padLeft + chartW, padTop + chartH); ctx.stroke();
+
+  series.forEach((s) => {
+    ctx.beginPath();
+    ctx.strokeStyle = s.color;
+    ctx.lineWidth = s.dashed ? 2.5 : 2;
+    ctx.setLineDash(s.dashed ? [6, 4] : []);
+    ctx.lineJoin = 'round';
+    s.values.forEach((v, i) => {
+      const x = xAt(i), y = yAt(v);
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+    ctx.setLineDash([]);
+    s.values.forEach((v, i) => {
+      ctx.beginPath();
+      ctx.fillStyle = s.color;
+      ctx.arc(xAt(i), yAt(v), s.dashed ? 3 : 2.5, 0, Math.PI * 2);
+      ctx.fill();
+    });
+  });
+
+  ctx.fillStyle = '#6b7488';
+  ctx.font = '10px -apple-system, sans-serif';
+  weeks.forEach((w, i) => {
+    const label = crossesYear ? (w.label + "'" + String(w.tahun).slice(2)) : w.label;
+    // label pertama & terakhir rawan kepotong tepi canvas kalau center-align
+    // (mis. "W36" jadi "V36", "W37" jadi "W3") -- align ke dalam biar ga clip.
+    if (i === 0 && weeks.length > 1) ctx.textAlign = 'left';
+    else if (i === weeks.length - 1 && weeks.length > 1) ctx.textAlign = 'right';
+    else ctx.textAlign = 'center';
+    ctx.fillText(label, xAt(i), cssHeight - 6);
+  });
+
+  // ---- legend HTML: nilai terakhir + tren %perubahan tiap seri ----
+  legend.innerHTML = series.map((s) => {
+    const lastVal = s.values[s.values.length - 1];
+    const pct = s.key === 'total' ? latest.totalChangePct : latest.plantsChangePct[s.key];
+    const trendClass = (pct === null || pct === undefined || pct === 0) ? '' : (pct > 0 ? ' vs-trend-up' : ' vs-trend-down');
+    const trendHtml = (pct === null || pct === undefined) ? '' : `<span class="vs-trend${trendClass}">${formatPct_(pct)}</span>`;
+    return `
+      <div class="kt-legend-item">
+        <span class="kt-dot" style="background:${s.color}"></span>
+        <span>${escapeHtml(s.label)}</span>
+        <strong>${formatRupiahCompact_(lastVal)}</strong>
+        ${trendHtml}
+      </div>
+    `;
+  }).join('');
+}
+
+// ---------------------------------------------------------------------------
+// MODAL "Input Value Stock" — tabel 2 kolom (Plant/Value Stock) ala Excel,
+// default 3 baris (VALUE_STOCK_PLANTS) tiap dibuka, bisa tambah/hapus baris
+// kalau perlu. Tanggal & Minggu Ke TIDAK diinput di sini — dihitung server
+// dari tanggal SAAT disimpan (lihat handleSaveValueStock, Code.gs).
+// ---------------------------------------------------------------------------
+function openValueStockModal() {
+  document.getElementById('valueStockRowsBody').innerHTML = '';
+  VALUE_STOCK_PLANTS.forEach((p) => addValueStockRow(p));
+  document.getElementById('valueStockModalBackdrop').hidden = false;
+  document.getElementById('valueStockModal').hidden = false;
+}
+function closeValueStockModal() {
+  document.getElementById('valueStockModalBackdrop').hidden = true;
+  document.getElementById('valueStockModal').hidden = true;
+}
+function addValueStockRow(prefillPlant) {
+  const tpl = document.getElementById('valueStockRowTemplate');
+  const node = tpl.content.cloneNode(true);
+  if (prefillPlant) node.querySelector('.vs-plant').value = prefillPlant;
+  document.getElementById('valueStockRowsBody').appendChild(node);
+}
+
+async function handleValueStockSubmit(e) {
+  e.preventDefault();
+  const rows = Array.from(document.querySelectorAll('#valueStockRowsBody .vs-row'));
+  const items = [];
+  const seenPlant = {};
+  for (const row of rows) {
+    const plant = row.querySelector('.vs-plant').value;
+    const valueRaw = row.querySelector('.vs-value').value;
+    if (!plant && valueRaw === '') continue; // baris kosong -> lewatin aja, bukan dianggap error
+    if (!plant) { showToast('Ada baris yang Plant-nya belum dipilih.', 'error'); return; }
+    if (seenPlant[plant]) { showToast('Plant ' + plant + ' kedobelan barisnya — gabungin jadi 1 baris aja.', 'error'); return; }
+    seenPlant[plant] = true;
+    const value = Number(valueRaw);
+    if (valueRaw === '' || isNaN(value) || value < 0) { showToast('Value Stock Plant ' + plant + ' harus diisi angka & tidak boleh negatif.', 'error'); return; }
+    items.push({ plant: plant, valueStock: value });
+  }
+  if (!items.length) { showToast('Minimal isi 1 baris Plant & Value Stock.', 'error'); return; }
+
+  const submitBtn = e.target.querySelector('button[type="submit"]');
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Menyimpan...';
+  try {
+    await Api.saveValueStock({ items: items });
+    showToast('Value Stock tersimpan.', 'success');
+    closeValueStockModal();
+    loadValueStockChart_(); // cukup refresh grafiknya aja, bukan seluruh Dashboard
+  } catch (err) {
+    showToast('Gagal menyimpan: ' + err.message, 'error');
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Simpan';
+  }
 }
