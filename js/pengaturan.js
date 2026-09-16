@@ -24,6 +24,7 @@ const PG_PREVIEW_SAMPLE = {
 
 function initPengaturanPage() {
   loadPengaturanEmail();
+  loadPgTarget();
 
   if (pengaturanInitialized) return;
   pengaturanInitialized = true;
@@ -31,6 +32,9 @@ function initPengaturanPage() {
   document.getElementById('formPengaturanEmail').addEventListener('submit', submitPengaturanEmail);
   document.getElementById('pgEmailSubject').addEventListener('input', updatePengaturanPreview);
   document.getElementById('pgEmailBody').addEventListener('input', updatePengaturanPreview);
+
+  document.getElementById('btnSavePgTarget').addEventListener('click', submitPgTarget);
+  document.getElementById('pgTargetRowsBody').addEventListener('paste', handlePgTargetPaste);
 }
 
 async function loadPengaturanEmail() {
@@ -75,6 +79,100 @@ async function submitPengaturanEmail(e) {
   try {
     await Api.saveEmailTemplate({ subject, body });
     showToast('Template email tersimpan.', 'success');
+  } catch (err) {
+    showToast('Gagal menyimpan: ' + err.message, 'error');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ============================================================================
+// TARGET VALUE STOCK (FACTORY MANAGER) — target TETAP per Plant (bukan per
+// minggu, lihat handleGetValueStockTarget/handleSaveValueStockTarget di
+// Code.gs), dipakai Dashboard buat itung % pencapaian di grafik Value Stock.
+// Tabelnya cuma 3 baris tetap (VALUE_STOCK_PLANTS, dari js/dashboard.js —
+// dashboard.js dimuat SEBELUM file ini di index.html jadi konstanta itu udah
+// ada), tiap baris cuma kolom angka Target yang bisa diedit + di-paste
+// langsung dari Excel (lihat handlePgTargetPaste).
+// ============================================================================
+
+async function loadPgTarget() {
+  const tbody = document.getElementById('pgTargetRowsBody');
+  try {
+    const res = await Api.getValueStockTarget();
+    const targets = (res && res.targets) || {};
+    tbody.innerHTML = VALUE_STOCK_PLANTS.map((p) => `
+      <tr class="vs-row">
+        <td>Plant ${escapeHtml(p)}</td>
+        <td><input type="text" inputmode="numeric" class="pg-target-input" data-plant="${escapeHtml(p)}" value="${targets[p] ? Math.round(targets[p]) : ''}" placeholder="0"></td>
+      </tr>
+    `).join('');
+  } catch (err) {
+    tbody.innerHTML = `<tr class="empty-state"><td colspan="2">Gagal memuat target: ${escapeHtml(err.message)}</td></tr>`;
+  }
+}
+
+// Ubah teks hasil paste jadi angka bulat — nerima format umum yang mungkin
+// kepaste dari Excel: angka polos ("1200000000"), format Indonesia
+// ("1.200.000.000" atau "1.200.000.000,50"), atau ada prefix "Rp"/spasi.
+function parsePgTargetNumber_(raw) {
+  if (raw === undefined || raw === null) return null;
+  let s = String(raw).trim().replace(/[^0-9.,\-]/g, '');
+  if (!s) return null;
+  if (s.indexOf(',') !== -1) {
+    s = s.replace(/\./g, '').replace(',', '.'); // titik = ribuan, koma = desimal
+  } else if (s.indexOf('.') !== -1) {
+    s = s.replace(/\./g, ''); // cuma titik -> anggap ribuan (Value Stock selalu bulat)
+  }
+  const num = parseFloat(s);
+  if (isNaN(num) || num < 0) return null;
+  return Math.round(num);
+}
+
+// Paste 1 atau beberapa baris sekaligus (select range di Excel lalu Copy),
+// mulai dari baris yang lagi difokus/dipaste, ngisi baris-baris Target di
+// bawahnya berurutan — persis kelakuan paste-drag di Excel/Google Sheets.
+// Kalau yang kepaste 2 kolom (mis. Plant + Value), dipakai kolom PALING
+// KANAN tiap baris (asumsi itu kolom Value-nya).
+function handlePgTargetPaste(e) {
+  const input = e.target;
+  if (!input.classList || !input.classList.contains('pg-target-input')) return;
+  const text = (e.clipboardData || window.clipboardData).getData('text');
+  if (!text) return;
+  e.preventDefault();
+
+  const allInputs = Array.from(document.querySelectorAll('#pgTargetRowsBody .pg-target-input'));
+  const startIdx = allInputs.indexOf(input);
+  const lines = text.split(/\r\n|\r|\n/).filter((l) => l.trim() !== '');
+  lines.forEach((line, i) => {
+    const targetInput = allInputs[startIdx + i];
+    if (!targetInput) return; // lebih banyak baris kepaste daripada Plant yang ada -- sisanya dibuang
+    const cells = line.split('\t').map((c) => c.trim());
+    const num = parsePgTargetNumber_(cells[cells.length - 1]);
+    if (num !== null) targetInput.value = num;
+  });
+}
+
+async function submitPgTarget() {
+  const inputs = Array.from(document.querySelectorAll('#pgTargetRowsBody .pg-target-input'));
+  const targets = {};
+  for (const inp of inputs) {
+    const plant = inp.dataset.plant;
+    const raw = inp.value.trim();
+    if (raw === '') { targets[plant] = 0; continue; }
+    const num = parsePgTargetNumber_(raw);
+    if (num === null) {
+      showToast('Target Plant ' + plant + ' harus angka & tidak boleh negatif.', 'error');
+      return;
+    }
+    targets[plant] = num;
+  }
+
+  const btn = document.getElementById('btnSavePgTarget');
+  btn.disabled = true;
+  try {
+    await Api.saveValueStockTarget({ targets });
+    showToast('Target Value Stock tersimpan.', 'success');
   } catch (err) {
     showToast('Gagal menyimpan: ' + err.message, 'error');
   } finally {
