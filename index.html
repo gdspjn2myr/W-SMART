@@ -394,6 +394,7 @@
         <div class="vs-chart-toggle" id="vsChartToggle" role="group" aria-label="Tampilan grafik Value Stock">
           <button type="button" class="vs-toggle-btn" data-mode="line">Garis</button>
           <button type="button" class="vs-toggle-btn is-active" data-mode="bar">Batang</button>
+          <button type="button" class="vs-toggle-btn" data-mode="table">Tabel</button>
         </div>
       </div>
       <div class="vs-chart-filterrow">
@@ -415,6 +416,24 @@
         <select id="vsWeekFilter" class="rw-select vs-chart-filter"></select>
       </div>
       <canvas id="chartValueStock" height="180"></canvas>
+      <!-- Mode Tabel: tabel ala Excel Bos -- Plant sebagai kolom, Minggu sebagai
+           baris, TAPI cuma 2 minggu TERAKHIR (bukan semua histori kayak mode
+           Garis/Batang, permintaan user) + baris Perubahan (Rp) & (%) di bawahnya.
+           Diisi JS, lihat renderValueStockTable_ di js/dashboard.js. -->
+      <div class="vs-table-wrap" id="vsTableWrap" hidden>
+        <table class="vs-table vs-data-table">
+          <thead>
+            <tr>
+              <th>Minggu</th>
+              <th>Plant 1111</th>
+              <th>Plant 1112</th>
+              <th>Plant 1113</th>
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody id="vsTableBody"></tbody>
+        </table>
+      </div>
       <div id="valueStockLegend" class="kt-legend kt-legend-row"></div>
     </div>
 
