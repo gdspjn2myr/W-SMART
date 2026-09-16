@@ -1179,6 +1179,19 @@ body {
 .vs-trend-up { color: var(--green); }
 .vs-trend-down { color: var(--red); }
 
+/* Badge "% dari target" di legend grafik Value Stock -- muncul kalau Target
+   Factory Manager plant/total itu udah diisi Admin di halaman Pengaturan. */
+.vs-target-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: #eef1f8;
+  color: var(--text-muted);
+}
+.vs-target-badge.vs-trend-up { background: #e6f7ee; color: var(--green); }
+.vs-target-badge.vs-trend-down { background: #fdeaea; color: var(--red); }
+
 .vs-table-wrap { overflow-x: auto; margin-bottom: 10px; }
 .vs-table { width: 100%; border-collapse: collapse; min-width: 320px; }
 .vs-table th {
