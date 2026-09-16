@@ -1334,10 +1334,24 @@ async function loadValueStockChart_() {
 // Mode gambar grafik Value Stock ("Garis" default / "Batang" ala contoh
 // Excel Bos) -- direset ke default tiap reload halaman (bukan preferensi
 // yang perlu disimpan permanen). valueStockLastData_ diinget biar toggle
-// switch mode bisa gambar ulang TANPA fetch ulang ke server.
+// switch mode / ganti filter bisa gambar ulang TANPA fetch ulang ke server.
+//
+// Filter (permintaan user: "diagram batang ... buat filter buat milih week",
+// "yg trend itu ... ada yg all ada yg per plant filternya biar saya tau naik
+// turunnya"):
+// - Mode Garis: valueStockPlantFilter_ ('all' / '1111' / '1112' / '1113' /
+//   'total') -- pilih 1 seri aja biar skalanya auto-zoom ke rentang nilai
+//   seri itu sendiri (lihat drawValueStockLineChart_), naik-turunnya jadi
+//   keliatan jelas walau %-nya kecil dibanding Total.
+// - Mode Batang: valueStockWeekFilter_ (key "tahun-minggu") -- nampilin bar
+//   1 minggu aja (bukan numpuk semua minggu yang ada).
 let valueStockLastData_ = null;
 let valueStockChartMode_ = 'line';
+let valueStockPlantFilter_ = 'all';
+let valueStockWeekFilter_ = null;
 let valueStockBarAnimToken_ = 0;
+
+function valueStockWeekKey_(w) { return w.tahun + '-' + w.minggu; }
 
 function setValueStockChartMode_(mode) {
   if (mode === valueStockChartMode_) return;
@@ -1345,7 +1359,40 @@ function setValueStockChartMode_(mode) {
   document.querySelectorAll('#vsChartToggle .vs-toggle-btn').forEach((btn) => {
     btn.classList.toggle('is-active', btn.dataset.mode === mode);
   });
+  const plantFilterEl = document.getElementById('vsPlantFilter');
+  const weekFilterEl = document.getElementById('vsWeekFilter');
+  if (plantFilterEl) plantFilterEl.hidden = (mode !== 'line');
+  if (weekFilterEl) weekFilterEl.hidden = (mode !== 'bar');
   if (valueStockLastData_) renderValueStockChart(valueStockLastData_);
+}
+
+function setValueStockPlantFilter_(value) {
+  valueStockPlantFilter_ = value;
+  if (valueStockLastData_) renderValueStockChart(valueStockLastData_);
+}
+
+function setValueStockWeekFilter_(value) {
+  valueStockWeekFilter_ = value;
+  if (valueStockLastData_) renderValueStockChart(valueStockLastData_);
+}
+
+// Diisi ulang tiap render (jumlah minggu makin nambah abis input baru) --
+// tetap pertahanin pilihan Bos kalau minggunya masih ada, kalau nggak (atau
+// belum pernah milih) fallback ke minggu TERBARU.
+function populateValueStockWeekFilter_(weeks, crossesYear) {
+  const sel = document.getElementById('vsWeekFilter');
+  if (!sel) return;
+  const ordered = weeks.slice().reverse(); // terbaru di paling atas dropdown
+  const latestKey = valueStockWeekKey_(weeks[weeks.length - 1]);
+  const stillValid = ordered.some((w) => valueStockWeekKey_(w) === valueStockWeekFilter_);
+  if (!valueStockWeekFilter_ || !stillValid) valueStockWeekFilter_ = latestKey;
+
+  sel.innerHTML = ordered.map((w) => {
+    const key = valueStockWeekKey_(w);
+    const label = crossesYear ? (w.label + "'" + String(w.tahun).slice(2)) : w.label;
+    return `<option value="${key}">${escapeHtml(label)}${key === latestKey ? ' (terbaru)' : ''}</option>`;
+  }).join('');
+  sel.value = valueStockWeekFilter_;
 }
 
 function renderValueStockChart(data) {
@@ -1380,6 +1427,8 @@ function renderValueStockChart(data) {
   }
   hint.textContent = 'Total minggu ' + latest.label + ': ' + formatRupiahFull_(latest.total) + ' (' + trendText + ')';
 
+  populateValueStockWeekFilter_(weeks, crossesYear);
+
   // ---- setup canvas -- pola sama seperti renderChart di atas ----
   const ctx = canvas.getContext('2d');
   const dpr = window.devicePixelRatio || 1;
@@ -1402,9 +1451,10 @@ function renderValueStockChart(data) {
   series.push({ key: 'total', label: 'Total', color: VALUE_STOCK_TOTAL_COLOR, dashed: true, values: weeks.map((w) => w.total) });
 
   if (valueStockChartMode_ === 'bar') {
-    drawValueStockBarChart_(ctx, cssWidth, cssHeight, weeks, crossesYear);
+    const weeksForBar = weeks.filter((w) => valueStockWeekKey_(w) === valueStockWeekFilter_);
+    drawValueStockBarChart_(ctx, cssWidth, cssHeight, weeksForBar.length ? weeksForBar : weeks.slice(-1), crossesYear);
   } else {
-    drawValueStockLineChart_(ctx, cssWidth, cssHeight, weeks, series, crossesYear);
+    drawValueStockLineChart_(ctx, cssWidth, cssHeight, weeks, series, crossesYear, valueStockPlantFilter_);
   }
 
   // ---- legend HTML: nilai terakhir + tren %perubahan + % vs Target (kalau
@@ -1431,25 +1481,52 @@ function renderValueStockChart(data) {
   }).join('');
 }
 
-// ---- mode "Garis": garis tren per Plant + Total (dashed) -- ini logic yang
-// sebelumnya nyatu langsung di renderValueStockChart, dipindah ke fungsi
-// sendiri pas nambah mode "Batang" (toggle-nya) ----
-function drawValueStockLineChart_(ctx, cssWidth, cssHeight, weeks, series, crossesYear) {
-  const allValues = series.reduce((acc, s) => acc.concat(s.values), []);
-  const maxVal = Math.max(1, ...allValues);
-  const padLeft = 6, padRight = 6, padTop = 14, padBottom = 22;
+// ---- mode "Garis": garis tren per Plant + Total (dashed), atau 1 seri aja
+// kalau Bos milih filter Plant/Total tertentu (bukan "Semua") -- pas fokus 1
+// seri, skala Y di-ZOOM ke rentang nilai seri itu sendiri (bukan mulai dari
+// 0 kayak mode "Semua"), biar naik-turunnya jelas keliatan walau %-nya kecil
+// dibanding Total. Ditambahin label nilai min/maks di kiri atas/bawah biar
+// Bos tau grafiknya lagi di-zoom, bukan skala 0 normal.
+function drawValueStockLineChart_(ctx, cssWidth, cssHeight, weeks, series, crossesYear, plantFilter) {
+  const activeSeries = (plantFilter && plantFilter !== 'all')
+    ? series.filter((s) => s.key === plantFilter)
+    : series;
+  if (!activeSeries.length) return; // jaga2 kalau filter-nya nyasar ke key yang ga ada
+
+  const allValues = activeSeries.reduce((acc, s) => acc.concat(s.values), []);
+  const zoomed = activeSeries.length === 1;
+  let minVal = 0;
+  let maxVal = Math.max(1, ...allValues);
+  if (zoomed) {
+    minVal = Math.min(...allValues);
+    maxVal = Math.max(...allValues);
+    if (minVal === maxVal) { minVal -= 1; maxVal += 1; }
+    const pad = (maxVal - minVal) * 0.15;
+    minVal = Math.max(0, minVal - pad);
+    maxVal = maxVal + pad;
+  }
+
+  const padLeft = 6, padRight = 6, padTop = zoomed ? 24 : 14, padBottom = zoomed ? 32 : 22;
   const chartW = cssWidth - padLeft - padRight;
   const chartH = cssHeight - padTop - padBottom;
   const stepX = weeks.length > 1 ? chartW / (weeks.length - 1) : 0;
   const xAt = (i) => padLeft + (weeks.length > 1 ? i * stepX : chartW / 2);
-  const yAt = (v) => padTop + (chartH - (v / maxVal) * chartH);
+  const yAt = (v) => padTop + (chartH - ((v - minVal) / (maxVal - minVal)) * chartH);
 
   // Gridline dasar tipis -- cuma acuan, sengaja minimalis (bukan grid penuh).
   ctx.strokeStyle = '#eef1f8';
   ctx.lineWidth = 1;
   ctx.beginPath(); ctx.moveTo(padLeft, padTop + chartH); ctx.lineTo(padLeft + chartW, padTop + chartH); ctx.stroke();
 
-  series.forEach((s) => {
+  if (zoomed) {
+    ctx.fillStyle = '#9aa3b5';
+    ctx.font = '9px -apple-system, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText(formatRupiahCompact_(maxVal), padLeft, padTop - 8);
+    ctx.fillText(formatRupiahCompact_(minVal), padLeft, padTop + chartH + 12);
+  }
+
+  activeSeries.forEach((s) => {
     ctx.beginPath();
     ctx.strokeStyle = s.color;
     ctx.lineWidth = s.dashed ? 2.5 : 2;
