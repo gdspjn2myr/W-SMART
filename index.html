@@ -389,7 +389,13 @@
         Value Stock per Plant (Mingguan)
         <button type="button" id="btnOpenValueStockModal" class="btn btn-small card-header-btn">+ Input Value Stock</button>
       </div>
-      <div class="dash-updated" id="valueStockTrendHint">Memuat...</div>
+      <div class="vs-chart-toprow">
+        <div class="dash-updated" id="valueStockTrendHint">Memuat...</div>
+        <div class="vs-chart-toggle" id="vsChartToggle" role="group" aria-label="Tampilan grafik Value Stock">
+          <button type="button" class="vs-toggle-btn is-active" data-mode="line">Garis</button>
+          <button type="button" class="vs-toggle-btn" data-mode="bar">Batang</button>
+        </div>
+      </div>
       <canvas id="chartValueStock" height="180"></canvas>
       <div id="valueStockLegend" class="kt-legend kt-legend-row"></div>
     </div>
