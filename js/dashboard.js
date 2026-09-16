@@ -1346,7 +1346,7 @@ async function loadValueStockChart_() {
 // - Mode Batang: valueStockWeekFilter_ (key "tahun-minggu") -- nampilin bar
 //   1 minggu aja (bukan numpuk semua minggu yang ada).
 let valueStockLastData_ = null;
-let valueStockChartMode_ = 'line';
+let valueStockChartMode_ = 'bar'; // default "Batang" (permintaan user)
 let valueStockPlantFilter_ = 'all';
 let valueStockWeekFilter_ = null;
 let valueStockBarAnimToken_ = 0;
@@ -1485,8 +1485,14 @@ function renderValueStockChart(data) {
 // kalau Bos milih filter Plant/Total tertentu (bukan "Semua") -- pas fokus 1
 // seri, skala Y di-ZOOM ke rentang nilai seri itu sendiri (bukan mulai dari
 // 0 kayak mode "Semua"), biar naik-turunnya jelas keliatan walau %-nya kecil
-// dibanding Total. Ditambahin label nilai min/maks di kiri atas/bawah biar
-// Bos tau grafiknya lagi di-zoom, bukan skala 0 normal.
+// dibanding Total. Tiap titik dikasih label angka (permintaan user: "di
+// titiknya gaada angka ya") -- ini juga yang bikin label sumbu min/maks
+// terpisah (versi sebelumnya) jadi ga perlu lagi, dihapus biar ga numpuk.
+// Label minggu sumbu-X item hitam BOLD (sebelumnya abu2 tipis, permintaan
+// user: "tulisan week nya ga keliatan"). Pakai animasi fade-in (token sendiri,
+// pola sama kayak drawValueStockBarChart_) biar transisi ganti
+// filter/minggu/mode kerasa lebih smooth, ga langsung "lompat".
+let valueStockLineAnimToken_ = 0;
 function drawValueStockLineChart_(ctx, cssWidth, cssHeight, weeks, series, crossesYear, plantFilter) {
   const activeSeries = (plantFilter && plantFilter !== 'all')
     ? series.filter((s) => s.key === plantFilter)
@@ -1506,57 +1512,84 @@ function drawValueStockLineChart_(ctx, cssWidth, cssHeight, weeks, series, cross
     maxVal = maxVal + pad;
   }
 
-  const padLeft = 6, padRight = 6, padTop = zoomed ? 24 : 14, padBottom = zoomed ? 32 : 22;
+  // padTop dilebarin dikit biar ada ruang buat label angka di atas titik
+  // paling tinggi (sebelumnya 14/24, sekarang +6 semua) biar ga kepotong.
+  const padLeft = 6, padRight = 6, padTop = zoomed ? 30 : 20, padBottom = 22;
   const chartW = cssWidth - padLeft - padRight;
   const chartH = cssHeight - padTop - padBottom;
   const stepX = weeks.length > 1 ? chartW / (weeks.length - 1) : 0;
   const xAt = (i) => padLeft + (weeks.length > 1 ? i * stepX : chartW / 2);
   const yAt = (v) => padTop + (chartH - ((v - minVal) / (maxVal - minVal)) * chartH);
 
-  // Gridline dasar tipis -- cuma acuan, sengaja minimalis (bukan grid penuh).
-  ctx.strokeStyle = '#eef1f8';
-  ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(padLeft, padTop + chartH); ctx.lineTo(padLeft + chartW, padTop + chartH); ctx.stroke();
+  const myToken = ++valueStockLineAnimToken_;
 
-  if (zoomed) {
-    ctx.fillStyle = '#9aa3b5';
-    ctx.font = '9px -apple-system, sans-serif';
-    ctx.textAlign = 'left';
-    ctx.fillText(formatRupiahCompact_(maxVal), padLeft, padTop - 8);
-    ctx.fillText(formatRupiahCompact_(minVal), padLeft, padTop + chartH + 12);
+  function draw(progress) {
+    if (myToken !== valueStockLineAnimToken_) return; // ada render baru, hentikan animasi lama
+    ctx.clearRect(0, 0, cssWidth, cssHeight);
+
+    // Gridline dasar tipis -- cuma acuan, sengaja minimalis (bukan grid penuh).
+    ctx.strokeStyle = '#eef1f8';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(padLeft, padTop + chartH); ctx.lineTo(padLeft + chartW, padTop + chartH); ctx.stroke();
+
+    ctx.globalAlpha = progress; // garis + titik + label angka fade-in bareng
+    activeSeries.forEach((s) => {
+      ctx.beginPath();
+      ctx.strokeStyle = s.color;
+      ctx.lineWidth = s.dashed ? 2.5 : 2;
+      ctx.setLineDash(s.dashed ? [6, 4] : []);
+      ctx.lineJoin = 'round';
+      s.values.forEach((v, i) => {
+        const x = xAt(i), y = yAt(v);
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+      ctx.setLineDash([]);
+      s.values.forEach((v, i) => {
+        ctx.beginPath();
+        ctx.fillStyle = s.color;
+        ctx.arc(xAt(i), yAt(v), s.dashed ? 3 : 2.5, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.font = 'bold 8.5px -apple-system, sans-serif';
+      s.values.forEach((v, i) => {
+        // sama kayak label minggu: titik pertama/terakhir rawan kepotong tepi
+        // canvas kalau center-align -- align ke dalam biar ga clip.
+        if (i === 0 && weeks.length > 1) ctx.textAlign = 'left';
+        else if (i === weeks.length - 1 && weeks.length > 1) ctx.textAlign = 'right';
+        else ctx.textAlign = 'center';
+        ctx.fillStyle = s.color;
+        ctx.fillText(formatRupiahCompact_(v), xAt(i), yAt(v) - (s.dashed ? 9 : 8));
+      });
+    });
+    ctx.globalAlpha = 1;
+
+    // Label minggu (sumbu-X) -- hitam bold biar jelas kebaca (permintaan user).
+    ctx.fillStyle = '#000';
+    ctx.font = 'bold 10px -apple-system, sans-serif';
+    weeks.forEach((w, i) => {
+      const label = crossesYear ? (w.label + "'" + String(w.tahun).slice(2)) : w.label;
+      // label pertama & terakhir rawan kepotong tepi canvas kalau center-align
+      // (mis. "W36" jadi "V36", "W37" jadi "W3") -- align ke dalam biar ga clip.
+      if (i === 0 && weeks.length > 1) ctx.textAlign = 'left';
+      else if (i === weeks.length - 1 && weeks.length > 1) ctx.textAlign = 'right';
+      else ctx.textAlign = 'center';
+      ctx.fillText(label, xAt(i), cssHeight - 6);
+    });
   }
 
-  activeSeries.forEach((s) => {
-    ctx.beginPath();
-    ctx.strokeStyle = s.color;
-    ctx.lineWidth = s.dashed ? 2.5 : 2;
-    ctx.setLineDash(s.dashed ? [6, 4] : []);
-    ctx.lineJoin = 'round';
-    s.values.forEach((v, i) => {
-      const x = xAt(i), y = yAt(v);
-      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-    });
-    ctx.stroke();
-    ctx.setLineDash([]);
-    s.values.forEach((v, i) => {
-      ctx.beginPath();
-      ctx.fillStyle = s.color;
-      ctx.arc(xAt(i), yAt(v), s.dashed ? 3 : 2.5, 0, Math.PI * 2);
-      ctx.fill();
-    });
-  });
+  if (prefersReducedMotion()) { draw(1); return; }
 
-  ctx.fillStyle = '#6b7488';
-  ctx.font = '10px -apple-system, sans-serif';
-  weeks.forEach((w, i) => {
-    const label = crossesYear ? (w.label + "'" + String(w.tahun).slice(2)) : w.label;
-    // label pertama & terakhir rawan kepotong tepi canvas kalau center-align
-    // (mis. "W36" jadi "V36", "W37" jadi "W3") -- align ke dalam biar ga clip.
-    if (i === 0 && weeks.length > 1) ctx.textAlign = 'left';
-    else if (i === weeks.length - 1 && weeks.length > 1) ctx.textAlign = 'right';
-    else ctx.textAlign = 'center';
-    ctx.fillText(label, xAt(i), cssHeight - 6);
-  });
+  const duration = 400;
+  const t0 = performance.now();
+  function frame(now) {
+    if (myToken !== valueStockLineAnimToken_) return;
+    const p = Math.min(1, (now - t0) / duration);
+    const eased = 1 - Math.pow(1 - p, 3); // ease-out cubic
+    draw(eased);
+    if (p < 1) requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
 }
 
 // ---- mode "Batang": bar chart berkelompok per minggu, persis contoh Excel
@@ -1607,8 +1640,9 @@ function drawValueStockBarChart_(ctx, cssWidth, cssHeight, weeks, crossesYear) {
         }
       });
 
-      ctx.fillStyle = '#6b7488';
-      ctx.font = '10px -apple-system, sans-serif';
+      // hitam bold biar jelas kebaca (permintaan user, sama kayak mode Garis).
+      ctx.fillStyle = '#000';
+      ctx.font = 'bold 10px -apple-system, sans-serif';
       const label = crossesYear ? (w.label + "'" + String(w.tahun).slice(2)) : w.label;
       // sama kayak drawValueStockLineChart_: label grup pertama/terakhir
       // di-align ke dalam (bukan center) biar ga kepotong tepi canvas.
