@@ -445,6 +445,27 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.key === 'Escape' && !document.getElementById('dashListModal').hidden) closeDashListModal();
   });
 
+  // Kartu "Value Stock per Plant" di Dashboard: tombol "+ Input Value Stock"
+  // buka modal tabel 2 kolom (Plant/Value Stock), lihat js/dashboard.js buat
+  // logic render grafik & submit-nya (openValueStockModal/handleValueStockSubmit).
+  const btnOpenValueStock = document.getElementById('btnOpenValueStockModal');
+  if (btnOpenValueStock) btnOpenValueStock.addEventListener('click', openValueStockModal);
+  document.getElementById('btnCloseValueStockModal').addEventListener('click', closeValueStockModal);
+  document.getElementById('valueStockModalBackdrop').addEventListener('click', closeValueStockModal);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !document.getElementById('valueStockModal').hidden) closeValueStockModal();
+  });
+  document.getElementById('btnAddValueStockRow').addEventListener('click', () => addValueStockRow());
+  // Delegated karena baris tabelnya dibuat dinamis (addValueStockRow), sama
+  // pola dengan hapus baris item di Barang Masuk (lihat itemsContainer di atas).
+  document.getElementById('valueStockRowsBody').addEventListener('click', (e) => {
+    if (e.target.classList.contains('vs-row-remove')) {
+      const row = e.target.closest('.vs-row');
+      if (row) row.remove();
+    }
+  });
+  document.getElementById('valueStockForm').addEventListener('submit', handleValueStockSubmit);
+
   // Chip filter Plant — dulu cuma di popup "Total SKU Terdaftar", sekarang
   // muncul di SEMUA popup kartu statistik Dashboard (opsinya dinamis, lihat
   // renderDashPlantFilterChipsFor/selectDashPlantFilter di dashboard.js) DAN
