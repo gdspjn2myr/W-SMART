@@ -1175,6 +1175,37 @@ body {
    4 seri (3 Plant + Total) lebih muat ditata begini di kartu yang lebih lebar. */
 .kt-legend-row { flex-direction: row; flex-wrap: wrap; gap: 8px 18px; margin-top: 10px; }
 .kt-legend-row .kt-legend-item strong { margin-left: 0; }
+.vs-chart-toprow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 10px;
+  margin-bottom: 8px;
+}
+/* Toggle "Garis" / "Batang" -- switch tampilan grafik Value Stock TANPA
+   fetch ulang ke server (data terakhir dipakai lagi, lihat valueStockLastData_
+   di dashboard.js), pola segmented-control simpel: pill abu2 + tombol aktif putih. */
+.vs-chart-toggle {
+  display: inline-flex;
+  background: #eef1f8;
+  border-radius: 999px;
+  padding: 2px;
+  flex-shrink: 0;
+}
+.vs-toggle-btn {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 5px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.vs-toggle-btn.is-active { background: #fff; color: var(--navy); box-shadow: 0 1px 3px rgba(15,42,92,.15); }
+
 .vs-trend { font-size: 11.5px; font-weight: 700; }
 .vs-trend-up { color: var(--green); }
 .vs-trend-down { color: var(--red); }
