@@ -1118,7 +1118,14 @@ body {
    (Stock Balance) yang baris flex horizontal bareng tombol "Tampilkan". */
 .dm-filter-section .dm-filter-reset { align-self: flex-start; padding: 2px 0 10px; }
 
-.tp-list { display: flex; flex-direction: column; gap: 12px; }
+/* max-height + scroll -- SEBELUMNYA daftar ini render SEMUA item apa adanya
+   (bisa belasan/puluhan baris), jadi kartu "Analisis Pemakaian Bulan Ini"
+   bisa jauh lebih tinggi dari kartu pasangannya (Chart 7 Hari) di layar
+   lebar & keliatan berantakan/nggak konsisten (keluhan user). Sekarang
+   tingginya dibatasi & sisanya di-scroll DI DALAM daftar itu sendiri, bukan
+   bikin kartunya makin manjang ke bawah terus. padding-right dikit biar teks
+   qty paling kanan nggak ketutupan scrollbar. */
+.tp-list { display: flex; flex-direction: column; gap: 12px; max-height: 320px; overflow-y: auto; padding-right: 4px; }
 .tp-item-label {
   display: flex;
   justify-content: space-between;
