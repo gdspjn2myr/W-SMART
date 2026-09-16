@@ -1331,7 +1331,25 @@ async function loadValueStockChart_() {
   }
 }
 
+// Mode gambar grafik Value Stock ("Garis" default / "Batang" ala contoh
+// Excel Bos) -- direset ke default tiap reload halaman (bukan preferensi
+// yang perlu disimpan permanen). valueStockLastData_ diinget biar toggle
+// switch mode bisa gambar ulang TANPA fetch ulang ke server.
+let valueStockLastData_ = null;
+let valueStockChartMode_ = 'line';
+let valueStockBarAnimToken_ = 0;
+
+function setValueStockChartMode_(mode) {
+  if (mode === valueStockChartMode_) return;
+  valueStockChartMode_ = mode;
+  document.querySelectorAll('#vsChartToggle .vs-toggle-btn').forEach((btn) => {
+    btn.classList.toggle('is-active', btn.dataset.mode === mode);
+  });
+  if (valueStockLastData_) renderValueStockChart(valueStockLastData_);
+}
+
 function renderValueStockChart(data) {
+  valueStockLastData_ = data;
   const canvas = document.getElementById('chartValueStock');
   const legend = document.getElementById('valueStockLegend');
   const hint = document.getElementById('valueStockTrendHint');
@@ -1362,7 +1380,7 @@ function renderValueStockChart(data) {
   }
   hint.textContent = 'Total minggu ' + latest.label + ': ' + formatRupiahFull_(latest.total) + ' (' + trendText + ')';
 
-  // ---- gambar garis tren (line chart) -- pola canvas sama seperti renderChart di atas ----
+  // ---- setup canvas -- pola sama seperti renderChart di atas ----
   const ctx = canvas.getContext('2d');
   const dpr = window.devicePixelRatio || 1;
   const parentEl = canvas.parentElement;
@@ -1383,6 +1401,40 @@ function renderValueStockChart(data) {
   }));
   series.push({ key: 'total', label: 'Total', color: VALUE_STOCK_TOTAL_COLOR, dashed: true, values: weeks.map((w) => w.total) });
 
+  if (valueStockChartMode_ === 'bar') {
+    drawValueStockBarChart_(ctx, cssWidth, cssHeight, weeks, crossesYear);
+  } else {
+    drawValueStockLineChart_(ctx, cssWidth, cssHeight, weeks, series, crossesYear);
+  }
+
+  // ---- legend HTML: nilai terakhir + tren %perubahan + % vs Target (kalau
+  // Target Factory Manager-nya udah diisi Admin di halaman Pengaturan) tiap seri ----
+  const achievement = data.achievement || {};
+  legend.innerHTML = series.map((s) => {
+    const lastVal = s.values[s.values.length - 1];
+    const pct = s.key === 'total' ? latest.totalChangePct : latest.plantsChangePct[s.key];
+    const trendClass = (pct === null || pct === undefined || pct === 0) ? '' : (pct > 0 ? ' vs-trend-up' : ' vs-trend-down');
+    const trendHtml = (pct === null || pct === undefined) ? '' : `<span class="vs-trend${trendClass}">${formatPct_(pct)}</span>`;
+    const achv = achievement[s.key];
+    const targetHtml = (achv && achv.target > 0)
+      ? `<span class="vs-target-badge${achv.met ? ' vs-trend-up' : ' vs-trend-down'}">${achv.pctOfTarget.toFixed(0)}% dari target (${formatRupiahCompact_(achv.target)})</span>`
+      : '';
+    return `
+      <div class="kt-legend-item">
+        <span class="kt-dot" style="background:${s.color}"></span>
+        <span>${escapeHtml(s.label)}</span>
+        <strong>${formatRupiahCompact_(lastVal)}</strong>
+        ${trendHtml}
+        ${targetHtml}
+      </div>
+    `;
+  }).join('');
+}
+
+// ---- mode "Garis": garis tren per Plant + Total (dashed) -- ini logic yang
+// sebelumnya nyatu langsung di renderValueStockChart, dipindah ke fungsi
+// sendiri pas nambah mode "Batang" (toggle-nya) ----
+function drawValueStockLineChart_(ctx, cssWidth, cssHeight, weeks, series, crossesYear) {
   const allValues = series.reduce((acc, s) => acc.concat(s.values), []);
   const maxVal = Math.max(1, ...allValues);
   const padLeft = 6, padRight = 6, padTop = 14, padBottom = 22;
@@ -1428,29 +1480,81 @@ function renderValueStockChart(data) {
     else ctx.textAlign = 'center';
     ctx.fillText(label, xAt(i), cssHeight - 6);
   });
+}
 
-  // ---- legend HTML: nilai terakhir + tren %perubahan + % vs Target (kalau
-  // Target Factory Manager-nya udah diisi Admin di halaman Pengaturan) tiap seri ----
-  const achievement = data.achievement || {};
-  legend.innerHTML = series.map((s) => {
-    const lastVal = s.values[s.values.length - 1];
-    const pct = s.key === 'total' ? latest.totalChangePct : latest.plantsChangePct[s.key];
-    const trendClass = (pct === null || pct === undefined || pct === 0) ? '' : (pct > 0 ? ' vs-trend-up' : ' vs-trend-down');
-    const trendHtml = (pct === null || pct === undefined) ? '' : `<span class="vs-trend${trendClass}">${formatPct_(pct)}</span>`;
-    const achv = achievement[s.key];
-    const targetHtml = (achv && achv.target > 0)
-      ? `<span class="vs-target-badge${achv.met ? ' vs-trend-up' : ' vs-trend-down'}">${achv.pctOfTarget.toFixed(0)}% dari target (${formatRupiahCompact_(achv.target)})</span>`
-      : '';
-    return `
-      <div class="kt-legend-item">
-        <span class="kt-dot" style="background:${s.color}"></span>
-        <span>${escapeHtml(s.label)}</span>
-        <strong>${formatRupiahCompact_(lastVal)}</strong>
-        ${trendHtml}
-        ${targetHtml}
-      </div>
-    `;
-  }).join('');
+// ---- mode "Batang": bar chart berkelompok per minggu, persis contoh Excel
+// Bos -- 3 bar Plant 1111/1112/1113 berdampingan tiap minggu + angka di atas
+// tiap bar. Total SENGAJA TIDAK ikut digambar sebagai bar (nilainya jauh
+// lebih besar dari tiap Plant, bar Total bakal bikin bar Plant keliatan
+// gepeng/kekecilan) -- Total tetap keliatan di hint di atas grafik & legend.
+// Pakai token animasi SENDIRI (bukan numpang chartAnimToken punya renderChart)
+// biar animasi kartu ini nggak saling batalin sama animasi kartu chart lain.
+function drawValueStockBarChart_(ctx, cssWidth, cssHeight, weeks, crossesYear) {
+  const myToken = ++valueStockBarAnimToken_;
+  const maxVal = Math.max(1, ...VALUE_STOCK_PLANTS.reduce((acc, p) => acc.concat(weeks.map((w) => w.plants[p] || 0)), []));
+  const padLeft = 4, padRight = 4, padTop = 22, padBottom = 22;
+  const chartH = cssHeight - padTop - padBottom;
+  const groupGap = 10;
+  const groupWidth = (cssWidth - padLeft - padRight - groupGap * (weeks.length + 1)) / weeks.length;
+  const innerGap = 3;
+  const barWidth = Math.max(2, (groupWidth - innerGap * (VALUE_STOCK_PLANTS.length - 1)) / VALUE_STOCK_PLANTS.length);
+
+  function draw(progress) {
+    if (myToken !== valueStockBarAnimToken_) return; // ada render baru, hentikan animasi lama
+    ctx.clearRect(0, 0, cssWidth, cssHeight);
+
+    ctx.strokeStyle = '#eef1f8';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(padLeft, padTop + chartH); ctx.lineTo(cssWidth - padRight, padTop + chartH); ctx.stroke();
+
+    weeks.forEach((w, wi) => {
+      const groupX = padLeft + groupGap + wi * (groupWidth + groupGap);
+
+      VALUE_STOCK_PLANTS.forEach((p, pi) => {
+        const val = w.plants[p] || 0;
+        const fullH = (val / maxVal) * chartH;
+        const barH = fullH * progress;
+        const x = groupX + pi * (barWidth + innerGap);
+        const y = padTop + (chartH - barH);
+        ctx.fillStyle = VALUE_STOCK_COLORS[p];
+        roundRectPath(ctx, x, y, barWidth, Math.max(barH, val > 0 ? 2 : 0), 2);
+        ctx.fill();
+
+        if (progress > 0.85 && val > 0 && barWidth > 10) {
+          ctx.globalAlpha = (progress - 0.85) / 0.15;
+          ctx.fillStyle = VALUE_STOCK_COLORS[p];
+          ctx.font = 'bold 8.5px -apple-system, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText(formatRupiahCompact_(val), x + barWidth / 2, y - 4);
+          ctx.globalAlpha = 1;
+        }
+      });
+
+      ctx.fillStyle = '#6b7488';
+      ctx.font = '10px -apple-system, sans-serif';
+      const label = crossesYear ? (w.label + "'" + String(w.tahun).slice(2)) : w.label;
+      // sama kayak drawValueStockLineChart_: label grup pertama/terakhir
+      // di-align ke dalam (bukan center) biar ga kepotong tepi canvas.
+      let labelX;
+      if (wi === 0 && weeks.length > 1) { ctx.textAlign = 'left'; labelX = groupX; }
+      else if (wi === weeks.length - 1 && weeks.length > 1) { ctx.textAlign = 'right'; labelX = groupX + groupWidth; }
+      else { ctx.textAlign = 'center'; labelX = groupX + groupWidth / 2; }
+      ctx.fillText(label, labelX, cssHeight - 6);
+    });
+  }
+
+  if (prefersReducedMotion()) { draw(1); return; }
+
+  const duration = 500;
+  const t0 = performance.now();
+  function frame(now) {
+    if (myToken !== valueStockBarAnimToken_) return;
+    const p = Math.min(1, (now - t0) / duration);
+    const eased = 1 - Math.pow(1 - p, 3); // ease-out cubic
+    draw(eased);
+    if (p < 1) requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
 }
 
 // ---------------------------------------------------------------------------
