@@ -476,6 +476,15 @@ document.addEventListener('DOMContentLoaded', () => {
       if (btn) setValueStockChartMode_(btn.dataset.mode);
     });
   }
+  // Filter grafik Value Stock -- mode Garis: pilih 1 Plant/Total (auto-zoom
+  // skala biar naik-turunnya keliatan); mode Batang: pilih 1 minggu (bukan
+  // numpuk semua minggu). Lihat setValueStockPlantFilter_/setValueStockWeekFilter_
+  // di js/dashboard.js. Permintaan user: "buat filter buat milih week juga...
+  // yg trend itu ... ada yg all ada yg per plant filternya".
+  const vsPlantFilter = document.getElementById('vsPlantFilter');
+  if (vsPlantFilter) vsPlantFilter.addEventListener('change', () => setValueStockPlantFilter_(vsPlantFilter.value));
+  const vsWeekFilter = document.getElementById('vsWeekFilter');
+  if (vsWeekFilter) vsWeekFilter.addEventListener('change', () => setValueStockWeekFilter_(vsWeekFilter.value));
 
   // Chip filter Plant — dulu cuma di popup "Total SKU Terdaftar", sekarang
   // muncul di SEMUA popup kartu statistik Dashboard (opsinya dinamis, lihat
