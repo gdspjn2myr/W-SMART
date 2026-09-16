@@ -126,6 +126,14 @@ function applyRoleVisibility() {
       .some((el) => el.style.display !== 'none');
     group.style.display = anyVisible ? '' : 'none';
   });
+
+  // Tombol "+ Input Value Stock" di Dashboard — Viewer cuma boleh LIHAT
+  // grafiknya (getValueStockChart ada di ROLE_PERMISSIONS buat semua Role),
+  // TAPI nginput angkanya (saveValueStock) Admin+Staff saja, sama kayak
+  // input transaksi lain — tombolnya disembunyikan biar Viewer nggak lihat
+  // tombol yang ujung-ujungnya bakal ditolak server.
+  const btnValueStock = document.getElementById('btnOpenValueStockModal');
+  if (btnValueStock) btnValueStock.style.display = (role === 'Viewer') ? 'none' : '';
 }
 
 function renderSidebarUserBox() {
