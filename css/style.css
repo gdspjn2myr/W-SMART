@@ -1206,6 +1206,9 @@ body {
 }
 .vs-toggle-btn.is-active { background: #fff; color: var(--navy); box-shadow: 0 1px 3px rgba(15,42,92,.15); }
 
+.vs-chart-filterrow { margin-bottom: 10px; }
+.vs-chart-filter { width: 100%; max-width: 260px; }
+
 .vs-trend { font-size: 11.5px; font-weight: 700; }
 .vs-trend-up { color: var(--green); }
 .vs-trend-down { color: var(--red); }
