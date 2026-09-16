@@ -396,6 +396,22 @@
           <button type="button" class="vs-toggle-btn" data-mode="bar">Batang</button>
         </div>
       </div>
+      <div class="vs-chart-filterrow">
+        <!-- Mode Garis: filter per-seri (default "Semua") -- pilih 1 Plant/Total
+             biar skala grafiknya auto-zoom ke rentang nilai seri itu sendiri
+             (bukan 0-Rp5M), jadi naik-turunnya keliatan jelas walau %-nya kecil. -->
+        <select id="vsPlantFilter" class="rw-select vs-chart-filter">
+          <option value="all">Semua Plant + Total</option>
+          <option value="1111">Plant 1111</option>
+          <option value="1112">Plant 1112</option>
+          <option value="1113">Plant 1113</option>
+          <option value="total">Total</option>
+        </select>
+        <!-- Mode Batang: filter per-minggu -- nampilin bar 1 minggu aja (bukan
+             numpuk semua minggu), pilih minggu mana lewat dropdown ini. Diisi
+             JS dari data minggu yang ada, lihat populateValueStockWeekFilter_. -->
+        <select id="vsWeekFilter" class="rw-select vs-chart-filter" hidden></select>
+      </div>
       <canvas id="chartValueStock" height="180"></canvas>
       <div id="valueStockLegend" class="kt-legend kt-legend-row"></div>
     </div>
