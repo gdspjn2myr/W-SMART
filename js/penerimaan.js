@@ -56,6 +56,14 @@ function initPenerimaanPage() {
   // biar kelihatan langsung & konsisten sama yang bakal disimpan/dicocokkan.
   wireUppercaseInput('fSLoc');
 
+  // Begitu Plant diisi/diubah, daftar saran Kode Barang (listMasterBarangPenerimaan)
+  // langsung ke-filter ngikutin Plant itu — lihat renderMasterBarangDatalist.
+  // 'change' (bukan 'input' lagi) karena fPlant sekarang dropdown <select>,
+  // bukan kotak teks bebas (disamakan dengan pmPlant di js/pemakaian.js).
+  document.getElementById('fPlant').addEventListener('change', (e) => {
+    renderMasterBarangDatalist('listMasterBarangPenerimaan', e.target.value);
+  });
+
   // Pemesan: field TERPISAH dari Penerima (fUser) di atas — Penerima tetap
   // identitas akun yang login (dipakai buat Riwayat Transaksi/audit, jangan
   // diutak-atik), sedangkan Pemesan ini nyatet SUMBER pemesanan barang
@@ -214,38 +222,72 @@ function setMode(mode) {
   document.getElementById('scanPanel').hidden = isManual;
 }
 
+// Isi ulang 1 <datalist> Kode Barang dari masterBarangCache, DEDUP per Kode
+// Barang — 1 kode barang cuma nongol 1x di daftar saran, walau Master
+// Data-nya kedaftar di lebih dari 1 Plant (lihat pola isMultiPlant di
+// hitungBalances_, Code.gs: 1 Kode Barang bisa punya beberapa baris Master
+// Data, 1 baris per Plant). SEBELUM ini di-dedup, itu penyebab kode barang
+// yang sama kelihatan "dobel" persis di daftar saran (keluhan user).
+//
+// plantFilter (opsional): kalau diisi, CUMA baris yang Plant-nya PERSIS sama
+// (atau baris yang Plant-nya emang belum/tidak diisi di Master Data) yang
+// ditampilkan — ini yang bikin saran Kode Barang otomatis ngikutin Plant
+// yang sudah diisi di form (Barang Masuk: fPlant, Barang Keluar: pmPlant),
+// bukan nyampur semua Plant kayak sebelumnya.
+function renderMasterBarangDatalist(datalistId, plantFilter) {
+  const el = document.getElementById(datalistId);
+  if (!el) return;
+  const plant = String(plantFilter || '').trim();
+  const seenKode = new Set();
+  const rows = [];
+  masterBarangCache.forEach((b) => {
+    if (plant && b.plant && String(b.plant).trim() !== plant) return; // beda Plant -> skip
+    if (seenKode.has(b.kodeBarang)) return; // kode ini sudah kepilih dari baris lain (Plant beda) -> jangan dobel
+    seenKode.add(b.kodeBarang);
+    rows.push(b);
+  });
+  el.innerHTML = rows.map((b) => `<option value="${escapeHtml(b.kodeBarang)}">${escapeHtml(b.namaBarang)}</option>`).join('');
+}
+
 async function loadMasterData() {
-  if (masterDataLoaded) return;
-  try {
-    const [barangRes, supplierRes, pemesanRes] = await Promise.all([Api.getMasterBarang(), Api.getSupplier(), Api.getPemesanDirectory()]);
-    masterBarangCache = (barangRes.data || []).filter((b) => b.status !== 'Nonaktif');
+  if (!masterDataLoaded) {
+    try {
+      const [barangRes, supplierRes, pemesanRes] = await Promise.all([Api.getMasterBarang(), Api.getSupplier(), Api.getPemesanDirectory()]);
+      masterBarangCache = (barangRes.data || []).filter((b) => b.status !== 'Nonaktif');
 
-    const listBarang = document.getElementById('listMasterBarang');
-    listBarang.innerHTML = masterBarangCache
-      .map((b) => `<option value="${escapeHtml(b.kodeBarang)}">${escapeHtml(b.namaBarang)}</option>`)
-      .join('');
+      const listSupplier = document.getElementById('listSupplier');
+      listSupplier.innerHTML = (supplierRes.data || [])
+        .map((s) => `<option value="${escapeHtml(s.namaSupplier)}"></option>`)
+        .join('');
 
-    const listSupplier = document.getElementById('listSupplier');
-    listSupplier.innerHTML = (supplierRes.data || [])
-      .map((s) => `<option value="${escapeHtml(s.namaSupplier)}"></option>`)
-      .join('');
+      // Dipakai buat autocomplete & auto-match Nama/NIK Pemesan (khusus Pemesan
+      // tipe USER) — lihat findPemesanMatch/updatePemesanMatchState.
+      pemesanDirectoryCache = pemesanRes.data || [];
+      document.getElementById('listPemesanNama').innerHTML = pemesanDirectoryCache
+        .map((u) => `<option value="${escapeHtml(u.nama)}"></option>`)
+        .join('');
+      document.getElementById('listPemesanNik').innerHTML = pemesanDirectoryCache
+        .filter((u) => u.nik)
+        .map((u) => `<option value="${escapeHtml(u.nik)}">${escapeHtml(u.nama)}</option>`)
+        .join('');
 
-    // Dipakai buat autocomplete & auto-match Nama/NIK Pemesan (khusus Pemesan
-    // tipe USER) — lihat findPemesanMatch/updatePemesanMatchState.
-    pemesanDirectoryCache = pemesanRes.data || [];
-    document.getElementById('listPemesanNama').innerHTML = pemesanDirectoryCache
-      .map((u) => `<option value="${escapeHtml(u.nama)}"></option>`)
-      .join('');
-    document.getElementById('listPemesanNik').innerHTML = pemesanDirectoryCache
-      .filter((u) => u.nik)
-      .map((u) => `<option value="${escapeHtml(u.nik)}">${escapeHtml(u.nama)}</option>`)
-      .join('');
-
-    masterDataLoaded = true;
-  } catch (err) {
-    // Master data opsional untuk fondasi ini — gagal load tidak menghalangi input manual.
-    console.warn('Gagal memuat master data:', err.message);
+      masterDataLoaded = true;
+    } catch (err) {
+      // Master data opsional untuk fondasi ini — gagal load tidak menghalangi input manual.
+      console.warn('Gagal memuat master data:', err.message);
+      return; // cache masih kosong, jangan lanjut render datalist Kode Barang di bawah
+    }
   }
+
+  // Selalu di-render ulang tiap fungsi ini dipanggil (murah, cuma baca cache
+  // di memori — bukan fetch ulang), supaya kalau Plant di form udah keisi
+  // duluan (misal baru balik lagi ke halaman ini), daftar sarannya langsung
+  // ngikut tanpa perlu nunggu event 'input'/'change' Plant lain dulu.
+  // listMasterBarang (dipakai Stock Opname) sengaja TANPA filter Plant — cuma
+  // dedup — karena halaman itu nggak punya 1 Plant tunggal buat semua baris.
+  renderMasterBarangDatalist('listMasterBarang', '');
+  renderMasterBarangDatalist('listMasterBarangPenerimaan', (document.getElementById('fPlant') || {}).value);
+  renderMasterBarangDatalist('listMasterBarangPemakaian', (document.getElementById('pmPlant') || {}).value);
 }
 
 function addItemRow(prefill) {
@@ -267,11 +309,19 @@ function clearItemRows() {
 // Autofill Nama Barang & Satuan dari Master Data begitu Kode Barang di baris
 // item cocok — nilainya tetap boleh diubah manual sesudahnya (mis. barang
 // belum terdaftar, atau satuan beda dari biasanya untuk pengiriman ini).
+// Kalau kode ini kedaftar di lebih dari 1 Plant (beda baris Master Data),
+// PRIORITASKAN baris yang Plant-nya sama dengan fPlant yang sudah diisi di
+// atas — semua item di 1 dokumen Penerimaan sama2 masuk ke Plant yang sama,
+// jadi Nama/Satuan yang paling relevan ya dari baris Plant itu, bukan asal
+// baris pertama yang ketemu (itu bisa salah kalau Nama/Satuan-nya beda
+// antar-Plant, walau jarang).
 function handleItemKodeInput(kodeInput) {
   const kode = kodeInput.value.trim();
   if (!kode) return;
-  const match = masterBarangCache.find((b) => b.kodeBarang === kode);
-  if (!match) return;
+  const matches = masterBarangCache.filter((b) => b.kodeBarang === kode);
+  if (!matches.length) return;
+  const plant = document.getElementById('fPlant').value.trim();
+  const match = (plant && matches.find((b) => String(b.plant || '').trim() === plant)) || matches[0];
 
   const row = kodeInput.closest('.item-row');
   if (!row) return;
@@ -398,6 +448,16 @@ async function handleSubmit(e) {
     return;
   }
 
+  // Plant WAJIB (disamakan dengan Barang Keluar/pmPlant — dulu opsional/bebas
+  // teks, sekarang dropdown wajib) — supaya barang baru yang auto-kedaftar ke
+  // Master Data (autoRegisterMasterBarang_ di Code.gs) selalu kebawa Plant-nya.
+  const plantVal = document.getElementById('fPlant').value.trim();
+  if (!plantVal) {
+    showToast('Plant wajib dipilih.', 'error');
+    document.getElementById('fPlant').focus();
+    return;
+  }
+
   // S.Loc WAJIB — ini yang menentukan pool Plant+S.Loc yang nanti divalidasi
   // ketat pas Barang Keluar (lihat js/pemakaian.js & resolveOnHandPlantSloc_
   // di Code.gs). Selalu disimpan huruf besar semua.
@@ -457,7 +517,7 @@ async function handleSubmit(e) {
     pemesanNama: pemesanTipe === 'USER' ? pemesanNama : '',
     pemesanNik: pemesanTipe === 'USER' ? pemesanNik : '',
     pemesanEmail: pemesanTipe === 'USER' ? pemesanEmail : '',
-    plant: document.getElementById('fPlant').value.trim(),
+    plant: plantVal,
     sloc: slocVal,
     keterangan: document.getElementById('fKeterangan').value.trim(),
     items,
