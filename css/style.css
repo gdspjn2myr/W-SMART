@@ -595,6 +595,11 @@ body {
   .btn-small.is-refreshing svg { animation: none; }
   .btn-small.is-refreshing { opacity: 0.6; }
 }
+/* Tombol aksi di dalam .card-header (mis. "+ Input Value Stock") -- numpang
+   pola margin-left:auto yang sama kayak .chart-legend, biar nempel di kanan
+   header tanpa perlu markup pembungkus tambahan. */
+.card-header-btn { margin-left: auto; flex-shrink: 0; }
+
 .dash-toolbar {
   display: flex;
   align-items: center;
@@ -1163,6 +1168,53 @@ body {
 }
 .kt-legend-item strong { margin-left: auto; color: var(--navy); }
 .kt-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+/* ---------- Value Stock (grafik tren Dashboard + modal input) ---------- */
+/* Legend Value Stock numpang .kt-legend-item (dot + label + angka), tapi
+   ditata BERBARIS ke samping (bukan tumpuk ke bawah kayak Kategori Item) --
+   4 seri (3 Plant + Total) lebih muat ditata begini di kartu yang lebih lebar. */
+.kt-legend-row { flex-direction: row; flex-wrap: wrap; gap: 8px 18px; margin-top: 10px; }
+.kt-legend-row .kt-legend-item strong { margin-left: 0; }
+.vs-trend { font-size: 11.5px; font-weight: 700; }
+.vs-trend-up { color: var(--green); }
+.vs-trend-down { color: var(--red); }
+
+.vs-table-wrap { overflow-x: auto; margin-bottom: 10px; }
+.vs-table { width: 100%; border-collapse: collapse; min-width: 320px; }
+.vs-table th {
+  text-align: left;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .03em;
+  padding: 0 6px 8px;
+}
+.vs-table td { padding: 4px 6px 10px; vertical-align: middle; }
+.vs-row select,
+.vs-row input {
+  width: 100%;
+  padding: 9px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  font-size: 13.5px;
+  background: #fbfcfe;
+  font-family: inherit;
+}
+.vs-row select:focus,
+.vs-row input:focus { outline: none; border-color: var(--navy); background: #fff; }
+.vs-row-remove {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: #fdeaea;
+  color: var(--red);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+}
 
 /* ---------- Stock Balance ("Mutasi Stock") ---------- */
 .badge-belum-master {
@@ -1789,6 +1841,7 @@ body {
   #page-dashboard .section-eyebrow,
   #page-dashboard .stat-card-hero,
   #page-dashboard #perluTindakanCard,
+  #page-dashboard #dashValueStockCard,
   #page-dashboard #dashRiwayatCard {
     grid-column: 1 / -1;
   }
