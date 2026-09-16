@@ -1361,8 +1361,12 @@ function setValueStockChartMode_(mode) {
   });
   const plantFilterEl = document.getElementById('vsPlantFilter');
   const weekFilterEl = document.getElementById('vsWeekFilter');
+  const canvasEl = document.getElementById('chartValueStock');
+  const tableWrapEl = document.getElementById('vsTableWrap');
   if (plantFilterEl) plantFilterEl.hidden = (mode !== 'line');
   if (weekFilterEl) weekFilterEl.hidden = (mode !== 'bar');
+  if (canvasEl) canvasEl.hidden = (mode === 'table');
+  if (tableWrapEl) tableWrapEl.hidden = (mode !== 'table');
   if (valueStockLastData_) renderValueStockChart(valueStockLastData_);
 }
 
@@ -1395,6 +1399,111 @@ function populateValueStockWeekFilter_(weeks, crossesYear) {
   sel.value = valueStockWeekFilter_;
 }
 
+// ---- mode "Tabel": tabel ala Excel Bos -- Plant + Total sebagai kolom,
+// Minggu sebagai baris, TAPI cuma 2 minggu TERAKHIR (bukan semua histori
+// kayak mode Garis/Batang, permintaan user: "hanya menunjukan 2 week
+// terakhir saja, seperti gambar yg saya kirim") + baris Total/Persentase
+// Kenaikan-Penurunan, DITAMBAH baris Target Factory Manager (permintaan user:
+// "ada target juga, soalnya di 2 diagram yg sudah dibuat ga munculin target
+// ini" -- dicek ulang, rumusnya beneran disamain PERSIS ke Excel Bos:
+//   Total Kenaikan/Penurunan Target = Target - Actual (minggu terakhir)
+//   Persentase Target = (Target - Actual) / Actual x 100
+// (bukan actual/target seperti badge "% dari target" di legend -- itu
+// metrik beda, tetap dipertahankan di legend, ini versi tabel disamain ke
+// rumus Excel-nya Bos). Baris target cuma muncul kalau minimal 1 Plant udah
+// diisi targetnya di halaman Pengaturan.
+function renderValueStockTable_(weeks, crossesYear, targets) {
+  const tbody = document.getElementById('vsTableBody');
+  if (!tbody) return;
+
+  const trendCellClass_ = (v) => (v === null || v === undefined || v === 0) ? '' : (v > 0 ? ' vs-trend-up' : ' vs-trend-down');
+  // formatRupiahFull_ taruh tanda minus SETELAH "Rp" ("Rp-21.962.842") --
+  // ga masalah buat nilai stock yang emang selalu positif, tapi buat
+  // delta yang bisa negatif ini keliatan aneh, jadi tanda +/- ditaruh
+  // manual di depan "Rp" di sini.
+  const signedRp_ = (v) => {
+    const sign = v > 0 ? '+' : (v < 0 ? '-' : '');
+    return sign + 'Rp' + Math.round(Math.abs(v)).toLocaleString('id-ID');
+  };
+
+  const last2 = weeks.slice(-2);
+  const weekLabel = (w) => crossesYear ? (w.label + "'" + String(w.tahun).slice(2)) : w.label;
+
+  const dataRows = last2.map((w) => {
+    const plantCells = VALUE_STOCK_PLANTS.map((p) => `<td>${formatRupiahFull_(w.plants[p] || 0)}</td>`).join('');
+    return `<tr><td>${escapeHtml(weekLabel(w))}</td>${plantCells}<td>${formatRupiahFull_(w.total)}</td></tr>`;
+  }).join('');
+
+  let deltaRows = '';
+  if (last2.length === 2) {
+    const prev = last2[0], cur = last2[1];
+    const deltaCells = VALUE_STOCK_PLANTS.map((p) => {
+      const delta = (cur.plants[p] || 0) - (prev.plants[p] || 0);
+      return `<td class="${trendCellClass_(delta)}">${signedRp_(delta)}</td>`;
+    }).join('');
+    const totalDelta = cur.total - prev.total;
+
+    const pctCells = VALUE_STOCK_PLANTS.map((p) => {
+      const pct = cur.plantsChangePct[p];
+      return `<td class="${trendCellClass_(pct)}">${formatPct_(pct) || '—'}</td>`;
+    }).join('');
+
+    deltaRows = `
+      <tr class="vs-table-delta-row">
+        <td>Total Kenaikan/Penurunan</td>${deltaCells}<td class="${trendCellClass_(totalDelta)}">${signedRp_(totalDelta)}</td>
+      </tr>
+      <tr class="vs-table-delta-row">
+        <td>Persentase Kenaikan/Penurunan</td>${pctCells}<td class="${trendCellClass_(cur.totalChangePct)}">${formatPct_(cur.totalChangePct) || '—'}</td>
+      </tr>
+    `;
+  }
+
+  let targetRows = '';
+  const targetsObj = targets || {};
+  const hasTarget = VALUE_STOCK_PLANTS.some((p) => Number(targetsObj[p]) > 0);
+  if (hasTarget && last2.length) {
+    const latestWeek = last2[last2.length - 1];
+    const totalTarget = VALUE_STOCK_PLANTS.reduce((s, p) => s + (Number(targetsObj[p]) || 0), 0);
+
+    const targetCells = VALUE_STOCK_PLANTS.map((p) => {
+      const t = Number(targetsObj[p]) || 0;
+      return `<td>${t > 0 ? formatRupiahFull_(t) : '—'}</td>`;
+    }).join('');
+
+    const targetDeltaCells = VALUE_STOCK_PLANTS.map((p) => {
+      const t = Number(targetsObj[p]) || 0;
+      if (!t) return '<td>—</td>';
+      const delta = t - (latestWeek.plants[p] || 0);
+      return `<td class="${trendCellClass_(delta)}">${signedRp_(delta)}</td>`;
+    }).join('');
+    const totalTargetDelta = totalTarget > 0 ? (totalTarget - latestWeek.total) : null;
+
+    const targetPctCells = VALUE_STOCK_PLANTS.map((p) => {
+      const t = Number(targetsObj[p]) || 0;
+      const actual = latestWeek.plants[p] || 0;
+      if (!t || !actual) return '<td>—</td>';
+      const pct = ((t - actual) / actual) * 100;
+      return `<td class="${trendCellClass_(pct)}">${formatPct_(pct)}</td>`;
+    }).join('');
+    const totalTargetPct = (totalTarget > 0 && latestWeek.total > 0)
+      ? ((totalTarget - latestWeek.total) / latestWeek.total) * 100 : null;
+
+    targetRows = `
+      <tr class="vs-table-delta-row">
+        <td>Target Factory Manager</td>${targetCells}<td>${totalTarget > 0 ? formatRupiahFull_(totalTarget) : '—'}</td>
+      </tr>
+      <tr class="vs-table-delta-row">
+        <td>Total Kenaikan/Penurunan Target</td>${targetDeltaCells}<td class="${trendCellClass_(totalTargetDelta)}">${totalTargetDelta === null ? '—' : signedRp_(totalTargetDelta)}</td>
+      </tr>
+      <tr class="vs-table-delta-row">
+        <td>Persentase Target</td>${targetPctCells}<td class="${trendCellClass_(totalTargetPct)}">${totalTargetPct === null ? '—' : formatPct_(totalTargetPct)}</td>
+      </tr>
+    `;
+  }
+
+  tbody.innerHTML = dataRows + deltaRows + targetRows;
+}
+
 function renderValueStockChart(data) {
   valueStockLastData_ = data;
   const canvas = document.getElementById('chartValueStock');
@@ -1407,6 +1516,8 @@ function renderValueStockChart(data) {
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     legend.innerHTML = '';
+    const tbodyEmpty = document.getElementById('vsTableBody');
+    if (tbodyEmpty) tbodyEmpty.innerHTML = '';
     hint.textContent = data && data.error
       ? 'Gagal memuat data Value Stock: ' + data.error
       : 'Belum ada data Value Stock — ketuk "+ Input Value Stock" buat mulai catat.';
@@ -1453,6 +1564,8 @@ function renderValueStockChart(data) {
   if (valueStockChartMode_ === 'bar') {
     const weeksForBar = weeks.filter((w) => valueStockWeekKey_(w) === valueStockWeekFilter_);
     drawValueStockBarChart_(ctx, cssWidth, cssHeight, weeksForBar.length ? weeksForBar : weeks.slice(-1), crossesYear);
+  } else if (valueStockChartMode_ === 'table') {
+    renderValueStockTable_(weeks, crossesYear, data.targets);
   } else {
     drawValueStockLineChart_(ctx, cssWidth, cssHeight, weeks, series, crossesYear, valueStockPlantFilter_);
   }
