@@ -1429,18 +1429,25 @@ function renderValueStockChart(data) {
     ctx.fillText(label, xAt(i), cssHeight - 6);
   });
 
-  // ---- legend HTML: nilai terakhir + tren %perubahan tiap seri ----
+  // ---- legend HTML: nilai terakhir + tren %perubahan + % vs Target (kalau
+  // Target Factory Manager-nya udah diisi Admin di halaman Pengaturan) tiap seri ----
+  const achievement = data.achievement || {};
   legend.innerHTML = series.map((s) => {
     const lastVal = s.values[s.values.length - 1];
     const pct = s.key === 'total' ? latest.totalChangePct : latest.plantsChangePct[s.key];
     const trendClass = (pct === null || pct === undefined || pct === 0) ? '' : (pct > 0 ? ' vs-trend-up' : ' vs-trend-down');
     const trendHtml = (pct === null || pct === undefined) ? '' : `<span class="vs-trend${trendClass}">${formatPct_(pct)}</span>`;
+    const achv = achievement[s.key];
+    const targetHtml = (achv && achv.target > 0)
+      ? `<span class="vs-target-badge${achv.met ? ' vs-trend-up' : ' vs-trend-down'}">${achv.pctOfTarget.toFixed(0)}% dari target (${formatRupiahCompact_(achv.target)})</span>`
+      : '';
     return `
       <div class="kt-legend-item">
         <span class="kt-dot" style="background:${s.color}"></span>
         <span>${escapeHtml(s.label)}</span>
         <strong>${formatRupiahCompact_(lastVal)}</strong>
         ${trendHtml}
+        ${targetHtml}
       </div>
     `;
   }).join('');
