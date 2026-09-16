@@ -1749,6 +1749,19 @@ body {
   .topbar-inner { max-width: 1100px; }
   .app-content { max-width: 1100px; padding: 28px 24px 48px; }
 
+  /* PENTING: dashboard-nya CSS Grid 2 kolom di layar lebar -- SEMUA anak
+     langsung #page-dashboard HARUS dapat grid-column eksplisit di sini
+     (jangan ada yang dibiarkan auto-placement). Sebelumnya cuma sebagian
+     yang di-assign (toolbar/eyebrow/perluTindakanCard/.stat-grid) sementara
+     kartu Stock Saat Ini (hero), kartu Chart, kartu Analisis Pemakaian, &
+     kartu Riwayat Penerimaan dibiarkan "auto" -- browser nempatin mereka
+     di kolom manapun yang kebetulan kosong duluan, hasilnya SUSUNAN KARTU
+     JADI BERANTAKAN & ninggalin sel kolom kosong nganggur (blank) di sisi
+     yang lain (lihat laporan user: dashboard-nya "berantakan susunan
+     card"-nya). Sekarang SEMUA di-assign eksplisit: hero, chart, & kartu2
+     lain yang cuma 1 kolom sengaja DIPASANGKAN (Chart col 1 + Analisis col
+     2 di baris yang sama), sisanya full-width -- nggak ada lagi sel kosong
+     yang nyelip nggak jelas. */
   #page-dashboard:not([hidden]) {
     display: grid;
     grid-template-columns: 1.15fr 0.85fr;
@@ -1767,9 +1780,13 @@ body {
   }
   #page-dashboard .dash-toolbar,
   #page-dashboard .section-eyebrow,
-  #page-dashboard #perluTindakanCard {
+  #page-dashboard .stat-card-hero,
+  #page-dashboard #perluTindakanCard,
+  #page-dashboard #dashRiwayatCard {
     grid-column: 1 / -1;
   }
+  #page-dashboard #dashChartCard { grid-column: 1; }
+  #page-dashboard #dashAnalisisCard { grid-column: 2; }
   #page-dashboard .card { margin-bottom: 0; }
 
   /* Barang Masuk (Penerimaan) — sebelumnya dipaksa max-width 640px & SEMUA
