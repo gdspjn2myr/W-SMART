@@ -466,6 +466,17 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   document.getElementById('valueStockForm').addEventListener('submit', handleValueStockSubmit);
 
+  // Toggle "Garis"/"Batang" grafik Value Stock -- switch mode gambar TANPA
+  // fetch ulang (dipakai data terakhir, lihat setValueStockChartMode_ di
+  // js/dashboard.js), permintaan user: "bar chart kaya [contoh Excel] ada juga ga?".
+  const vsChartToggle = document.getElementById('vsChartToggle');
+  if (vsChartToggle) {
+    vsChartToggle.addEventListener('click', (e) => {
+      const btn = e.target.closest('.vs-toggle-btn');
+      if (btn) setValueStockChartMode_(btn.dataset.mode);
+    });
+  }
+
   // Chip filter Plant — dulu cuma di popup "Total SKU Terdaftar", sekarang
   // muncul di SEMUA popup kartu statistik Dashboard (opsinya dinamis, lihat
   // renderDashPlantFilterChipsFor/selectDashPlantFilter di dashboard.js) DAN
