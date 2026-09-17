@@ -27,6 +27,7 @@ const PAGE_ROLES = {
   opname: ['Admin', 'Staff'],
   'cek-barang': ['Admin', 'Staff', 'Viewer'],
   'alert-order': ['Admin', 'Staff', 'Viewer'],
+  orderan: ['Admin', 'Staff', 'Viewer'],
   users: ['Admin'],
   pengaturan: ['Admin'],
   reservasi: ['Admin', 'Staff'],
