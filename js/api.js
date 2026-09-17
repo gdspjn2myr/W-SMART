@@ -12,7 +12,10 @@
 // scanSPB dikasih waktu lebih lama karena proses baca gambar (OCR) di server
 // memang bisa makan waktu lebih dari aksi lain yang cuma baca/tulis sheet.
 const API_TIMEOUT_MS = 30000;
-const API_TIMEOUT_MS_LONG = { scanSPB: 60000, uploadFotoSpk: 45000 };
+// createPRBatch dikasih waktu lebih lama juga — bisa berisi puluhan item
+// sekaligus (1x Simpan buat semua baris di tabel Buat PR), jadi butuh lebih
+// dari 30 detik "normal" kalau itemnya banyak.
+const API_TIMEOUT_MS_LONG = { scanSPB: 60000, uploadFotoSpk: 45000, createPRBatch: 45000 };
 
 // Action yang TIDAK butuh sessionToken (belum tentu ada sesi saat dipanggil —
 // login justru tujuannya BIKIN sesi baru). Semua action lain otomatis disisipi
@@ -126,6 +129,8 @@ const Api = {
   getAlertOrder: () => callApi('getAlertOrder'),
   createPR: (payload) => callApi('createPR', payload),
   createPRBatch: (payload) => callApi('createPRBatch', payload),
+  getPRDocumentList: () => callApi('getPRDocumentList'),
+  getPRDocument: (payload) => callApi('getPRDocument', payload),
   getOrderanList: () => callApi('getOrderanList'),
   updateOrderan: (payload) => callApi('updateOrderan', payload),
   getReceivingDetail: (payload) => callApi('getReceivingDetail', payload),
