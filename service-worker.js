@@ -4,8 +4,8 @@
 // DAN supaya user dapat notif "Versi baru tersedia" di aplikasi.
 // ============================================================================
 
-const APP_VERSION = '2.3.8';
-const CACHE_NAME = 'wsmart-v.' + APP_VERSION;
+const APP_VERSION = '2.3.9';
+const CACHE_NAME = 'v.' + APP_VERSION;
 const APP_SHELL = [
   './',
   './index.html',
@@ -30,6 +30,7 @@ const APP_SHELL = [
   './js/opname.js',
   './js/cek-barang.js',
   './js/alert-order.js',
+  './js/orderan.js',
   './js/foto-compress.js',
   './js/reservasi.js',
   './js/spk-online.js',
