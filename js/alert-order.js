@@ -4,10 +4,11 @@
 // bikin 1 DOKUMEN PR berisi BEBERAPA barang sekaligus (format "Form Pengadaan
 // Spare Part" perusahaan) — beda dari mekanisme lama (1 PR per klik tombol
 // per-item) yang sudah dihapus dari halaman ini. Begitu barang datang lewat
-// Barang Masuk, PR yang masih "Menunggu" otomatis ditutup di server (lihat
-// closeMatchingPR_ di Code.gs) dan Lead Time asli (Tanggal PR -> Tanggal
-// Kedatangan) terekam. No PO yang menutup PR itu ikut dicatat di baris PR
-// yang sama (kolom "No PO Terkait" di sheet PurchaseRequest).
+// Barang Masuk, baris PR yang masih "Menunggu" otomatis disinkron di server
+// (lihat syncOrderanFromPenerimaan_ di Code.gs) dan Lead Time asli (Tanggal
+// PR -> Tanggal Kedatangan) terekam. Lihat juga halaman "Orderan" (js/
+// orderan.js) buat lacak siklus PR -> PO -> barang datang per item, termasuk
+// No PR/No PO & Tanggal Release yang diisi manual di sana.
 //
 // Avg Usage Otomatis & Lead Time Otomatis dihitung REALTIME di server dari
 // histori Pemakaian & PurchaseRequest yang sudah "Selesai" (lihat
