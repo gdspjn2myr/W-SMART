@@ -1305,6 +1305,19 @@ const VALUE_STOCK_PLANTS = ['1111', '1112', '1113'];
 const VALUE_STOCK_COLORS = { '1111': '#0f2a5c', '1112': '#2058a8', '1113': '#ffb703' };
 const VALUE_STOCK_TOTAL_COLOR = '#0a1d40';
 
+// Teks putih di atas batang gelap (1111/1112) kebaca jelas, tapi di atas
+// batang kuning (1113) teks putih malah nyaris ga keliatan -- jadi pilih
+// warna teks label otomatis berdasarkan terang/gelapnya warna batang
+// (relative luminance), bukan di-hardcode putih semua.
+function plantLabelTextColor_(bgColor) {
+  const hex = bgColor.replace('#', '');
+  const r = parseInt(hex.substring(0, 2), 16) / 255;
+  const g = parseInt(hex.substring(2, 4), 16) / 255;
+  const b = parseInt(hex.substring(4, 6), 16) / 255;
+  const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
+  return luminance > 0.6 ? '#1a1a1a' : '#ffffff';
+}
+
 function formatRupiahFull_(n) {
   return 'Rp' + Math.round(Number(n) || 0).toLocaleString('id-ID');
 }
@@ -1749,6 +1762,23 @@ function drawValueStockBarChart_(ctx, cssWidth, cssHeight, weeks, crossesYear) {
           ctx.font = 'bold 8.5px -apple-system, sans-serif';
           ctx.textAlign = 'center';
           ctx.fillText(formatRupiahCompact_(val), x + barWidth / 2, y - 4);
+          ctx.globalAlpha = 1;
+        }
+
+        // Nama Plant langsung di batangnya (bukan cuma di legend bawah chart —
+        // permintaan user: "keterangan plant jangan dibawah, langsung di
+        // batangnya saja soalnya kurang keliatan"). Warna teks disesuaikan
+        // biar kontras jelas kebaca di atas warna batang masing-masing
+        // (batang kuning Plant 1113 pakai teks gelap, batang biru gelap
+        // pakai teks putih), dan cuma digambar kalau batangnya cukup
+        // tinggi/lebar buat muat teksnya.
+        if (progress > 0.85 && val > 0 && barH >= 16) {
+          ctx.globalAlpha = (progress - 0.85) / 0.15;
+          ctx.fillStyle = plantLabelTextColor_(VALUE_STOCK_COLORS[p]);
+          ctx.textAlign = 'center';
+          const plantLabel = barWidth >= 60 ? 'Plant ' + p : p;
+          ctx.font = (barWidth >= 60 ? 'bold 9.5px' : 'bold 8px') + ' -apple-system, sans-serif';
+          ctx.fillText(plantLabel, x + barWidth / 2, padTop + chartH - 8);
           ctx.globalAlpha = 1;
         }
       });
