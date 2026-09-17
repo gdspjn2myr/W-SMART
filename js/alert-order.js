@@ -60,6 +60,7 @@ function initAlertOrderPage() {
     document.getElementById('btnDownloadAlertOrderExcel').addEventListener('click', downloadAlertOrderExcel);
     document.getElementById('btnDownloadAlertOrderPdf').addEventListener('click', printAlertOrderPdf);
     wireBuatPRModal();
+    wireRiwayatDokumenPRModal();
   }
   loadAlertOrder();
 }
@@ -369,6 +370,12 @@ let prSearchText = '';
 let prRows = []; // draft baris PR yang lagi diedit — {source, kode, namaBarang, area, minStock, maxStock, satuan, statusBarang, stockPer, orderQty, plant, diluarFilter}
 let prSaved = null; // hasil Api.createPRBatch, dipakai buat Download Excel/PDF
 let prStockBalanceCache = null; // cache Api.getStockBalance({}), dipakai buat search "+ Tambah Item Manual"
+// ID anti-dobel-simpan buat 1x "percobaan Simpan PR" (SAMA pola dengan
+// pnRequestId di js/penerimaan.js) — dibuat ulang tiap modal Buat PR dibuka
+// (transaksi baru), TAPI TETAP PAKAI ID YANG SAMA kalau user retry Simpan
+// yang gagal/timeout (lihat withIdempotency_ di Code.gs & komentar
+// clientRequestId di handleCreatePRBatch soal kenapa ini penting).
+let prRequestId = generateClientRequestId();
 
 function prRowFromItem(it, source) {
   return {
@@ -456,13 +463,14 @@ function renderPRTable() {
   const tbody = document.getElementById('buatPRTbody');
   document.getElementById('buatPRSummary').textContent = prRows.length + ' item';
   if (!prRows.length) {
-    tbody.innerHTML = '<tr><td colspan="11" class="empty-state">Tidak ada barang yang cocok dengan filter. Gunakan "+ Tambah Item Manual" untuk menambah barang lain.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="12" class="empty-state">Tidak ada barang yang cocok dengan filter. Gunakan "+ Tambah Item Manual" untuk menambah barang lain.</td></tr>';
     return;
   }
   tbody.innerHTML = prRows.map((r, idx) => `
       <tr class="${r.diluarFilter ? 'pr-row-diluar-filter' : ''}" data-idx="${idx}">
         <td>${idx + 1}</td>
         <td><input type="text" data-field="kode" value="${escapeHtml(r.kode)}"></td>
+        <td class="pr-col-plant">${escapeHtml(r.plant || '-')}</td>
         <td class="pr-col-nama">
           <input type="text" data-field="namaBarang" value="${escapeHtml(r.namaBarang)}">
           ${r.diluarFilter ? '<div class="pr-badge-diluar-filter">Di luar filter</div>' : ''}
@@ -526,6 +534,7 @@ function openBuatPRModal() {
   prSearchText = '';
   prRows = [];
   prSaved = null;
+  prRequestId = generateClientRequestId(); // transaksi baru -> ID baru
 
   document.getElementById('buatPRSearchItem').value = '';
   document.getElementById('buatPRAddManualPanel').hidden = true;
@@ -570,7 +579,8 @@ async function handleSimpanPR() {
         qtyDisarankan: r.orderQty, plant: r.plant, area: r.area,
         minStock: r.minStock, maxStock: r.maxStock, statusBarang: r.statusBarang,
         stockPer: r.stockPer, diluarFilter: r.diluarFilter
-      }))
+      })),
+      clientRequestId: prRequestId
     };
     const res = await Api.createPRBatch(payload);
     res.judul = document.getElementById('buatPRJudul').value;
@@ -580,6 +590,13 @@ async function handleSimpanPR() {
       showToast(res.dilewati.length + ' item dilewati (sudah ada PR menunggu): ' + res.dilewati.map((d) => d.kode).join(', '), 'error');
     }
     if (!res.items.length) {
+      // Semua item di batch ini "dilewati" (tidak ada yang benar2 ditulis) —
+      // form TETAP kebuka buat user perbaiki/hapus baris yang bentrok & coba
+      // lagi, jadi ID-nya harus diganti juga di sini (bukan cuma di jalur
+      // sukses di bawah), supaya percobaan berikutnya TIDAK dianggap retry
+      // dari percobaan "kosong" ini (yang hasilnya ok:true & ikut ke-cache
+      // oleh withIdempotency_ di server).
+      prRequestId = generateClientRequestId();
       btn.disabled = false;
       btn.textContent = 'Simpan PR';
       return;
@@ -591,6 +608,7 @@ async function handleSimpanPR() {
     document.getElementById('buatPRSavedPanel').hidden = false;
     btn.textContent = 'Tersimpan';
     prLockAfterSave();
+    prRequestId = generateClientRequestId(); // sudah sukses -> percobaan berikutnya (kalau ada) dianggap transaksi baru
     await loadAlertOrder(); // refresh daftar Alert Order biar item yg baru dapat PR ilang dari situ
   } catch (err) {
     showToast(err.message, 'error');
@@ -890,6 +908,107 @@ function printPRDocument() {
       img.addEventListener('error', onOneDone, { once: true });
     });
   }
+}
+
+// ---------------------------------------------------------------------------
+// RIWAYAT DOKUMEN PR — daftar SEMUA dokumen PR yang sudah pernah tersimpan di
+// server (lihat handleGetPRDocumentList di Code.gs). Tombol Excel/PDF di
+// modal "Buat PR" di atas cuma jalan selama prSaved (in-memory) masih keisi
+// — begitu modal itu ditutup atau halaman di-reload, prSaved hilang. Modal
+// INI ambil datanya langsung dari server tiap kali dibuka, jadi tetap bisa
+// download/cetak ulang dokumen mana pun kapan saja — termasuk skenario "muncul
+// pesan gagal padahal sudah tersimpan" (lihat komentar clientRequestId di
+// handleCreatePRBatch) kalau Bos kelanjur nutup modal/reload sebelum sempat
+// klik Simpan PR ulang.
+// ---------------------------------------------------------------------------
+
+// Judul dokumen TIDAK disimpan di server (cuma isian bebas pas awal bikin) —
+// di-generate ulang di sini pakai TANGGAL DOKUMEN ASLINYA (bukan hari ini),
+// supaya cetak ulang dokumen lama tetap nunjukin tanggal yang benar.
+function prDefaultJudulFor(tanggalPRStr) {
+  const datePart = (tanggalPRStr || '').split(' ')[0];
+  const parts = datePart.split('-');
+  const d = (parts.length === 3) ? new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2])) : new Date();
+  return 'FORM PENGADAAN SPARE PART FAST MOVING & CRITICAL JAYANTI 2 per TANGGAL ' + prFormatTanggalIndo(d);
+}
+
+async function openPrDocListModal() {
+  document.getElementById('prDocListModalBackdrop').hidden = false;
+  document.getElementById('prDocListModal').hidden = false;
+  await loadPrDocList();
+}
+function closePrDocListModal() {
+  document.getElementById('prDocListModalBackdrop').hidden = true;
+  document.getElementById('prDocListModal').hidden = true;
+}
+
+async function loadPrDocList() {
+  const body = document.getElementById('prDocListBody');
+  body.innerHTML = '<div class="empty-state">Memuat...</div>';
+  try {
+    const res = await Api.getPRDocumentList();
+    renderPrDocList(res.documents || []);
+  } catch (err) {
+    body.innerHTML = `<div class="empty-state">Gagal memuat: ${escapeHtml(err.message)}</div>`;
+  }
+}
+
+function renderPrDocList(documents) {
+  const body = document.getElementById('prDocListBody');
+  if (!documents.length) {
+    body.innerHTML = '<div class="empty-state">Belum ada dokumen PR yang tersimpan.</div>';
+    return;
+  }
+  body.innerHTML = documents.map((d) => `
+      <div class="pr-doc-item" data-no-dokumen="${escapeHtml(d.noDokumen)}">
+        <div class="pr-doc-item-main">
+          <strong>${escapeHtml(d.noDokumen)}</strong>
+          <span class="item-meta-line">${escapeHtml(d.tanggalPR)} · ${d.jumlahItem} item${d.plants.length ? ' · Plant ' + escapeHtml(d.plants.join(', ')) : ''}</span>
+        </div>
+        <div class="pr-doc-item-actions">
+          <button type="button" class="btn btn-small" data-doc-action="excel">Excel</button>
+          <button type="button" class="btn btn-small" data-doc-action="pdf">PDF</button>
+        </div>
+      </div>
+    `).join('');
+}
+
+// Pakai balik downloadPRExcel/printPRDocument APA ADANYA (bukan nulis logic
+// generate Excel/PDF terpisah) — dengan cara isi prSaved global dari data
+// yang diambil ulang dari server, PERSIS bentuknya kayak hasil createPRBatch
+// pas awal disimpan. Sengaja BUKAN disimpan permanen (cuma dipakai sesaat
+// buat 1x download/print ini) — kalau modal "Buat PR" kebetulan lagi ada
+// state lain, itu prioritas terakhir kok yang menang, jadi tidak masalah.
+async function handlePrDocListAction(noDokumen, action, btn) {
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '...';
+  try {
+    const res = await Api.getPRDocument({ noDokumen });
+    prSaved = { noDokumen: res.noDokumen, tanggalPR: res.tanggalPR, items: res.items, judul: prDefaultJudulFor(res.tanggalPR) };
+    if (action === 'excel') downloadPRExcel(); else printPRDocument();
+  } catch (err) {
+    showToast(err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
+}
+
+function wireRiwayatDokumenPRModal() {
+  document.getElementById('btnRiwayatDokumenPR').addEventListener('click', openPrDocListModal);
+  document.getElementById('btnClosePrDocListModal').addEventListener('click', closePrDocListModal);
+  document.getElementById('prDocListModalBackdrop').addEventListener('click', closePrDocListModal);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !document.getElementById('prDocListModal').hidden) closePrDocListModal();
+  });
+  document.getElementById('prDocListBody').addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-doc-action]');
+    if (!btn) return;
+    const item = e.target.closest('[data-no-dokumen]');
+    if (!item) return;
+    handlePrDocListAction(item.dataset.noDokumen, btn.dataset.docAction, btn);
+  });
 }
 
 function wireBuatPRModal() {
