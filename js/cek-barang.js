@@ -120,11 +120,21 @@ function renderCbResult(res) {
       ? `<div class="sb-sumber-breakdown">${sumberBreakdownChipsHtml(p.sumberBreakdown)}</div>`
       : '';
 
+    // Plant ini SUDAH tercatat ada transaksinya, TAPI belum resmi terdaftar di
+    // Master Data buat kombinasi kode+Plant ini (mis. Barang Masuk yang salah
+    // pencet Plant) — ditandai jelas biar Bos tahu perlu didaftarkan/dikoreksi,
+    // bukan dikira Plant normal biasa (lihat handleGetCekBarang, Code.gs).
+    const belumTerdaftarBadge = p.belumAdaMaster
+      ? '<span class="ra-badge ra-badge-unregistered">Belum Terdaftar di Master Data</span>' : '';
+
     return `
       <div class="cb-plant-block">
         <div class="cb-plant-header">
           <span>Plant ${escapeHtml(p.plant || '-')}</span>
-          <span class="ra-badge ${statusClass}">${escapeHtml(statusLabel)}</span>
+          <span class="cb-plant-header-badges">
+            <span class="ra-badge ${statusClass}">${escapeHtml(statusLabel)}</span>
+            ${belumTerdaftarBadge}
+          </span>
         </div>
         <div class="op-detail-stats">
           <div><span>Qty Sistem</span><strong>${p.onHand} ${escapeHtml(res.satuan || '')}</strong></div>
