@@ -2233,6 +2233,10 @@ body {
 .rw-badge-opname { background: #ece9f3; color: #4b3b8a; }
 .rw-badge-pr { background: #e6edfb; color: var(--navy); }
 
+/* ------------------------------- ORDERAN --------------------------------- */
+.or-empty { color: var(--text-muted); font-style: italic; }
+.or-satuan { font-size: 10.5px; font-weight: 600; color: var(--text-muted); margin-left: 3px; }
+
 /* ---------------------------- STOCK OPNAME ------------------------------- */
 .ra-badge-normal { background: #e6f7ee; color: var(--green); }
 .ra-badge-overmax { background: #f4eefc; color: #7a4bcf; }
@@ -2291,8 +2295,9 @@ body {
 }
 .cb-plant-header {
   display: flex; justify-content: space-between; align-items: center; gap: 10px;
-  font-weight: 700; color: var(--navy); font-size: 14px;
+  font-weight: 700; color: var(--navy); font-size: 14px; flex-wrap: wrap;
 }
+.cb-plant-header-badges { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 
 .op-item-wrap { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
 .op-item {
