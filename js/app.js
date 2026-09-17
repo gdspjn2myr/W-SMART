@@ -618,6 +618,9 @@ document.addEventListener('DOMContentLoaded', () => {
   Router.register('alert-order', () => {
     initAlertOrderPage();
   });
+  Router.register('orderan', () => {
+    initOrderanPage();
+  });
   Router.register('users', () => {
     initUsersPage();
   });
