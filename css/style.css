@@ -2426,12 +2426,24 @@ body {
   margin-top: 6px;
 }
 .pr-table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 10px; margin-bottom: 10px; }
-.pr-table { width: 100%; border-collapse: collapse; font-size: 12.5px; min-width: 900px; }
+.pr-table { width: 100%; border-collapse: collapse; font-size: 12.5px; min-width: 960px; }
 .pr-table th, .pr-table td {
   border: 1px solid var(--border); padding: 6px 7px; text-align: left; vertical-align: middle; white-space: nowrap;
 }
 .pr-table th { background: #eef1f8; font-weight: 700; color: var(--navy); font-size: 11.5px; }
 .pr-table td:first-child, .pr-table th:first-child { text-align: center; white-space: normal; }
+.pr-table td.pr-col-plant { text-align: center; color: var(--text-muted); font-weight: 600; }
+
+/* Riwayat Dokumen PR — daftar dokumen PR tersimpan (lihat js/alert-order.js
+   wireRiwayatDokumenPRModal), dipola sama seperti .op-riwayat-list/.op-riwayat-item. */
+.pr-doc-list { display: flex; flex-direction: column; gap: 6px; }
+.pr-doc-item {
+  display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 12.5px;
+}
+.pr-doc-item-main { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.pr-doc-item-main strong { color: var(--navy); }
+.pr-doc-item-actions { display: flex; gap: 6px; flex-shrink: 0; }
 .pr-table input, .pr-table select {
   width: 100%;
   min-width: 70px;
