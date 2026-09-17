@@ -1317,6 +1317,7 @@
         <span>Barang Perlu Diorder <span class="count-badge" id="aoCount">0 Item</span></span>
         <div class="ao-header-actions">
           <button type="button" id="btnBuatPR" class="btn btn-small btn-primary">+ Buat PR</button>
+          <button type="button" id="btnRiwayatDokumenPR" class="btn btn-small" title="Lihat/download ulang dokumen PR yang sudah pernah dibuat">Riwayat Dokumen PR</button>
           <button type="button" id="btnRefreshAlertOrder" class="btn btn-small" title="Refresh" aria-label="Refresh">
             <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 4v6h-6"/></svg>
           </button>
@@ -1471,13 +1472,13 @@
         <table class="pr-table" id="buatPRTable">
           <thead>
             <tr>
-              <th>NO</th><th>Kode Barang</th><th>Nama Barang</th><th>Unit Mesin</th>
+              <th>NO</th><th>Kode Barang</th><th>Plant</th><th>Nama Barang</th><th>Unit Mesin</th>
               <th>Min</th><th>Max</th><th>Satuan</th><th>Status</th>
               <th id="buatPRStockPerHeader">Stock Per</th><th>Order</th><th></th>
             </tr>
           </thead>
           <tbody id="buatPRTbody">
-            <tr><td colspan="11" class="empty-state">Tidak ada barang yang cocok dengan filter.</td></tr>
+            <tr><td colspan="12" class="empty-state">Tidak ada barang yang cocok dengan filter.</td></tr>
           </tbody>
         </table>
       </div>
@@ -1499,6 +1500,27 @@
           <button type="button" id="btnDownloadPRExcel" class="btn btn-small">Download Excel</button>
           <button type="button" id="btnDownloadPRPdf" class="btn btn-small">Download PDF</button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- "Riwayat Dokumen PR" — daftar SEMUA dokumen PR yang sudah pernah
+       tersimpan di server, TERPISAH dari modal "Buat PR" di atas (yang
+       tombol Download-nya cuma aktif selama modal itu kebuka). Jaga-jaga
+       kalau modal "Buat PR" kelanjur ketutup/halaman ke-reload pas balasan
+       Simpan PR-nya telat/gagal sampai ke browser — datanya tetap aman di
+       server, dan tetap bisa di-download/cetak ulang dari sini. Lihat
+       wireRiwayatDokumenPRModal di js/alert-order.js. -->
+  <div id="prDocListModalBackdrop" class="modal-backdrop" hidden></div>
+  <div id="prDocListModal" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="prDocListModalTitle">
+    <div class="modal-card modal-card-wide card">
+      <div class="modal-header">
+        <span id="prDocListModalTitle">Riwayat Dokumen PR</span>
+        <button type="button" id="btnClosePrDocListModal" class="modal-close" aria-label="Tutup">×</button>
+      </div>
+      <p class="md-preview-hint">Semua dokumen PR yang sudah pernah tersimpan — dipakai buat download/cetak ulang Excel/PDF-nya kapan saja, walau modal "Buat PR" sudah ditutup.</p>
+      <div id="prDocListBody" class="pr-doc-list">
+        <div class="empty-state">Memuat...</div>
       </div>
     </div>
   </div>
