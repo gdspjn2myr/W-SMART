@@ -189,6 +189,10 @@
       <svg viewBox="0 0 24 24" class="nav-icon"><path d="M12 3a6 6 0 0 0-6 6c0 4.5-2 6-2 6h16s-2-1.5-2-6a6 6 0 0 0-6-6Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 20a2 2 0 0 0 4 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
       <span>Alert Order</span>
     </a>
+    <a href="#/orderan" class="nav-item" data-nav="orderan">
+      <svg viewBox="0 0 24 24" class="nav-icon"><path d="M9 3.5h6a1 1 0 0 1 1 1V6h1.5A1.5 1.5 0 0 1 19 7.5v12A1.5 1.5 0 0 1 17.5 21h-11A1.5 1.5 0 0 1 5 19.5v-12A1.5 1.5 0 0 1 6.5 6H8V4.5a1 1 0 0 1 1-1Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 11h6M9 15h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      <span>Orderan</span>
+    </a>
     <a href="#/users" class="nav-item" data-nav="users">
       <svg viewBox="0 0 24 24" class="nav-icon"><path d="M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3.5 20c0-3.6 2.5-6 5.5-6s5.5 2.4 5.5 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M16 5.5c1.5.4 2.5 1.7 2.5 3.2S17.5 11.5 16 12M19 20c0-2.8-1.6-4.9-3.8-5.7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       <span>Kelola User</span>
@@ -1345,6 +1349,103 @@
 
   </section>
 
+  <!-- ============================= ORDERAN ============================= -->
+  <!-- Daftar SEMUA barang yang sudah pernah dibuatkan PR dari Alert Order,
+       dari PR dibuat sampai barang datang. No PR/Tanggal Release PR/PO & No PO
+       diisi manual (klik ikon Edit per baris) — sisanya (Tanggal Datang, Qty
+       Datang, Outstanding, Leadtime) otomatis kesinkron dari Barang Masuk,
+       lihat js/orderan.js. -->
+  <section id="page-orderan" class="page" hidden>
+
+    <div class="md-toolbar">
+      <input type="search" id="orSearch" class="md-search" placeholder="Cari kode / nama barang / No PR / No PO...">
+      <select id="orPlantFilter" class="rw-select">
+        <option value="">Semua Plant</option>
+        <option value="1111">Plant 1111</option>
+        <option value="1112">Plant 1112</option>
+        <option value="1113">Plant 1113</option>
+      </select>
+      <select id="orStatusFilter" class="rw-select">
+        <option value="">Semua Status</option>
+        <option value="Menunggu">Menunggu (Proses)</option>
+        <option value="Selesai">Selesai (Barang Datang)</option>
+      </select>
+    </div>
+
+    <div class="sb-summary">
+      <span id="orCount">0 Item</span>
+      <button type="button" id="btnRefreshOrderan" class="btn btn-small" title="Refresh" aria-label="Refresh">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 4v6h-6"/></svg>
+      </button>
+    </div>
+
+    <div class="card sb-table-card">
+      <div class="sb-table-wrap" id="orTableWrap">
+        <table class="sb-table">
+          <thead>
+            <tr>
+              <th>Kode Barang</th>
+              <th>Nama Barang</th>
+              <th>Plant</th>
+              <th class="sb-num">Qty Order</th>
+              <th>Tanggal PR</th>
+              <th>Tgl Release PR</th>
+              <th>No PR</th>
+              <th>Tgl Release PO</th>
+              <th>No PO</th>
+              <th>Tanggal Datang</th>
+              <th class="sb-num">Qty Datang</th>
+              <th class="sb-num">Outstanding</th>
+              <th class="sb-num">Leadtime</th>
+              <th>Status</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="orTbody">
+            <tr><td colspan="15" class="empty-state">Memuat data...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- Modal Edit Orderan — cuma 4 field manual (No PR, Tanggal Release PR,
+       Tanggal Release PO, No PO), lihat js/orderan.js. -->
+  <div id="orderanEditModalBackdrop" class="modal-backdrop" hidden></div>
+  <div id="orderanEditModal" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="orderanEditModalTitle">
+    <div class="modal-card card">
+      <div class="modal-header">
+        <span id="orderanEditModalTitle">Edit Orderan</span>
+        <button type="button" id="btnCloseOrderanEditModal" class="modal-close" aria-label="Tutup">×</button>
+      </div>
+      <p class="md-preview-hint" id="orderanEditItemInfo"></p>
+      <form id="orderanEditForm">
+        <div class="form-row-pair">
+          <div class="form-row">
+            <label>No PR</label>
+            <input type="text" id="orEditNoPR" placeholder="Nomor PR dari procurement">
+          </div>
+          <div class="form-row">
+            <label>Tanggal Release PR</label>
+            <input type="date" id="orEditTglReleasePR">
+          </div>
+        </div>
+        <div class="form-row-pair">
+          <div class="form-row">
+            <label>No PO</label>
+            <input type="text" id="orEditNoPO" placeholder="Nomor PO dari procurement">
+          </div>
+          <div class="form-row">
+            <label>Tanggal Release PO</label>
+            <input type="date" id="orEditTglReleasePO">
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">Simpan</button>
+      </form>
+    </div>
+  </div>
+
   <!-- Modal "Buat PR" — bikin 1 dokumen PR berisi beberapa barang sekaligus
        (format "Form Pengadaan Spare Part"), lihat js/alert-order.js. -->
   <div id="buatPRModalBackdrop" class="modal-backdrop" hidden></div>
@@ -1919,6 +2020,7 @@
 <script src="js/opname.js"></script>
 <script src="js/cek-barang.js"></script>
 <script src="js/alert-order.js"></script>
+<script src="js/orderan.js"></script>
 <script src="js/foto-compress.js"></script>
 <script src="js/reservasi.js"></script>
 <script src="js/spk-online.js"></script>
