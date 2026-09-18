@@ -34,6 +34,7 @@ function initMasterDataPage() {
     ['mdAvgUsage', 'mdLeadTime', 'mdMinStock', 'mdMaxStock'].forEach((id) => {
       document.getElementById(id).addEventListener('input', updateMdPreview);
     });
+    document.getElementById('mdJenis').addEventListener('change', updateMdJenisVisibility);
 
     document.getElementById('mdForm').addEventListener('submit', handleMdSubmit);
 
@@ -96,7 +97,7 @@ function renderMdList() {
     // yang dipakai buat nandain item hasil auto-daftar dari Barang Masuk (lihat
     // autoRegisterMasterBarang_ di Code.gs), bukan cuma item ROP > MAX.
     const belumLengkap = it.minStock === 0 && it.max === 0;
-    const jenisClass = it.jenis === 'OBS' ? 'md-badge-jenis-obs' : it.jenis === 'Fast Moving' ? 'md-badge-jenis-fm' : '';
+    const jenisClass = it.jenis === 'OBS' ? 'md-badge-jenis-obs' : it.jenis === 'Fast Moving' ? 'md-badge-jenis-fm' : it.jenis === 'User' ? 'md-badge-jenis-user' : '';
     return `
       <div class="md-item">
         <div class="md-item-main">
@@ -151,6 +152,7 @@ function openMdModal(item, opts) {
   document.getElementById('mdLeadTime').value = item ? (item.leadTime || 0) : 0;
   document.getElementById('mdMinStock').value = item ? (item.minStock || 0) : 0;
   document.getElementById('mdMaxStock').value = item ? (item.max || 0) : 0;
+  updateMdJenisVisibility();
   updateMdPreview();
 
   document.getElementById('mdModalBackdrop').hidden = false;
@@ -162,6 +164,16 @@ function closeMdModal() {
   document.getElementById('mdModalBackdrop').hidden = true;
   document.getElementById('mdModal').hidden = true;
   document.getElementById('mdKode').disabled = false;
+}
+
+// Jenis "User" = barang khusus buat 1 orang/kebutuhan tertentu, BUKAN barang
+// stock reorder rutin -> Min-Max/Avg Usage/Lead Time/ROP nggak berlaku (server
+// selalu paksa 0, lihat handleSaveMasterBarang di Code.gs) — section itu
+// disembunyikan di sini biar formnya nggak nampilin field yang percuma diisi.
+function updateMdJenisVisibility() {
+  const isUser = document.getElementById('mdJenis').value === 'User';
+  document.getElementById('mdMinMaxSection').hidden = isUser;
+  document.getElementById('mdUserJenisHint').hidden = !isUser;
 }
 
 function updateMdPreview() {
