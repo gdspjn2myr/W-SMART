@@ -1503,6 +1503,7 @@ body {
 }
 .md-badge-jenis-obs { background: #ece9f3; color: #4b3b8a; }
 .md-badge-jenis-fm { background: #e6f7ee; color: var(--green); }
+.md-badge-jenis-user { background: #e7f0fd; color: #1d5ea8; }
 
 .status-pill {
   border: none;
