@@ -1664,6 +1664,7 @@
             <option value="">Belum ditentukan</option>
             <option value="OBS">OBS</option>
             <option value="Fast Moving">Fast Moving</option>
+            <option value="User">User</option>
           </select>
         </div>
         <div class="form-row">
@@ -1681,36 +1682,45 @@
         </select>
       </div>
 
-      <div class="items-header"><span>Min-Max (dari Perusahaan)</span></div>
-      <div class="md-formula-grid">
-        <div class="form-row">
-          <label>Min Stock (pcs) *</label>
-          <input type="number" id="mdMinStock" min="0" step="1" value="0" required>
+      <!-- Barang Jenis "User" = barang khusus buat 1 orang/kebutuhan tertentu,
+           BUKAN barang stock reorder rutin — jadi Min-Max/ROP-nya nggak
+           berlaku (selalu dianggap 0, lihat handleSaveMasterBarang di
+           Code.gs). Section ini disembunyikan begitu Jenis = User dipilih
+           (lihat updateMdJenisVisibility di js/master-data.js), diganti
+           hint singkat di bawah. -->
+      <div id="mdMinMaxSection">
+        <div class="items-header"><span>Min-Max (dari Perusahaan)</span></div>
+        <div class="md-formula-grid">
+          <div class="form-row">
+            <label>Min Stock (pcs) *</label>
+            <input type="number" id="mdMinStock" min="0" step="1" value="0" required>
+          </div>
+          <div class="form-row">
+            <label>Max Stock (pcs) *</label>
+            <input type="number" id="mdMaxStock" min="0" step="1" value="0" required>
+          </div>
         </div>
-        <div class="form-row">
-          <label>Max Stock (pcs) *</label>
-          <input type="number" id="mdMaxStock" min="0" step="1" value="0" required>
-        </div>
-      </div>
 
-      <div class="items-header"><span>Buffer &amp; Titik Order (dihitung otomatis)</span></div>
-      <div class="md-formula-grid">
-        <div class="form-row">
-          <label>Avg Usage (pcs/hari)</label>
-          <input type="number" id="mdAvgUsage" min="0" step="any" value="0">
+        <div class="items-header"><span>Buffer &amp; Titik Order (dihitung otomatis)</span></div>
+        <div class="md-formula-grid">
+          <div class="form-row">
+            <label>Avg Usage (pcs/hari)</label>
+            <input type="number" id="mdAvgUsage" min="0" step="any" value="0">
+          </div>
+          <div class="form-row">
+            <label>Lead Time (hari)</label>
+            <input type="number" id="mdLeadTime" min="0" step="1" value="0">
+          </div>
         </div>
-        <div class="form-row">
-          <label>Lead Time (hari)</label>
-          <input type="number" id="mdLeadTime" min="0" step="1" value="0">
-        </div>
-      </div>
 
-      <div class="md-preview">
-        <div class="md-preview-item"><span>ROP (Titik Order)</span><strong id="mdPreviewRop">0</strong></div>
-        <div class="md-preview-item"><span>Buffer di atas Min</span><strong id="mdPreviewBuffer">0</strong></div>
+        <div class="md-preview">
+          <div class="md-preview-item"><span>ROP (Titik Order)</span><strong id="mdPreviewRop">0</strong></div>
+          <div class="md-preview-item"><span>Buffer di atas Min</span><strong id="mdPreviewBuffer">0</strong></div>
+        </div>
+        <div id="mdPreviewWarning" class="md-preview-warning" hidden></div>
+        <p class="md-preview-hint">ROP = Min Stock + (Avg Usage × Lead Time) — ini titik kapan kamu harus order, supaya stock nggak sempat turun di bawah Min selagi nunggu barang datang.</p>
       </div>
-      <div id="mdPreviewWarning" class="md-preview-warning" hidden></div>
-      <p class="md-preview-hint">ROP = Min Stock + (Avg Usage × Lead Time) — ini titik kapan kamu harus order, supaya stock nggak sempat turun di bawah Min selagi nunggu barang datang.</p>
+      <p id="mdUserJenisHint" class="md-preview-hint" hidden>Barang Jenis "User" nggak pakai Min-Max/ROP (bukan barang stock reorder rutin) — nggak akan masuk Alert Order kecuali stock-nya benar-benar habis (Stock Out).</p>
 
       <button type="submit" class="btn btn-primary btn-block">Simpan Item</button>
     </form>
