@@ -10,7 +10,7 @@ let sbInitialized = false;
 let sbCurrentPeriod = null; // { tanggalMulai, tanggalAkhir } dari filter yang lagi aktif — dipakai popup Riwayat Transaksi biar rentangnya SAMA dengan yang lagi ditampilkan di tabel
 
 const SB_KATEGORI_CLASS = { A: 'md-badge-a', B: 'md-badge-b', C: 'md-badge-c' };
-const SB_JENIS_CLASS = { 'OBS': 'md-badge-jenis-obs', 'Fast Moving': 'md-badge-jenis-fm' };
+const SB_JENIS_CLASS = { 'OBS': 'md-badge-jenis-obs', 'Fast Moving': 'md-badge-jenis-fm', 'User': 'md-badge-jenis-user' };
 const SB_RIWAYAT_JENIS_CLASS = { 'Penerimaan': 'ra-badge-normal', 'Pemakaian': 'ra-badge-out', 'Koreksi Stock': 'ra-badge-near' };
 
 function initStockBalancePage() {
