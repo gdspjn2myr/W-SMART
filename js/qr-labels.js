@@ -258,14 +258,15 @@ function renderQrBarangSelected() {
   wrap.innerHTML = `<div class="qr-pick-selected-count">${qrBarangSelected.size} barang dipilih</div><div class="qr-pick-chip-list">${chips}</div>`;
 }
 
-// Baca "Detail Tambahan (opsional)" di mode Manual — berlaku SAMA buat semua
-// barang yang dipilih di 1x generate ini (No PO/Vendor/dst emang biasanya 1
-// dokumen/1 sumber yang sama buat sekumpulan barang yang lagi dicetak
-// labelnya bareng). Field yang dikosongin -> tidak ditampilkan di label.
-// `plant` di sini SENGAJA cuma FALLBACK MANUAL (dipakai di generateQrBarangLabels
-// kalau baris Master Data barangnya sendiri nggak punya Plant) — lihat catatan
-// di generateQrBarangLabels soal kenapa Object.assign biasa TIDAK dipakai
-// buat field ini.
+// Baca "Detail Tambahan (opsional)" di mode Manual. DULU field ini dipaksa
+// SAMA buat semua barang yang dipilih di 1x generate — bug yang dilaporkan
+// Bos: pilih beberapa Kode Barang yang beda (dari PO/Vendor/User yang beda
+// juga), labelnya keliatan seragam semua padahal barangnya beda transaksi.
+// SEKARANG field yang di sini DIKOSONGIN otomatis diisi dari Penerimaan
+// TERAKHIR milik masing2 barang SENDIRI-SENDIRI (lihat generateQrBarangLabels
+// & handleGetLatestPenerimaanBatch di Code.gs) — field ini cuma jadi OVERRIDE
+// manual kalau memang diisi (dipaksa sama ke semua barang, buat kasus mis.
+// relabel di bawah 1 dokumen yang sama).
 function readQrManualDetail() {
   const noPO = (document.getElementById('qrManualNoPO') || {}).value || '';
   const vendor = (document.getElementById('qrManualVendor') || {}).value || '';
@@ -290,21 +291,49 @@ async function generateQrBarangLabels() {
     return;
   }
   const manualDetail = readQrManualDetail();
-  const labels = items.map((it) => buildBarangLabel(Object.assign({
-    kode: it.kodeBarang,
-    namaBarang: it.namaBarang,
-    satuan: it.satuan
-  }, manualDetail, {
-    // Plant: utamakan isian manual "Detail Tambahan" (buat barang yang
-    // Plant-nya belum kedaftar/kosong di baris Master Data-nya, atau kalau
-    // memang mau di-override) — fallback ke Plant dari Master Data (it.plant)
-    // kalau field manual dikosongin. Field ini SENGAJA ditulis TERPISAH
-    // setelah manualDetail (bukan ikut disebar polos lewat Object.assign di
-    // atas): manualDetail.plant yang KOSONG ('') itu falsy tapi tetap bakal
-    // NIMPA it.plant kalau ikut disebar biasa lewat Object.assign — jadi
-    // fallback-nya harus dihitung eksplisit di sini.
-    plant: manualDetail.plant || it.plant
-  })));
+
+  // Ambil Penerimaan TERAKHIR punya MASING2 barang sekaligus (1x panggil buat
+  // semua kode yang dipilih, bukan satu-satu per kode — lihat
+  // handleGetLatestPenerimaanBatch di Code.gs). Ini yang benerin bug "No
+  // PO/User dst keliatan seragam" — tiap barang sekarang kepakein histori
+  // Penerimaan-nya SENDIRI, bukan numpang 1 isian manual yang sama.
+  let latestByKode = {};
+  const btn = document.getElementById('btnGenerateQrBarang');
+  const originalBtnText = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = 'Memuat...'; }
+  try {
+    const res = await Api.getLatestPenerimaanBatch({ kodes: items.map((it) => it.kodeBarang) });
+    latestByKode = res.data || {};
+  } catch (err) {
+    // Gagal ambil histori BUKAN alasan gagalin cetak label sama sekali — tetap
+    // lanjut (field yang kosong ya kosong/pakai fallback lain), cuma dikasih
+    // tau biar Bos ngerti kenapa sebagian field label mungkin kosong.
+    showToast('Gagal ambil histori Penerimaan per barang (' + err.message + ') — label tetap dibuat, sebagian field mungkin kosong.', 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = originalBtnText; }
+  }
+
+  const labels = items.map((it) => {
+    const auto = latestByKode[it.kodeBarang] || {};
+    // Prioritas tiap field: isian manual "Detail Tambahan" (override, kalau
+    // diisi) -> Penerimaan TERAKHIR punya barang ITU SENDIRI -> kosong.
+    // Plant beda dikit: fallback terakhirnya Plant dari Master Data (it.plant)
+    // kalau barangnya belum pernah ada Penerimaan sama sekali & tidak diisi
+    // manual — SAMA seperti perilaku lama, cuma sekarang disisipin auto.plant
+    // di antaranya.
+    return buildBarangLabel({
+      kode: it.kodeBarang,
+      namaBarang: it.namaBarang,
+      satuan: it.satuan,
+      noPO: manualDetail.noPO || auto.noPO || '',
+      vendor: manualDetail.vendor || auto.vendor || '',
+      sumber: manualDetail.sumber || auto.sumber || '',
+      sloc: manualDetail.sloc || auto.sloc || '',
+      tanggal: manualDetail.tanggal || auto.tanggal || '',
+      user: auto.user || '', // "Detail Tambahan" nggak ada isian User manual — selalu dari histori
+      plant: manualDetail.plant || auto.plant || it.plant || ''
+    });
+  });
   await renderQrLabels(labels);
 }
 
