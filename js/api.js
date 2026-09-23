@@ -134,6 +134,7 @@ const Api = {
   getOrderanList: () => callApi('getOrderanList'),
   updateOrderan: (payload) => callApi('updateOrderan', payload),
   getReceivingDetail: (payload) => callApi('getReceivingDetail', payload),
+  getLatestPenerimaanBatch: (payload) => callApi('getLatestPenerimaanBatch', payload),
   getPemakaianDetail: (payload) => callApi('getPemakaianDetail', payload),
   getStockMutasi: (payload) => callApi('getStockMutasi', payload),
   getItemMutasiRiwayat: (payload) => callApi('getItemMutasiRiwayat', payload),
