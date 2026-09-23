@@ -52,6 +52,16 @@ let qrLabelsPendingItems = null; // dipakai buat "cetak QR langsung" dari halama
 // buat lookup info barangnya — lihat getQrItemInfo di bawah.
 let qrBelumMapping = [];
 let qrBelumMappingLoaded = false;
+let qrBelumMappingSearchText = '';
+// Sama konsepnya dengan filter Sumber di Dashboard/Stock Balance (lihat
+// SUMBER_FILTER_OPTIONS & filterItemsBySumber di js/dashboard.js) — permintaan
+// Bos: "tambah filter sumber juga" di daftar Belum Ter-mapping ini. BEDA
+// dikit dari filterItemsBySumber aslinya: itu nge-GANTI angka onHand jadi
+// sisa khusus Sumber itu (buat kartu Dashboard) — di sini kita CUMA mau
+// nyaring baris mana yang ditampilkan, angka "Sisa X" yang ditampilkan tetap
+// belumTerMapping apa adanya (bukan pecahan per Sumber), makanya dibikin
+// fungsi sendiri (qrBelumMappingMatchesSumber) bukan numpang filterItemsBySumber.
+let qrBelumMappingSumber = '';
 
 const QR_BARANG_SUGGEST_LIMIT = 8; // maksimal saran yang ditampilkan sekaligus biar gak balik jadi daftar panjang
 
@@ -87,6 +97,17 @@ function initQrLabelsPage() {
     });
 
     document.getElementById('btnToggleQrBelumMapping').addEventListener('click', toggleQrBelumMappingSection);
+    document.getElementById('qrBelumMappingSearch').addEventListener('input', (e) => {
+      qrBelumMappingSearchText = e.target.value.trim().toLowerCase();
+      renderQrBelumMappingList();
+    });
+    document.getElementById('qrBelumMappingSumberFilter').addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-sumber]');
+      if (!btn) return;
+      qrBelumMappingSumber = btn.dataset.sumber;
+      renderSumberFilterChipsInto('qrBelumMappingSumberFilter', qrBelumMappingSumber);
+      renderQrBelumMappingList();
+    });
 
     document.getElementById('btnGenerateQrBarang').addEventListener('click', generateQrBarangLabels);
     document.getElementById('btnGenerateQrBin').addEventListener('click', generateQrBinLabels);
@@ -312,10 +333,20 @@ async function loadQrBelumMapping() {
     const res = await Api.getStockBalance({ filter: 'perlu-putaway' });
     qrBelumMapping = res.data || [];
     qrBelumMappingLoaded = true;
+    renderSumberFilterChipsInto('qrBelumMappingSumberFilter', qrBelumMappingSumber);
     renderQrBelumMappingList();
   } catch (err) {
     wrap.innerHTML = `<div class="qr-pick-suggest-empty">Gagal memuat: ${escapeHtml(err.message)}</div>`;
   }
+}
+
+// Barang dianggap "dari Sumber X" kalau stock saat ini punya rincian
+// sumberBreakdown (lihat hitungBalances_ di Code.gs) yang ada bucket tipe X
+// dengan sisa > 0 — pendekatan yang sama dipakai filterItemsBySumber, CUMA
+// di sini sekadar buat nyaring baris (bukan ganti angka onHand-nya).
+function qrBelumMappingMatchesSumber(it, tipe) {
+  if (!tipe) return true;
+  return Array.isArray(it.sumberBreakdown) && it.sumberBreakdown.some((b) => b.tipe === tipe && b.sisa > 0);
 }
 
 function renderQrBelumMappingList() {
@@ -324,9 +355,15 @@ function renderQrBelumMappingList() {
     wrap.innerHTML = '<div class="qr-pick-suggest-empty">Tidak ada barang yang belum ter-mapping saat ini.</div>';
     return;
   }
-  const items = qrBelumMapping.filter((it) => !qrBarangSelected.has(it.kode));
+  const items = qrBelumMapping.filter((it) =>
+    !qrBarangSelected.has(it.kode) &&
+    qrBelumMappingMatchesSumber(it, qrBelumMappingSumber) &&
+    (!qrBelumMappingSearchText ||
+      (it.kode || '').toLowerCase().includes(qrBelumMappingSearchText) ||
+      (it.namaBarang || '').toLowerCase().includes(qrBelumMappingSearchText))
+  );
   if (!items.length) {
-    wrap.innerHTML = '<div class="qr-pick-suggest-empty">Semua barang belum-ter-mapping sudah dipilih — cek daftar "Barang Dipilih" di bawah.</div>';
+    wrap.innerHTML = '<div class="qr-pick-suggest-empty">Tidak ada barang yang cocok (sudah dipilih semua, atau tidak ada yang cocok dengan pencarian/filter Sumber).</div>';
     return;
   }
   const rows = items.map((it) => {
