@@ -1862,6 +1862,44 @@ body {
 }
 .pw-print-btn:hover, .pw-print-btn:active { background: linear-gradient(135deg, #e0e9f9, #c8d8f4); }
 
+/* ---------- Put Away multi-select (checkbox + bulk bar + bulk modal) ---------- */
+.pw-item-check { display: flex; align-items: center; flex-shrink: 0; cursor: pointer; }
+.pw-select-checkbox { width: 18px; height: 18px; cursor: pointer; }
+.pw-select-all-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-muted);
+  margin: 4px 0 8px;
+  cursor: pointer;
+}
+.pw-select-all-row input { width: 16px; height: 16px; cursor: pointer; }
+.pw-bulk-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: #eef1f8;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--navy);
+}
+.pw-bulk-bar-actions { display: flex; gap: 8px; flex-shrink: 0; }
+.pw-bulk-list { display: flex; flex-direction: column; gap: 10px; margin: 8px 0 4px; }
+.pw-bulk-item {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: var(--card-bg);
+}
+.pw-bulk-item-title { font-weight: 600; font-size: 13.5px; }
+.pw-bulk-item-sub { font-size: 12px; color: var(--text-muted); margin: 2px 0 8px; }
+
 @media (min-width: 640px) {
   .modal { align-items: center; padding: 20px; }
   .modal-card { border-radius: 16px; }
@@ -2004,6 +2042,18 @@ body {
   cursor: pointer;
 }
 .qr-pick-suggest-addall:hover { background: #eef1f8; }
+
+/* Daftar "Belum Ter-mapping" di QR Labels Mode Manual — collapsible, bukan
+   dropdown-overlay (beda dari .qr-pick-suggest), jadi baris2 di dalamnya
+   (.qr-pick-suggest-item dkk, dipakai ulang) butuh wrapper statis sendiri. */
+.qr-belum-mapping-section {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px;
+  margin-bottom: 14px;
+  background: #f8f9fd;
+}
+.qr-belum-mapping-list { max-height: 320px; overflow-y: auto; }
 
 /* Chip list barang yang sudah dipilih — ini yang beneran dipakai buat
    generate label, kepisah dari hasil pencarian di atas. */
