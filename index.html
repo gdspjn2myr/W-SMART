@@ -647,7 +647,18 @@
         Belum Ter-mapping (Perlu Put Away)
         <span class="count-badge" id="pwBelumMappingCount">0 Item</span>
       </div>
-      <p class="md-preview-hint">Sudah diterima (Penerimaan) tapi belum di-scan masuk ke bin manapun. Klik item buat langsung pilih.</p>
+      <p class="md-preview-hint">Sudah diterima (Penerimaan) tapi belum di-scan masuk ke bin manapun. Klik item buat langsung pilih 1 di form atas, atau centang buat pilih beberapa sekaligus (bisa multi-SKU/multi-user) &mdash; muncul opsi Cetak Label atau Masukkan ke Bin di bawah.</p>
+      <label class="pw-select-all-row">
+        <input type="checkbox" id="pwSelectAll">
+        <span>Pilih semua</span>
+      </label>
+      <div id="pwBulkBar" class="pw-bulk-bar" hidden>
+        <span id="pwBulkCount">0 item dipilih</span>
+        <div class="pw-bulk-bar-actions">
+          <button type="button" id="btnPwBulkPrint" class="btn btn-small">Cetak Label</button>
+          <button type="button" id="btnPwBulkPutaway" class="btn btn-small btn-primary">Masukkan ke Bin</button>
+        </div>
+      </div>
       <div id="pwBelumMappingList" class="pw-list">
         <div class="empty-state">Memuat...</div>
       </div>
@@ -867,6 +878,15 @@
         <input type="search" id="qrBarangSearch" class="md-search" placeholder="Ketik kode / nama barang..." autocomplete="off">
         <div id="qrBarangSuggest" class="qr-pick-suggest" hidden></div>
       </div>
+
+      <button type="button" id="btnToggleQrBelumMapping" class="btn-link">+ Pilih dari daftar Belum Ter-mapping (Perlu Put Away)</button>
+      <div id="qrBelumMappingSection" class="qr-belum-mapping-section" hidden>
+        <p class="hint-text">Barang yang sudah diterima tapi belum di-put away ke bin manapun &mdash; berguna kalau barangnya belum bisa/belum sempat di-put away tapi labelnya perlu dicetak duluan. Klik buat nambah ke "Barang Dipilih" di bawah.</p>
+        <div id="qrBelumMappingList" class="qr-belum-mapping-list">
+          <div class="qr-pick-suggest-empty">Memuat...</div>
+        </div>
+      </div>
+
       <div id="qrBarangSelected" class="qr-pick-selected">
         <div class="qr-pick-selected-empty">Belum ada barang dipilih — cari & klik dari saran di atas.</div>
       </div>
@@ -1790,6 +1810,28 @@
       <button type="button" id="btnPnPrintQr" class="btn btn-small btn-block">Cetak Label QR Dulu</button>
       <button type="button" id="btnPnPutawayLater" class="btn-link">Nanti</button>
     </div>
+  </div>
+</div>
+
+<!-- "Masukkan ke Bin" (batch) — dipanggil dari checkbox multi-select di
+     daftar "Belum Ter-mapping" (js/putaway.js, openPwBulkModal). Tiap item
+     boleh punya Lokasi/S.Loc sendiri-sendiri; Qty otomatis semua sisa
+     belum-ter-mapping; Nama User 1x buat semua item. -->
+<div id="pwBulkModalBackdrop" class="modal-backdrop" hidden></div>
+<div id="pwBulkModal" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="pwBulkModalTitle">
+  <div class="modal-card modal-card-wide card">
+    <div class="modal-header">
+      <span id="pwBulkModalTitle">Masukkan ke Bin</span>
+      <button type="button" id="btnClosePwBulkModal" class="modal-close" aria-label="Tutup">×</button>
+    </div>
+    <p class="hint-text">Qty otomatis mengambil SEMUA sisa belum-ter-mapping tiap item. Isi Lokasi &amp; S.Loc per item &mdash; kalau semuanya ke bin yang sama, isi baris pertama lalu pakai tombol "Samakan ke semua baris".</p>
+    <button type="button" id="btnPwBulkSamakan" class="btn-link">Samakan ke semua baris</button>
+    <div id="pwBulkModalList" class="pw-bulk-list"></div>
+    <div class="form-row">
+      <label>Nama User *</label>
+      <input type="text" id="pwBulkModalUser" placeholder="Otomatis terisi dari akun yang login" readonly required>
+    </div>
+    <button type="button" id="btnPwBulkSubmit" class="btn btn-primary btn-block">Simpan Semua</button>
   </div>
 </div>
 
