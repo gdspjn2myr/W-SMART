@@ -41,6 +41,18 @@ let qrBarangSelected = new Set();
 let qrBarangSearchText = '';
 let qrLabelsPendingItems = null; // dipakai buat "cetak QR langsung" dari halaman lain (lihat goToQrLabelsForItems)
 
+// Daftar "Belum Ter-mapping" (sama sumbernya dengan card di halaman Put Away,
+// Api.getStockBalance filter 'perlu-putaway') — ditampilkan di sini juga
+// (collapsible, lazy-load) supaya Mode Manual bisa langsung pilih dari
+// barang yang PERLU di-put away tanpa harus ketik cari satu-satu. Kasus
+// nyata yang dilaporkan Bos: kadang barang belum bisa di-put away (bin belum
+// ada/nunggu keputusan dll), tapi labelnya tetap perlu dicetak duluan —
+// termasuk barang yang belumAdaMaster (belum terdaftar di Master Data),
+// makanya TIDAK bisa cuma mengandalkan qrBarangItems (hasil getMasterBarang)
+// buat lookup info barangnya — lihat getQrItemInfo di bawah.
+let qrBelumMapping = [];
+let qrBelumMappingLoaded = false;
+
 const QR_BARANG_SUGGEST_LIMIT = 8; // maksimal saran yang ditampilkan sekaligus biar gak balik jadi daftar panjang
 
 function initQrLabelsPage() {
@@ -71,7 +83,10 @@ function initQrLabelsPage() {
       qrBarangSelected.delete(removeBtn.dataset.removeKode);
       renderQrBarangSelected();
       renderQrBarangSuggest(); // barang yg baru dilepas bisa muncul lagi di saran kalau masih cocok pencarian
+      if (qrBelumMappingLoaded) renderQrBelumMappingList(); // begitu juga di daftar Belum Ter-mapping kalau sedang kebuka
     });
+
+    document.getElementById('btnToggleQrBelumMapping').addEventListener('click', toggleQrBelumMappingSection);
 
     document.getElementById('btnGenerateQrBarang').addEventListener('click', generateQrBarangLabels);
     document.getElementById('btnGenerateQrBin').addEventListener('click', generateQrBinLabels);
@@ -235,6 +250,26 @@ function addQrBarangToSelection(kodeList) {
   qrBarangSearchText = '';
   document.getElementById('qrBarangSuggest').hidden = true;
   renderQrBarangSelected();
+  if (qrBelumMappingLoaded) renderQrBelumMappingList(); // barang yg baru ditambah hilang dari daftar Belum Ter-mapping (kalau lagi kebuka)
+}
+
+// Cari info tampilan (nama/satuan/plant/kategori/jenis) 1 kode barang — dari
+// Master Data (qrBarangItems, sumber normal buat search) DULU, fallback ke
+// qrBelumMapping (dipakai kalau kode dipilih dari daftar "Belum Ter-mapping"
+// & KEBETULAN belumAdaMaster — belum terdaftar resmi di Master Data sama
+// sekali, jadi TIDAK ada di qrBarangItems). SELALU balikin object (nggak
+// pernah undefined) supaya pemanggil (renderQrBarangSelected,
+// generateQrBarangLabels) nggak perlu cek null-nya sendiri2.
+function getQrItemInfo(kode) {
+  const fromMaster = qrBarangItems.find((x) => x.kodeBarang === kode);
+  if (fromMaster) {
+    return { kodeBarang: fromMaster.kodeBarang, namaBarang: fromMaster.namaBarang, satuan: fromMaster.satuan, plant: fromMaster.plant, kategori: fromMaster.kategori, jenis: fromMaster.jenis };
+  }
+  const fromBelum = qrBelumMapping.find((x) => x.kode === kode);
+  if (fromBelum) {
+    return { kodeBarang: fromBelum.kode, namaBarang: fromBelum.namaBarang, satuan: fromBelum.satuan, plant: fromBelum.plant, kategori: fromBelum.kategori, jenis: fromBelum.jenis };
+  }
+  return { kodeBarang: kode, namaBarang: '', satuan: '', plant: '', kategori: '', jenis: '' };
 }
 
 // Daftar "Barang Dipilih" — chip yang bisa dihapus satu-satu (× di tiap
@@ -246,16 +281,73 @@ function renderQrBarangSelected() {
     return;
   }
   const chips = [...qrBarangSelected].map((kode) => {
-    const it = qrBarangItems.find((x) => x.kodeBarang === kode);
-    const nama = it ? it.namaBarang : '';
-    const meta = it ? itemMetaLine({ plant: it.plant, kategori: it.kategori, itemJenis: it.jenis }) : '';
+    const it = getQrItemInfo(kode);
+    const meta = itemMetaLine({ plant: it.plant, kategori: it.kategori, itemJenis: it.jenis });
     return `
       <span class="qr-pick-chip">
-        <span class="qr-pick-chip-text">${escapeHtml(kode)}${nama ? ' — ' + escapeHtml(nama) : ''}${meta ? ` <span class="item-meta-line">· ${meta}</span>` : ''}</span>
+        <span class="qr-pick-chip-text">${escapeHtml(kode)}${it.namaBarang ? ' — ' + escapeHtml(it.namaBarang) : ''}${meta ? ` <span class="item-meta-line">· ${meta}</span>` : ''}</span>
         <button type="button" class="qr-pick-chip-remove" data-remove-kode="${escapeHtml(kode)}" aria-label="Hapus dari pilihan">×</button>
       </span>`;
   }).join('');
   wrap.innerHTML = `<div class="qr-pick-selected-count">${qrBarangSelected.size} barang dipilih</div><div class="qr-pick-chip-list">${chips}</div>`;
+}
+
+// ---------------------------------------------------------------------------
+// Daftar "Belum Ter-mapping" (collapsible, lazy-load — cuma dipanggil begitu
+// section-nya dibuka, biar buka halaman QR Labels biasa nggak nambah 1x
+// panggilan API yang belum tentu kepake).
+// ---------------------------------------------------------------------------
+async function toggleQrBelumMappingSection() {
+  const section = document.getElementById('qrBelumMappingSection');
+  const btn = document.getElementById('btnToggleQrBelumMapping');
+  const willShow = section.hidden;
+  section.hidden = !willShow;
+  if (btn) btn.textContent = willShow ? '− Sembunyikan daftar Belum Ter-mapping' : '+ Pilih dari daftar Belum Ter-mapping (Perlu Put Away)';
+  if (willShow && !qrBelumMappingLoaded) await loadQrBelumMapping();
+}
+
+async function loadQrBelumMapping() {
+  const wrap = document.getElementById('qrBelumMappingList');
+  try {
+    const res = await Api.getStockBalance({ filter: 'perlu-putaway' });
+    qrBelumMapping = res.data || [];
+    qrBelumMappingLoaded = true;
+    renderQrBelumMappingList();
+  } catch (err) {
+    wrap.innerHTML = `<div class="qr-pick-suggest-empty">Gagal memuat: ${escapeHtml(err.message)}</div>`;
+  }
+}
+
+function renderQrBelumMappingList() {
+  const wrap = document.getElementById('qrBelumMappingList');
+  if (!qrBelumMapping.length) {
+    wrap.innerHTML = '<div class="qr-pick-suggest-empty">Tidak ada barang yang belum ter-mapping saat ini.</div>';
+    return;
+  }
+  const items = qrBelumMapping.filter((it) => !qrBarangSelected.has(it.kode));
+  if (!items.length) {
+    wrap.innerHTML = '<div class="qr-pick-suggest-empty">Semua barang belum-ter-mapping sudah dipilih — cek daftar "Barang Dipilih" di bawah.</div>';
+    return;
+  }
+  const rows = items.map((it) => {
+    const meta = itemMetaLine(it);
+    return `
+      <button type="button" class="qr-pick-suggest-item" data-add-belum-kode="${escapeHtml(it.kode)}">
+        <span class="qr-pick-suggest-kode">${escapeHtml(it.kode)}</span>
+        <span class="qr-pick-suggest-nama">${escapeHtml(it.namaBarang || '-')}${it.belumAdaMaster ? ' · <span class="badge-belum-master">⚠ Belum terdaftar</span>' : ''}${meta ? ` <span class="item-meta-line">· ${meta}</span>` : ''}</span>
+        <span class="qr-pick-suggest-satuan">Sisa ${it.belumTerMapping} ${escapeHtml(it.satuan || '-')}</span>
+      </button>
+    `;
+  }).join('');
+  const addAllBtn = items.length > 1
+    ? `<button type="button" class="qr-pick-suggest-addall" id="btnQrAddAllBelumMapping">+ Tambah semua ${items.length} item belum-ter-mapping</button>`
+    : '';
+  wrap.innerHTML = rows + addAllBtn;
+  wrap.querySelectorAll('[data-add-belum-kode]').forEach((btn) => {
+    btn.addEventListener('click', () => addQrBarangToSelection([btn.dataset.addBelumKode]));
+  });
+  const addAllEl = document.getElementById('btnQrAddAllBelumMapping');
+  if (addAllEl) addAllEl.addEventListener('click', () => addQrBarangToSelection(items.map((it) => it.kode)));
 }
 
 // Baca "Detail Tambahan (opsional)" di mode Manual. DULU field ini dipaksa
@@ -285,7 +377,12 @@ function readQrManualDetail() {
 }
 
 async function generateQrBarangLabels() {
-  const items = qrBarangItems.filter((it) => qrBarangSelected.has(it.kodeBarang));
+  // Dibangun dari qrBarangSelected langsung (BUKAN filter qrBarangItems) —
+  // kalau cuma filter qrBarangItems (hasil getMasterBarang), barang yang
+  // dipilih dari daftar "Belum Ter-mapping" tapi belumAdaMaster (belum
+  // terdaftar di Master Data sama sekali) bakal HILANG diam2 dari sini
+  // (kepilih di layar tapi labelnya nggak ikut kecetak) — lihat getQrItemInfo.
+  const items = [...qrBarangSelected].map(getQrItemInfo);
   if (!items.length) {
     showToast('Pilih minimal 1 barang dulu.', 'error');
     return;
