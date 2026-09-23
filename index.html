@@ -873,7 +873,7 @@
 
       <div class="qr-manual-detail">
         <div class="qr-manual-detail-header">Detail Tambahan (opsional)</div>
-        <p class="hint-text">Nggak wajib diisi — kalau diisi, berlaku sama buat SEMUA barang yang dipilih di atas (biasanya memang 1 dokumen/sumber yang sama). Plant otomatis dicoba diisi dari Master Data tiap barang dulu — kalau di Master Data-nya kosong (belum kedaftar per-Plant), isi manual di sini biar tetap muncul di label (sama kayak pas cetak setelah Penerimaan Barang).</p>
+        <p class="hint-text">Nggak wajib diisi. Field yang DIKOSONGIN otomatis diambilkan dari Penerimaan TERAKHIR punya masing-masing barang sendiri-sendiri (jadi kalau barangnya beda PO/Vendor/User, labelnya ikut beda — nggak dipukul rata). Field yang DIISI di sini jadi "paksa sama" buat SEMUA barang yang dipilih (baru dipakai kalau memang sengaja mau override, mis. relabel di bawah 1 dokumen yang sama). Plant fallback terakhirnya dari Master Data kalau barang itu belum pernah ada Penerimaan & tidak diisi manual.</p>
         <div class="form-row-pair">
           <div class="form-row">
             <label>No PO</label>
