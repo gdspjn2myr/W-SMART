@@ -15,7 +15,7 @@ const API_TIMEOUT_MS = 30000;
 // createPRBatch dikasih waktu lebih lama juga — bisa berisi puluhan item
 // sekaligus (1x Simpan buat semua baris di tabel Buat PR), jadi butuh lebih
 // dari 30 detik "normal" kalau itemnya banyak.
-const API_TIMEOUT_MS_LONG = { scanSPB: 60000, uploadFotoSpk: 45000, createPRBatch: 45000 };
+const API_TIMEOUT_MS_LONG = { scanSPB: 60000, uploadFotoSpk: 45000, createPRBatch: 45000, savePutawayBatch: 45000 };
 
 // Action yang TIDAK butuh sessionToken (belum tentu ada sesi saat dipanggil —
 // login justru tujuannya BIKIN sesi baru). Semua action lain otomatis disisipi
@@ -113,6 +113,7 @@ const Api = {
   toggleMasterBarangStatus: (payload) => callApi('toggleMasterBarangStatus', payload),
   savePemakaian: (payload) => callApi('savePemakaian', payload),
   savePutaway: (payload) => callApi('savePutaway', payload),
+  savePutawayBatch: (payload) => callApi('savePutawayBatch', payload),
   getSupplier: () => callApi('getSupplier'),
   getPemesanDirectory: () => callApi('getPemesanDirectory'),
   getEmailTemplate: () => callApi('getEmailTemplate'),
