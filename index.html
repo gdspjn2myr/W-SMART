@@ -675,15 +675,14 @@
         <input type="date" id="pmTanggalDisplay" disabled>
       </div>
       <div class="form-row">
-        <label>Ambil dari Lokasi/Bin (opsional, scan diprioritaskan)</label>
+        <label>Ambil dari Lokasi/Bin (opsional)</label>
         <div class="scan-lokasi-row">
           <button type="button" id="btnScanPmLokasi" class="btn btn-small btn-scan">
             <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7V5a1 1 0 0 1 1-1h2M17 4h2a1 1 0 0 1 1 1v2M20 17v2a1 1 0 0 1-1 1h-2M7 20H5a1 1 0 0 1-1-1v-2"/><rect x="8" y="8" width="8" height="8" rx="1"/></svg>
             Scan Lokasi
           </button>
-          <span id="pmLokasiBadge" class="lokasi-badge" hidden></span>
-          <button type="button" id="btnClearPmLokasi" class="btn-clear-lokasi" hidden aria-label="Hapus lokasi">×</button>
         </div>
+        <input type="text" id="pmLokasi" placeholder="Atau ketik manual, contoh: SP-R01-03">
       </div>
       <div class="form-row">
         <label>Kode Barang *</label>
