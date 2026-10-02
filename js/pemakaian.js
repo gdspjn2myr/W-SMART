@@ -3,14 +3,13 @@
 // Kode barang dicocokkan ke masterBarangCache (diisi oleh loadMasterData() di
 // js/penerimaan.js) supaya Nama & Satuan bisa terisi otomatis saat kode dipilih.
 //
-// Lokasi/Bin OPSIONAL — kalau user scan QR lokasi sebelum ambil barang, itu
-// dicatat (dipakai buat breakdown stock per bin di Stock Balance). Kalau tidak
-// di-scan (manual), tetap boleh disimpan tanpa lokasi — scan cuma prioritas,
-// bukan wajib (sesuai konfirmasi user).
+// Lokasi/Bin OPSIONAL — diisi lewat scan QR (#pmLokasi diisi otomatis) ATAU
+// ketik manual langsung di field-nya (permintaan Bos: dulu cuma bisa scan,
+// nggak ada opsi ketik — sama polanya kayak Lokasi/Bin di Put Away). Kalau
+// dikosongin sama sekali, tetap boleh disimpan tanpa lokasi.
 // ============================================================================
 
 let pemakaianInitialized = false;
-let pmLokasi = '';
 let pmStockHintTimer = null;
 let pmStockHintSeq = 0; // dipakai buang jawaban getStockHint yang basi (kalau user ngetik cepat & respons datang gak berurutan)
 let pmSumberOptions = []; // opsi Sumber (OBS/Fast Moving/User+nama) terakhir dari server buat Kode+Plant yang lagi dipilih — lihat renderPmSumberField
@@ -27,35 +26,29 @@ function initPemakaianPage() {
     pemakaianInitialized = true;
 
     document.getElementById('pmKode').addEventListener('input', (e) => { handlePmKodeInput(e); scheduleStockHint(); });
-    document.getElementById('pmPlant').addEventListener('change', scheduleStockHint);
+    // Begitu Plant diganti, daftar saran Kode Barang (listMasterBarangPemakaian)
+    // langsung ke-filter ngikutin Plant itu — lihat renderMasterBarangDatalist
+    // (js/penerimaan.js) & keluhan user soal kode barang kelihatan dobel di saran.
+    document.getElementById('pmPlant').addEventListener('change', (e) => {
+      renderMasterBarangDatalist('listMasterBarangPemakaian', e.target.value);
+      scheduleStockHint();
+    });
     document.getElementById('pmSLoc').addEventListener('input', scheduleStockHint);
     document.getElementById('formPemakaian').addEventListener('submit', handlePmSubmit);
     wireUppercaseInput('pmSLoc'); // S.Loc ikut mengikat stock di backend, selalu huruf besar (lihat normalizeSloc_ di Code.gs)
 
     document.getElementById('btnScanPmLokasi').addEventListener('click', () => {
       openQrScanner(
-        (value) => { setPmLokasi(value); showToast('Lokasi terbaca: ' + value, 'success'); },
+        (value) => {
+          document.getElementById('pmLokasi').value = value;
+          showToast('Lokasi terbaca: ' + value, 'success');
+        },
         (err) => showToast(err, 'error')
       );
     });
-    document.getElementById('btnClearPmLokasi').addEventListener('click', () => setPmLokasi(''));
   }
 
   setPmTanggalDisplay();
-}
-
-function setPmLokasi(value) {
-  pmLokasi = value;
-  const badge = document.getElementById('pmLokasiBadge');
-  const clearBtn = document.getElementById('btnClearPmLokasi');
-  if (value) {
-    badge.textContent = 'Dari: ' + value;
-    badge.hidden = false;
-    clearBtn.hidden = false;
-  } else {
-    badge.hidden = true;
-    clearBtn.hidden = true;
-  }
 }
 
 function setPmTanggalDisplay() {
@@ -72,14 +65,19 @@ function handlePmKodeInput(e) {
   const hint = document.getElementById('pmNamaHint');
 
   if (matches.length) {
-    document.getElementById('pmSatuan').value = matches[0].satuan || '';
-    const meta = itemMetaLine({ kategori: matches[0].kategori, itemJenis: matches[0].jenis });
+    // Kalau Plant udah dipilih & ada baris Master Data yang PERSIS Plant itu,
+    // pakai baris itu buat Satuan/Nama (paling akurat) — kalau belum dipilih
+    // atau kodenya belum kedaftar di Plant itu, fallback ke baris pertama.
+    const plant = document.getElementById('pmPlant').value.trim();
+    const primary = (plant && matches.find((m) => String(m.plant || '').trim() === plant)) || matches[0];
+    document.getElementById('pmSatuan').value = primary.satuan || '';
+    const meta = itemMetaLine({ kategori: primary.kategori, itemJenis: primary.jenis });
     const metaHtml = meta ? ` <span class="item-meta-line">· ${meta}</span>` : '';
     if (matches.length > 1) {
       const plants = matches.map((m) => m.plant).filter(Boolean).join(', ');
-      hint.innerHTML = '→ ' + escapeHtml(matches[0].namaBarang) + ' — kode ini ada di beberapa Plant (' + escapeHtml(plants) + '). Pastikan Plant di bawah sesuai tempat barang fisiknya, transaksi akan ditolak kalau stock-nya kosong di Plant yang dipilih.' + metaHtml;
+      hint.innerHTML = '→ ' + escapeHtml(primary.namaBarang) + ' — kode ini ada di beberapa Plant (' + escapeHtml(plants) + '). Pastikan Plant di bawah sesuai tempat barang fisiknya, transaksi akan ditolak kalau stock-nya kosong di Plant yang dipilih.' + metaHtml;
     } else {
-      hint.innerHTML = '→ ' + escapeHtml(matches[0].namaBarang) + metaHtml;
+      hint.innerHTML = '→ ' + escapeHtml(primary.namaBarang) + metaHtml;
     }
     hint.hidden = false;
   } else {
@@ -257,7 +255,7 @@ async function handlePmSubmit(e) {
     satuan: document.getElementById('pmSatuan').value.trim(),
     teknisi,
     keterangan: document.getElementById('pmKeterangan').value.trim(),
-    lokasi: pmLokasi,
+    lokasi: document.getElementById('pmLokasi').value.trim(),
     plant,
     sloc,
     sumberTipe,
@@ -289,5 +287,6 @@ function resetPmForm() {
   document.getElementById('pmNamaHint').hidden = true;
   document.getElementById('pmStockHint').hidden = true;
   renderPmSumberField([]);
-  setPmLokasi('');
+  // pmLokasi ikut ke-reset otomatis lewat formPemakaian.reset() di atas — dia
+  // sekarang input beneran di dalam form itu (dulu badge/variabel terpisah).
 }
